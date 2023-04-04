@@ -1,0 +1,36 @@
+apiVersion: datainfra.io/v1
+kind: Environment
+metadata:
+  labels:
+    app.kubernetes.io/name: environment
+    app.kubernetes.io/instance: environment-sample
+    app.kubernetes.io/part-of: ballastdata
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ballastdata
+  name: environment-sample
+spec:
+  envType: dev
+  cloudInfra:
+   type: aws
+   awsRegion: us-west-2
+   auth: 
+     awsAccessKey: AKIAWLZK4B6ACNA3H43S
+     awsSecretAccessKey: pEWSLAc+QgEMXnny7Mw+h7dOb5eFtBrtJdTdh9g1
+   network:
+     vpcName: dev
+     cidrBlock: 10.0.0.0/24
+     tags:
+       env: dev
+       team: dataorg
+     subnets:
+      - name: dev-eks-1
+        cidrBlock: 10.1.0.0/24
+        tags:
+          env: dev
+      - name: dev-eks-2
+        cidrBlock: 10.2.0.0/24
+        tags:
+          env: dev
+   storage: {}
+   kubernetes: {}
+
