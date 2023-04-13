@@ -50,54 +50,28 @@ spec:
                     type: object
                   awsRegion:
                     type: string
-                  kubernetes:
+                  eks:
                     properties:
-                      eks:
-                        properties:
-                          name:
-                            type: string
-                          roleArn:
-                            type: string
-                          version:
-                            type: string
-                        required:
-                        - name
-                        - roleArn
-                        - version
-                        type: object
-                    type: object
-                  network:
-                    properties:
-                      cidrBlock:
+                      name:
                         type: string
-                      subnets:
+                      roleArn:
+                        type: string
+                      securityGroupIds:
                         items:
-                          properties:
-                            cidrBlock:
-                              type: string
-                            name:
-                              type: string
-                            tags:
-                              additionalProperties:
-                                type: string
-                              type: object
-                          required:
-                          - cidrBlock
-                          - name
-                          type: object
-                        type: array
-                      tags:
-                        additionalProperties:
                           type: string
-                        type: object
-                      vpcName:
+                        type: array
+                      subnetIds:
+                        items:
+                          type: string
+                        type: array
+                      version:
                         type: string
                     required:
-                    - cidrBlock
-                    - subnets
-                    - vpcName
-                    type: object
-                  storage:
+                    - name
+                    - roleArn
+                    - securityGroupIds
+                    - subnetIds
+                    - version
                     type: object
                   type:
                     description: CloudType
@@ -105,9 +79,7 @@ spec:
                 required:
                 - auth
                 - awsRegion
-                - kubernetes
-                - network
-                - storage
+                - eks
                 - type
                 type: object
               envType:
@@ -119,6 +91,24 @@ spec:
             type: object
           status:
             description: EnvironmentStatus defines the observed state of Environment
+            properties:
+              cloudInfraStatus:
+                properties:
+                  eksStatus:
+                    properties:
+                      clusterId:
+                        type: string
+                    required:
+                    - clusterId
+                    type: object
+                  type:
+                    type: string
+                required:
+                - eksStatus
+                - type
+                type: object
+            required:
+            - cloudInfraStatus
             type: object
         type: object
     served: true

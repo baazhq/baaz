@@ -36,13 +36,16 @@ type CloudInfraConfig struct {
 
 // EnvironmentStatus defines the observed state of Environment
 type EnvironmentStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	CloudInfraStatus CloudInfraStatus `json:"cloudInfraStatus"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+type CloudInfraStatus struct {
+	Type                      string `json:"type"`
+	AwsCloudInfraConfigStatus `json:",inline,omitempty"`
+}
 
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // Environment is the Schema for the environments API
 type Environment struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -52,8 +55,7 @@ type Environment struct {
 	Status EnvironmentStatus `json:"status,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-
+// +kubebuilder:object:root=true
 // EnvironmentList contains a list of Environment
 type EnvironmentList struct {
 	metav1.TypeMeta `json:",inline"`

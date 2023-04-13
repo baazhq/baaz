@@ -2,62 +2,120 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+
 	"os"
 
+	"datainfra.io/ballastdata/pkg/aws/eks"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
+
 	v1 "datainfra.io/ballastdata/api/v1"
-	aws_network "datainfra.io/ballastdata/pkg/aws/network"
+	"github.com/datainfrahq/operator-builder/builder"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func reconcileEnvironment(client client.Client, env *v1.Environment) error {
+func reconcileEnvironment(client client.Client, env *v1.Environment, recorder record.EventRecorder) error {
 
-	os.Setenv("AWS_ACCESS_KEY_ID", "AKIAWLZK4B6ACNA3H43S")
-	os.Setenv("AWS_SECRET_ACCESS_KEY", "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")
-	err := CreateEnvironment(context.TODO(), env)
+	os.Setenv("AWS_ACCESS_KEY_ID", env.Spec.CloudInfra.Auth.AwsAccessKey)
+	os.Setenv("AWS_SECRET_ACCESS_KEY", env.Spec.CloudInfra.Auth.AwsSecretAccessKey)
+
+	err := CreateEnvironment(context.TODO(), env, client, recorder)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
 	return nil
 }
 
-func CreateEnvironment(ctx context.Context, env *v1.Environment) error {
+func CreateEnvironment(ctx context.Context, env *v1.Environment, client client.Client, record record.EventRecorder) error {
 
-	network := aws_network.NetworkEnvironment{
+	eks := eks.EksEnvironment{
 		Env:    env,
-		Config: *aws_network.NewConfig(env.Spec.CloudInfra.AwsRegion),
+		Config: *eks.NewConfig(env.Spec.CloudInfra.AwsRegion),
+		Client: client,
 	}
+	getOwnerRef := makeOwnerRef(
+		env.APIVersion,
+		env.Kind,
+		env.Name,
+		env.UID,
+	)
 
-	networkOutput, err := network.CreateNetwork()
+	cm := makeEnvConfigMap(env, client, getOwnerRef, env.Spec)
+
+	build := builder.NewBuilder(
+		builder.ToNewBuilderConfigMap([]builder.BuilderConfigMap{*cm}),
+		builder.ToNewBuilderRecorder(builder.BuilderRecorder{Recorder: record, ControllerName: "envoperator"}),
+		builder.ToNewBuilderContext(builder.BuilderContext{Context: ctx}),
+		builder.ToNewBuilderStore(
+			*builder.NewStore(client, map[string]string{"app": env.Name}, env.Namespace, env),
+		),
+	)
+
+	resp, err := build.ReconcileConfigMap()
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(networkOutput)
+	fmt.Println(resp)
 
-	// subnet := ec2.CreateSubnetInput{
-	// 	VpcId:     vpcOutput.Vpc.VpcId,
-	// 	CidrBlock: aws.String("10.0.0.0/24"),
-	// }
+	if resp == controllerutil.OperationResultCreated {
+		fmt.Println("creating eks")
+		output := eks.CreateEks()
+		fmt.Println(output)
+	} else if resp == controllerutil.OperationResultUpdated {
+		fmt.Println("updating eks")
+		output := eks.UpdateEks()
+		fmt.Println(output)
+	}
 
-	//	subnetOutput, _ := ec2Client.CreateSubnet(context.TODO(), &subnet)
-
-	// input := &eks.CreateClusterInput{
-	// 	ClientRequestToken: aws.String("1d2129a1-3d38-460a-9756-e5b91fddb951"),
-	// 	Name:               aws.String("prod"),
-	// 	ResourcesVpcConfig: &types.VpcConfigRequest{
-	// 		SecurityGroupIds: []string{"sg-6979fe18"},
-	// 		SubnetIds:        []string{"subnet-6782e71e", "subnet-e7e761ac"},
-	// 	},
-	// 	RoleArn: aws.String("arn:aws:iam::012345678910:role/eks-service-role-AWSServiceRoleForAmazonEKS-J7ONKE3BQ4PI"),
-	// 	Version: aws.String("1.22"),
-	// }
-
-	// result, err := svc.CreateCluster(context.TODO(), input)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
 	return nil
+}
+
+func makeEnvConfigMap(
+	env *v1.Environment,
+	client client.Client,
+	ownerRef *metav1.OwnerReference,
+	data interface{},
+) *builder.BuilderConfigMap {
+
+	dataByte, err := json.Marshal(data)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	configMap := &builder.BuilderConfigMap{
+		CommonBuilder: builder.CommonBuilder{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      env.GetName(),
+				Namespace: env.GetNamespace(),
+			},
+			Client:   client,
+			CrObject: env,
+			OwnerRef: *ownerRef,
+		},
+		Data: map[string]string{
+			"data": string(dataByte),
+		},
+	}
+
+	return configMap
+}
+
+// create owner ref ie parseable tenant controller
+func makeOwnerRef(apiVersion, kind, name string, uid types.UID) *metav1.OwnerReference {
+	controller := true
+
+	return &metav1.OwnerReference{
+		APIVersion: apiVersion,
+		Kind:       kind,
+		Name:       name,
+		UID:        uid,
+		Controller: &controller,
+	}
 }
