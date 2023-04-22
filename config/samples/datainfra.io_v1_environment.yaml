@@ -8,20 +8,21 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: ballastdata
   name: environment-dev
+  namespace: demo
 spec:
   envType: dev
   cloudInfra:
     type: aws
-    awsRegion: us-west-2
+    awsRegion: us-east-1
     auth: 
-      awsAccessKey: AKIAWLZK4B6AFWEZHDEO
-      awsSecretAccessKey: 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
+      awsAccessKey: <access-key>
+      awsSecretAccessKey: <secret-key>
     eks:
       name: dev-eks
       subnetIds:
-      - subnet-0ead63d54bf9ace41
-      - subnet-02606e97a084174a4
+      - subnet-0bc86ae6da788ffa9
+      - subnet-03f386a9958d5e364
       securityGroupIds:
-      - sg-07d35cfe67eda9a63
-      roleArn: "arn:aws:iam::437639712640:role/myAmazonEKSClusterRole"
+      - sg-0c7a522c8ce4b82be
+      roleArn: "arn:aws:iam::437639712640:role/pulak-eks-role"
       version: "1.22"
