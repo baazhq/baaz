@@ -25,6 +25,7 @@ const (
 type EksOutput struct {
 	Result     string
 	Properties map[string]string
+	Success    bool
 }
 
 func NewConfig(awsRegion string) *aws.Config {

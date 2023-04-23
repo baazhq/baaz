@@ -3,78 +3,63 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-
 	"os"
 
+	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/aws/eks"
+	"github.com/datainfrahq/operator-builder/builder"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
-
-	v1 "datainfra.io/ballastdata/api/v1"
-	"github.com/datainfrahq/operator-builder/builder"
-
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-func reconcileEnvironment(client client.Client, env *v1.Environment, recorder record.EventRecorder) error {
-
+func reconcileEnvironment(ctx context.Context, client client.Client, env *v1.Environment, recorder record.EventRecorder) error {
 	os.Setenv("AWS_ACCESS_KEY_ID", env.Spec.CloudInfra.Auth.AwsAccessKey)
 	os.Setenv("AWS_SECRET_ACCESS_KEY", env.Spec.CloudInfra.Auth.AwsSecretAccessKey)
 
-	err := CreateEnvironment(context.TODO(), env, client, recorder)
-	if err != nil {
-		return err
+	return createOrUpdateEnvironment(ctx, env, client, recorder)
+}
+
+func createOrUpdateEnvironment(ctx context.Context, env *v1.Environment, c client.Client, record record.EventRecorder) error {
+	eksEnv := eks.EksEnvironment{
+		Env:    env,
+		Config: *eks.NewConfig(env.Spec.CloudInfra.AwsRegion),
+		Client: c,
 	}
 
+	if err := eks.DescribeCluster(ctx, eksEnv); err != nil {
+		klog.Info("Updating Environment status to creating")
+		if _, _, err := PatchStatus(ctx, c, env, func(obj client.Object) client.Object {
+			in := obj.(*v1.Environment)
+			in.Status.Phase = v1.Creating
+			return in
+		}); err != nil {
+			return err
+		}
+		if err := createEnvironment(eksEnv); err != nil {
+			return err
+		}
+		klog.Info("Successfully created kubernetes control plane")
+	}
+	return updateEnvironment(eksEnv)
+}
+
+func updateEnvironment(eksEnv eks.EksEnvironment) error {
+	// TODO: Update environment
+	fmt.Println("Todo: Updating environment")
 	return nil
 }
 
-func CreateEnvironment(ctx context.Context, env *v1.Environment, client client.Client, record record.EventRecorder) error {
-
-	eks := eks.EksEnvironment{
-		Env:    env,
-		Config: *eks.NewConfig(env.Spec.CloudInfra.AwsRegion),
-		Client: client,
+func createEnvironment(eksEnv eks.EksEnvironment) error {
+	output := eksEnv.CreateEks()
+	if output.Success {
+		return nil
 	}
-	getOwnerRef := makeOwnerRef(
-		env.APIVersion,
-		env.Kind,
-		env.Name,
-		env.UID,
-	)
-
-	cm := makeEnvConfigMap(env, client, getOwnerRef, env.Spec)
-
-	build := builder.NewBuilder(
-		builder.ToNewBuilderConfigMap([]builder.BuilderConfigMap{*cm}),
-		builder.ToNewBuilderRecorder(builder.BuilderRecorder{Recorder: record, ControllerName: "envoperator"}),
-		builder.ToNewBuilderContext(builder.BuilderContext{Context: ctx}),
-		builder.ToNewBuilderStore(
-			*builder.NewStore(client, map[string]string{"app": env.Name}, env.Namespace, env),
-		),
-	)
-
-	resp, err := build.ReconcileConfigMap()
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(resp)
-
-	if resp == controllerutil.OperationResultCreated {
-		fmt.Println("creating eks")
-		output := eks.CreateEks()
-		fmt.Println(output)
-	} else if resp == controllerutil.OperationResultUpdated {
-		fmt.Println("updating eks")
-		output := eks.UpdateEks()
-		fmt.Println(output)
-	}
-
-	return nil
+	return errors.New(output.Result)
 }
 
 func makeEnvConfigMap(

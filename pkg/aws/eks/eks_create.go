@@ -19,7 +19,7 @@ func (ke *EksEnvironment) CreateEks() EksOutput {
 			return EksOutput{Result: err.Error()}
 		}
 	}
-	return EksOutput{Result: ClusterLaunchInitated}
+	return EksOutput{Result: ClusterLaunchInitated, Success: true}
 
 	//	updatedStatus := v1.EnvironmentStatus{}
 

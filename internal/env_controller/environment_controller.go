@@ -18,14 +18,12 @@ package controller
 
 import (
 	"context"
-	"time"
-
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"time"
 
 	datainfraiov1 "datainfra.io/ballastdata/api/v1"
 )
@@ -47,19 +45,24 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	desiredObj := &datainfraiov1.Environment{}
 	err := r.Get(context.TODO(), req.NamespacedName, desiredObj)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			return ctrl.Result{}, nil
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	// If first time reconciling set status to pending
+	if desiredObj.Status.Phase == "" {
+		if _, _, err := PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
+			in := obj.(*datainfraiov1.Environment)
+			in.Status.Phase = datainfraiov1.Pending
+			return in
+		}); err != nil {
+			return ctrl.Result{}, err
 		}
-		// Error reading the object - requeue the request.
-		return ctrl.Result{}, err
 	}
 
-	if err := reconcileEnvironment(r.Client, desiredObj, r.Recorder); err != nil {
+	if err := reconcileEnvironment(ctx, r.Client, desiredObj, r.Recorder); err != nil {
 		return ctrl.Result{}, err
 	} else {
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
-
 }
 
 // SetupWithManager sets up the controller with the Manager.

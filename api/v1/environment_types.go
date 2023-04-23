@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -34,9 +35,43 @@ type CloudInfraConfig struct {
 	AwsCloudInfraConfig `json:",inline,omitempty"`
 }
 
+type EnvironmentPhase string
+
+const (
+	Pending  EnvironmentPhase = "Pending"
+	Creating EnvironmentPhase = "Creating"
+	Ready    EnvironmentPhase = "Ready"
+	NotReady EnvironmentPhase = "NotReady"
+)
+
 // EnvironmentStatus defines the observed state of Environment
 type EnvironmentStatus struct {
-	CloudInfraStatus CloudInfraStatus `json:"cloudInfraStatus"`
+	Phase              EnvironmentPhase       `json:"phase,omitempty"`
+	CloudInfraStatus   CloudInfraStatus       `json:"cloudInfraStatus,omitempty"`
+	ObservedGeneration int64                  `json:"observedGeneration,omitempty"`
+	Conditions         []EnvironmentCondition `json:"conditions,omitempty"`
+}
+
+type EnvironmentConditionType string
+
+const (
+	ControlPlaneCreated EnvironmentConditionType = "ControlPlaneCreated"
+)
+
+// EnvironmentCondition describes the state of a deployment at a certain point.
+type EnvironmentCondition struct {
+	// Type of deployment condition.
+	Type EnvironmentConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=DeploymentConditionType"`
+	// Status of the condition, one of True, False, Unknown.
+	Status v1.ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status,casttype=k8s.io/api/core/v1.ConditionStatus"`
+	// The last time this condition was updated.
+	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty" protobuf:"bytes,6,opt,name=lastUpdateTime"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty" protobuf:"bytes,7,opt,name=lastTransitionTime"`
+	// The reason for the condition's last transition.
+	Reason string `json:"reason,omitempty" protobuf:"bytes,4,opt,name=reason"`
+	// A human readable message indicating details about the transition.
+	Message string `json:"message,omitempty" protobuf:"bytes,5,opt,name=message"`
 }
 
 type CloudInfraStatus struct {
@@ -46,6 +81,8 @@ type CloudInfraStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
+// +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 // Environment is the Schema for the environments API
 type Environment struct {
 	metav1.TypeMeta   `json:",inline"`
