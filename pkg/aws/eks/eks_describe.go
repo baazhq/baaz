@@ -2,13 +2,26 @@ package eks
 
 import (
 	"context"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 )
 
-func DescribeCluster(ctx context.Context, env EksEnvironment) error {
+const (
+	EKSStatusCreating = "CREATING"
+	EKSStatusACTIVE   = "ACTIVE"
+)
+
+type DescribeClusterOutput struct {
+	Result *awseks.DescribeClusterOutput `json:"result"`
+}
+
+func DescribeCluster(ctx context.Context, env EksEnvironment) (*DescribeClusterOutput, error) {
 	eksClient := awseks.NewFromConfig(env.Config)
 
-	_, err := eksClient.DescribeCluster(ctx, &awseks.DescribeClusterInput{Name: aws.String(env.Env.Spec.CloudInfra.Eks.Name)})
-	return err
+	result, err := eksClient.DescribeCluster(ctx, &awseks.DescribeClusterInput{Name: aws.String(env.Env.Spec.CloudInfra.Eks.Name)})
+	if err != nil {
+		return nil, err
+	}
+	return &DescribeClusterOutput{Result: result}, nil
 }

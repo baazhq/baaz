@@ -31,7 +31,10 @@ func createOrUpdateEnvironment(ctx context.Context, env *v1.Environment, c clien
 		Client: c,
 	}
 
-	if err := eks.DescribeCluster(ctx, eksEnv); err != nil {
+	result, err := eks.DescribeCluster(ctx, eksEnv)
+	if err != nil {
+		// need to filter out others error except NOT FOUND error
+		klog.Info("Creating EKS Control plane")
 		klog.Info("Updating Environment status to creating")
 		if _, _, err := PatchStatus(ctx, c, env, func(obj client.Object) client.Object {
 			in := obj.(*v1.Environment)
@@ -45,12 +48,33 @@ func createOrUpdateEnvironment(ctx context.Context, env *v1.Environment, c clien
 		}
 		klog.Info("Successfully created kubernetes control plane")
 	}
-	return updateEnvironment(eksEnv)
+	return updateEnvironment(ctx, eksEnv, result)
 }
 
-func updateEnvironment(eksEnv eks.EksEnvironment) error {
-	// TODO: Update environment
-	fmt.Println("Todo: Updating environment")
+func updateEnvironment(ctx context.Context, eksEnv eks.EksEnvironment, clusterResult *eks.DescribeClusterOutput) error {
+	klog.Info("Updating Environment")
+	if clusterResult == nil || clusterResult.Result == nil || clusterResult.Result.Cluster == nil {
+		return errors.New("describe cluster output is nil")
+	}
+	switch clusterResult.Result.Cluster.Status {
+	case eks.EKSStatusCreating:
+		klog.Info("Waiting for eks control plane to be created")
+		return nil
+	case eks.EKSStatusACTIVE:
+		if eksEnv.Env.Status.Phase == v1.Ready {
+			klog.Info("Control plane is ready")
+			return nil
+		}
+
+		klog.Info("Update Cluster status as Ready")
+		if _, _, err := PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
+			in := obj.(*v1.Environment)
+			in.Status.Phase = v1.Ready
+			return in
+		}); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

@@ -18,12 +18,13 @@ package controller
 
 import (
 	"context"
+	"time"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	"time"
 
 	datainfraiov1 "datainfra.io/ballastdata/api/v1"
 )
@@ -61,7 +62,7 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err := reconcileEnvironment(ctx, r.Client, desiredObj, r.Recorder); err != nil {
 		return ctrl.Result{}, err
 	} else {
-		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: 2 * time.Minute}, nil
 	}
 }
 
