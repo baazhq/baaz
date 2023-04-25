@@ -18,9 +18,9 @@ func (ke *EksEnvironment) CreateEks() EksOutput {
 		if err != nil {
 			return EksOutput{Result: err.Error()}
 		}
+		break
 	}
 	return EksOutput{Result: ClusterLaunchInitated, Success: true}
-
 	//	updatedStatus := v1.EnvironmentStatus{}
 
 	// updatedStatus.CloudInfraStatus = v1.CloudInfraStatus{
