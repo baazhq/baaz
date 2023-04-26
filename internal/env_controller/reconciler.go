@@ -46,7 +46,8 @@ func createOrUpdateEnvironment(ctx context.Context, env *v1.Environment, c clien
 		if err := createEnvironment(eksEnv); err != nil {
 			return err
 		}
-		klog.Info("Successfully created kubernetes control plane")
+		klog.Info("Successfully initiated kubernetes control plane")
+		return nil
 	}
 	return updateEnvironment(ctx, eksEnv, result)
 }
@@ -60,20 +61,43 @@ func updateEnvironment(ctx context.Context, eksEnv eks.EksEnvironment, clusterRe
 	case eks.EKSStatusCreating:
 		klog.Info("Waiting for eks control plane to be created")
 		return nil
+	case eks.EKSStatusUpdating:
+		klog.Info("Waiting for eks control plane to be updated")
+		return nil
 	case eks.EKSStatusACTIVE:
-		if eksEnv.Env.Status.Phase == v1.Ready {
-			klog.Info("Control plane is ready")
-			return nil
-		}
+		return syncControlPlane(ctx, eksEnv, clusterResult)
+	}
+	return nil
+}
 
-		klog.Info("Update Cluster status as Ready")
+func syncControlPlane(ctx context.Context, eksEnv eks.EksEnvironment, clusterResult *eks.DescribeClusterOutput) error {
+	// checking for version upgrade
+	statusVersion := eksEnv.Env.Status.Version
+	specVersion := eksEnv.Env.Spec.CloudInfra.Eks.Version
+	if statusVersion != "" && statusVersion != specVersion && *clusterResult.Result.Cluster.Version != specVersion {
+		klog.Info("Updating Kubernetes version to: ", eksEnv.Env.Spec.CloudInfra.Eks.Version)
 		if _, _, err := PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
 			in := obj.(*v1.Environment)
-			in.Status.Phase = v1.Ready
+			in.Status.Phase = v1.Updating
 			return in
 		}); err != nil {
 			return err
 		}
+		result := eksEnv.UpdateEks()
+		if !result.Success {
+			return errors.New(result.Result)
+		}
+		klog.Info("Successfully initiated version update")
+	}
+
+	klog.Info("Sync Cluster status and version")
+	if _, _, err := PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
+		in := obj.(*v1.Environment)
+		in.Status.Phase = v1.Success
+		in.Status.Version = in.Spec.CloudInfra.Eks.Version
+		return in
+	}); err != nil {
+		return err
 	}
 	return nil
 }

@@ -40,8 +40,9 @@ type EnvironmentPhase string
 const (
 	Pending  EnvironmentPhase = "Pending"
 	Creating EnvironmentPhase = "Creating"
-	Ready    EnvironmentPhase = "Ready"
-	NotReady EnvironmentPhase = "NotReady"
+	Success  EnvironmentPhase = "Success"
+	Failed   EnvironmentPhase = "Failed"
+	Updating EnvironmentPhase = "Updating"
 )
 
 // EnvironmentStatus defines the observed state of Environment
@@ -50,6 +51,7 @@ type EnvironmentStatus struct {
 	CloudInfraStatus   CloudInfraStatus       `json:"cloudInfraStatus,omitempty"`
 	ObservedGeneration int64                  `json:"observedGeneration,omitempty"`
 	Conditions         []EnvironmentCondition `json:"conditions,omitempty"`
+	Version            string                 `json:"version,omitempty"`
 }
 
 type EnvironmentConditionType string

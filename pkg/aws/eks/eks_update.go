@@ -14,17 +14,21 @@ func (ke *EksEnvironment) UpdateEks() EksOutput {
 	go ke.updateEks(errChannel)
 
 	for err := range errChannel {
-		return EksOutput{Result: err.Error()}
-
+		if err != nil {
+			return EksOutput{Result: err.Error()}
+		}
+		break
 	}
-	return EksOutput{Result: ClusterVersionUpradeInitated}
-
+	return EksOutput{
+		Result:  ClusterVersionUpradeInitated,
+		Success: true,
+	}
 }
 
-func (ke *EksEnvironment) updateEks(errorChan chan<- error) eks.UpdateClusterVersionOutput {
+func (ke *EksEnvironment) updateEks(errorChan chan<- error) {
 	eksClient := eks.NewFromConfig(ke.Config)
 
-	output, err := eksClient.UpdateClusterVersion(context.TODO(), &eks.UpdateClusterVersionInput{
+	_, err := eksClient.UpdateClusterVersion(context.TODO(), &eks.UpdateClusterVersionInput{
 		Name:    &ke.Env.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
 		Version: aws.String(ke.Env.Spec.CloudInfra.Eks.Version),
 	})
@@ -32,7 +36,4 @@ func (ke *EksEnvironment) updateEks(errorChan chan<- error) eks.UpdateClusterVer
 	if err != nil {
 		errorChan <- err
 	}
-
-	return *output
-
 }

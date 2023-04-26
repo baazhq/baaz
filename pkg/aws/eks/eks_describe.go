@@ -10,6 +10,7 @@ import (
 const (
 	EKSStatusCreating = "CREATING"
 	EKSStatusACTIVE   = "ACTIVE"
+	EKSStatusUpdating = "UPDATING"
 )
 
 type DescribeClusterOutput struct {

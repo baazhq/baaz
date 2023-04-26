@@ -60,7 +60,14 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if err := reconcileEnvironment(ctx, r.Client, desiredObj, r.Recorder); err != nil {
-		return ctrl.Result{}, err
+		if _, _, upErr := PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
+			in := obj.(*datainfraiov1.Environment)
+			in.Status.Phase = datainfraiov1.Failed
+			return in
+		}); upErr != nil {
+			return ctrl.Result{}, upErr
+		}
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, err
 	} else {
 		return ctrl.Result{RequeueAfter: 2 * time.Minute}, nil
 	}
