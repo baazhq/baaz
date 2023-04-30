@@ -2,18 +2,14 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"time"
 
 	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/aws/eks"
-	"github.com/datainfrahq/operator-builder/builder"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,47 +124,4 @@ func createEnvironment(eksEnv eks.EksEnvironment) error {
 		return nil
 	}
 	return errors.New(output.Result)
-}
-
-func makeEnvConfigMap(
-	env *v1.Environment,
-	client client.Client,
-	ownerRef *metav1.OwnerReference,
-	data interface{},
-) *builder.BuilderConfigMap {
-
-	dataByte, err := json.Marshal(data)
-	if err != nil {
-		fmt.Println(err)
-	}
-
-	configMap := &builder.BuilderConfigMap{
-		CommonBuilder: builder.CommonBuilder{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      env.GetName(),
-				Namespace: env.GetNamespace(),
-			},
-			Client:   client,
-			CrObject: env,
-			OwnerRef: *ownerRef,
-		},
-		Data: map[string]string{
-			"data": string(dataByte),
-		},
-	}
-
-	return configMap
-}
-
-// create owner ref ie parseable tenant controller
-func makeOwnerRef(apiVersion, kind, name string, uid types.UID) *metav1.OwnerReference {
-	controller := true
-
-	return &metav1.OwnerReference{
-		APIVersion: apiVersion,
-		Kind:       kind,
-		Name:       name,
-		UID:        uid,
-		Controller: &controller,
-	}
 }
