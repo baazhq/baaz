@@ -6,10 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/aws/eks"
 	"github.com/datainfrahq/operator-builder/builder"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -39,6 +41,14 @@ func createOrUpdateEnvironment(ctx context.Context, env *v1.Environment, c clien
 		if _, _, err := PatchStatus(ctx, c, env, func(obj client.Object) client.Object {
 			in := obj.(*v1.Environment)
 			in.Status.Phase = v1.Creating
+			in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
+				Type:               v1.ControlPlaneCreateInitiated,
+				Status:             corev1.ConditionTrue,
+				LastUpdateTime:     metav1.Time{Time: time.Now()},
+				LastTransitionTime: metav1.Time{Time: time.Now()},
+				Reason:             "Initiated kubernetes control plane",
+				Message:            "Initiated kubernetes control plane",
+			})
 			return in
 		}); err != nil {
 			return err
@@ -97,6 +107,14 @@ func syncControlPlane(ctx context.Context, eksEnv eks.EksEnvironment, clusterRes
 		in := obj.(*v1.Environment)
 		in.Status.Phase = v1.Success
 		in.Status.Version = in.Spec.CloudInfra.Eks.Version
+		in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
+			Type:               v1.ControlPlaneCreated,
+			Status:             corev1.ConditionTrue,
+			LastUpdateTime:     metav1.Time{Time: time.Now()},
+			LastTransitionTime: metav1.Time{Time: time.Now()},
+			Reason:             "Kubernetes control plane created",
+			Message:            "Kubernetes control plane created",
+		})
 		return in
 	}); err != nil {
 		return err

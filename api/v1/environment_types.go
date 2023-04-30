@@ -57,7 +57,8 @@ type EnvironmentStatus struct {
 type EnvironmentConditionType string
 
 const (
-	ControlPlaneCreated EnvironmentConditionType = "ControlPlaneCreated"
+	ControlPlaneCreateInitiated EnvironmentConditionType = "ControlPlaneCreateInitiated"
+	ControlPlaneCreated         EnvironmentConditionType = "ControlPlaneCreated"
 )
 
 // EnvironmentCondition describes the state of a deployment at a certain point.
