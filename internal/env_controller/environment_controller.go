@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/klog/v2"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -48,6 +50,7 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	klog.Infof("Reconciling Environment: %s/%s", desiredObj.Namespace, desiredObj.Name)
 	// If first time reconciling set status to pending
 	if desiredObj.Status.Phase == "" {
 		if _, _, err := PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {

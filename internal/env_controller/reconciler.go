@@ -34,7 +34,7 @@ func createOrUpdateEnvironment(ctx context.Context, env *v1.Environment, c clien
 	result, err := eks.DescribeCluster(ctx, eksEnv)
 	if err != nil {
 		// need to filter out others error except NOT FOUND error
-		klog.Info("Creating EKS Control plane")
+		klog.Infof("Creating EKS Control plane: %s for Environment: %s/%s", eksEnv.Env.Spec.CloudInfra.Eks.Name, eksEnv.Env.Namespace, eksEnv.Env.Name)
 		klog.Info("Updating Environment status to creating")
 		if _, _, err := PatchStatus(ctx, c, env, func(obj client.Object) client.Object {
 			in := obj.(*v1.Environment)
@@ -53,10 +53,12 @@ func createOrUpdateEnvironment(ctx context.Context, env *v1.Environment, c clien
 }
 
 func updateEnvironment(ctx context.Context, eksEnv eks.EksEnvironment, clusterResult *eks.DescribeClusterOutput) error {
-	klog.Info("Updating Environment")
 	if clusterResult == nil || clusterResult.Result == nil || clusterResult.Result.Cluster == nil {
 		return errors.New("describe cluster output is nil")
 	}
+
+	klog.Infof("Syncing Environment: %s/%s", eksEnv.Env.Namespace, eksEnv.Env.Name)
+
 	switch clusterResult.Result.Cluster.Status {
 	case eks.EKSStatusCreating:
 		klog.Info("Waiting for eks control plane to be created")
