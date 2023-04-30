@@ -59,6 +59,8 @@ type EnvironmentConditionType string
 const (
 	ControlPlaneCreateInitiated EnvironmentConditionType = "ControlPlaneCreateInitiated"
 	ControlPlaneCreated         EnvironmentConditionType = "ControlPlaneCreated"
+	VersionUpgradeInitiated     EnvironmentConditionType = "VersionUpgradeInitiated"
+	VersionUpgradeSuccessful    EnvironmentConditionType = "VersionUpgradeSuccessful"
 )
 
 // EnvironmentCondition describes the state of a deployment at a certain point.

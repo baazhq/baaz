@@ -87,6 +87,14 @@ func syncControlPlane(ctx context.Context, eksEnv eks.EksEnvironment, clusterRes
 		if _, _, err := PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
 			in := obj.(*v1.Environment)
 			in.Status.Phase = v1.Updating
+			in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
+				Type:               v1.VersionUpgradeInitiated,
+				Status:             corev1.ConditionTrue,
+				LastUpdateTime:     metav1.Time{Time: time.Now()},
+				LastTransitionTime: metav1.Time{Time: time.Now()},
+				Reason:             "Kubernetes control plane version upgrade initiated",
+				Message:            "Kubernetes control plane version upgrade initiated",
+			})
 			return in
 		}); err != nil {
 			return err
