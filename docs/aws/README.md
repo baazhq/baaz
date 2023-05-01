@@ -1,0 +1,2 @@
+- https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html
+- arn:aws:iam::437639712640:role/AmazonEKSNodeRole

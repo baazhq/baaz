@@ -1,0 +1,28 @@
+apiVersion: datainfra.io/v1
+kind: Environment
+metadata:
+  labels:
+    app.kubernetes.io/name: environment
+    app.kubernetes.io/instance: environment-sample
+    app.kubernetes.io/part-of: ballastdata
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ballastdata
+  name: environment-dev
+  namespace: demo
+spec:
+  envType: dev
+  cloudInfra:
+    type: aws
+    awsRegion: us-east-1
+    auth: 
+      awsAccessKey: <access-key>
+      awsSecretAccessKey: <secret-key>
+    eks:
+      name: dev-eks
+      subnetIds:
+      - subnet-0bc86ae6da788ffa9
+      - subnet-03f386a9958d5e364
+      securityGroupIds:
+      - sg-0c7a522c8ce4b82be
+      roleArn: "arn:aws:iam::437639712640:role/pulak-eks-role"
+      version: "1.22"
