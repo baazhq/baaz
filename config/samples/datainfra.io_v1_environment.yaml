@@ -26,3 +26,17 @@ spec:
       - sg-0c7a522c8ce4b82be
       roleArn: "arn:aws:iam::437639712640:role/pulak-eks-role"
       version: "1.22"
+  application:
+    - name: clickhouse-datascience
+      appType: ClickHouse
+      size: clickhouse-small
+  size:
+    - name: clickhouse-small
+      spec:
+        appType: ClickHouse
+        nodes:
+          nodeLabels:
+            app: clickhouse
+          nodeSize: t2.small
+          min: 1
+          max: 3
