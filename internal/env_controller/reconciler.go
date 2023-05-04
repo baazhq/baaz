@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -55,7 +56,13 @@ func createOrUpdateEnvironment(ctx context.Context, env *v1.Environment, c clien
 		klog.Info("Successfully initiated kubernetes control plane")
 		return nil
 	}
-	return updateEnvironment(ctx, eksEnv, result)
+	if err := updateEnvironment(ctx, eksEnv, result); err != nil {
+		return err
+	}
+	if result.Result.Cluster.Status == eks.EKSStatusACTIVE {
+		return reconcileNodeGroup(ctx, eksEnv)
+	}
+	return nil
 }
 
 func updateEnvironment(ctx context.Context, eksEnv eks.EksEnvironment, clusterResult *eks.DescribeClusterOutput) error {
@@ -75,6 +82,16 @@ func updateEnvironment(ctx context.Context, eksEnv eks.EksEnvironment, clusterRe
 	case eks.EKSStatusACTIVE:
 		return syncControlPlane(ctx, eksEnv, clusterResult)
 	}
+	return nil
+}
+
+func reconcileNodeGroup(ctx context.Context, eksEnv eks.EksEnvironment) error {
+	result, err := eks.CreateNodeGroup(ctx, eksEnv)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	fmt.Println(result)
 	return nil
 }
 
