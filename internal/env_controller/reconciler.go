@@ -86,13 +86,37 @@ func updateEnvironment(ctx context.Context, eksEnv eks.EksEnvironment, clusterRe
 }
 
 func reconcileNodeGroup(ctx context.Context, eksEnv eks.EksEnvironment) error {
-	result, err := eks.CreateNodeGroup(ctx, eksEnv)
-	if err != nil {
-		fmt.Println(err)
-		return err
+	for _, app := range eksEnv.Env.Spec.Application {
+		// Todo: Need to figure out how do we know this node group is already created or not
+		// One possible option can be Name pattern:
+		// like: {eksname}-{appname} in this case if user change the app name, we gonna create
+		// another nodegroup for this one
+		//
+		// another option can be status, we can track created node group in the status in same order of application
+		// if user change the application order in the spec, then how we handle that?
+		nodeSpec, err := getNodegroupSpecForAppSize(eksEnv.Env, app)
+		if err != nil {
+			return err
+		}
+
+		result, err := eks.CreateNodeGroup(ctx, &eksEnv, nodeSpec, &app)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+		fmt.Println(result)
 	}
-	fmt.Println(result)
+
 	return nil
+}
+
+func getNodegroupSpecForAppSize(env *v1.Environment, app v1.ApplicationConfig) (*v1.NodeGroupSpec, error) {
+	for _, size := range env.Spec.Size {
+		if size.Name == app.Size && size.Spec.AppType == app.AppType {
+			return size.Spec.Nodes, nil
+		}
+	}
+	return nil, fmt.Errorf("no NodegroupSpec for app %s & size %s", app.Name, app.Size)
 }
 
 func syncControlPlane(ctx context.Context, eksEnv eks.EksEnvironment, clusterResult *eks.DescribeClusterOutput) error {
