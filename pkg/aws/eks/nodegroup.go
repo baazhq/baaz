@@ -19,7 +19,7 @@ func CreateNodeGroup(ctx context.Context, eksEnv EksEnvironment) (*CreateNodeGro
 	eksClient := awseks.NewFromConfig(eksEnv.Config)
 	input := &awseks.CreateNodegroupInput{
 		ClusterName:        aws.String(eksEnv.Env.Spec.CloudInfra.Eks.Name),
-		NodeRole:           aws.String("arn:aws:iam::437639712640:instance-profile/pulak-eks-node-role"),
+		NodeRole:           aws.String("arn:aws:iam::437639712640:role/pulak-eks-node-role"),
 		NodegroupName:      aws.String(fmt.Sprintf("%s-%s", eksEnv.Env.Spec.CloudInfra.Eks.Name, eksEnv.Env.Spec.Application[0].Name)),
 		Subnets:            eksEnv.Env.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
 		AmiType:            "",
