@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/eks/types"
+
 	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/aws/eks"
 	corev1 "k8s.io/api/core/v1"
@@ -99,14 +101,53 @@ func reconcileNodeGroup(ctx context.Context, eksEnv eks.EksEnvironment) error {
 			return err
 		}
 
-		result, err := eks.CreateNodeGroup(ctx, &eksEnv, nodeSpec, &app)
+		nodegroup, err := eks.DescribeNodegroup(ctx, &eksEnv, &app)
 		if err != nil {
-			fmt.Println(err)
-			return err
+			// Todo: Create only for 404 error
+			result, err := eks.CreateNodeGroup(ctx, &eksEnv, nodeSpec, &app)
+			if err != nil {
+				fmt.Println(err)
+				return err
+			}
+			fmt.Println(result)
 		}
-		fmt.Println(result)
+		if nodegroup != nil && nodegroup.Result != nil && nodegroup.Result.Nodegroup != nil {
+			nodegroupName := *nodegroup.Result.Nodegroup.NodegroupName
+			switch nodegroup.Result.Nodegroup.Status {
+			case types.NodegroupStatusCreating:
+				klog.Infof("Waiting for nodegroup %s to be created", nodegroupName)
+				return updateStatusWithNodegroup(ctx, &eksEnv, nodegroupName, string(types.NodegroupStatusCreating))
+			case types.NodegroupStatusCreateFailed:
+				klog.Errorf("Create failed for nodegroup %s", nodegroupName)
+				return updateStatusWithNodegroup(ctx, &eksEnv, nodegroupName, string(types.NodegroupStatusCreateFailed))
+			case types.NodegroupStatusActive:
+				if err := updateStatusWithNodegroup(ctx, &eksEnv, nodegroupName, string(types.NodegroupStatusActive)); err != nil {
+					return err
+				}
+				return syncNodegroup(ctx, &eksEnv)
+			}
+		} else {
+			klog.Error("Bad formatted result for node group")
+		}
 	}
+	return nil
+}
 
+func updateStatusWithNodegroup(ctx context.Context, eksEnv *eks.EksEnvironment, nodegroup, status string) error {
+	// update status with current nodegroup status
+	_, _, err := PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
+		in := obj.(*v1.Environment)
+		if in.Status.NodegroupStatus == nil {
+			in.Status.NodegroupStatus = make(map[string]string)
+		}
+		in.Status.NodegroupStatus[nodegroup] = status
+		return in
+	})
+	return err
+}
+
+func syncNodegroup(ctx context.Context, eksEnv *eks.EksEnvironment) error {
+	// update node group if spec node group is updated
 	return nil
 }
 

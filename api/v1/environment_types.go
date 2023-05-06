@@ -82,6 +82,12 @@ type EnvironmentStatus struct {
 	ObservedGeneration int64                  `json:"observedGeneration,omitempty"`
 	Conditions         []EnvironmentCondition `json:"conditions,omitempty"`
 	Version            string                 `json:"version,omitempty"`
+	// NodegroupStatus will contain a map of node group name & status
+	// Example:
+	// nodegroupStatus:
+	//    clickhouse: CREATING
+	//    druid:      ACTIVE
+	NodegroupStatus map[string]string `json:"nodegroupStatus,omitempty"`
 }
 
 type EnvironmentConditionType string
