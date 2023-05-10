@@ -27,7 +27,45 @@ type EnvironmentSpec struct {
 	EnvType string `json:"envType"`
 	// Cloud can be any pubic name ie aws, gcp, azure.
 	CloudInfra CloudInfraConfig `json:"cloudInfra"`
+	// DataInfra describes the data config information
+	Application []ApplicationConfig `json:"application"`
+	Size        []ApplicationSize   `json:"size"`
 }
+
+type ApplicationSize struct {
+	Name string      `json:"name"`
+	Spec AppSizeSpec `json:"spec"`
+}
+
+type ApplicationConfig struct {
+	Name string `json:"name"`
+	// +kubebuilder:validation:Enum:=Druid;ClickHouse
+	AppType ApplicationType `json:"appType"`
+	Size    string          `json:"size"`
+}
+
+type AppSizeSpec struct {
+	// +kubebuilder:validation:Enum:=Druid;ClickHouse
+	AppType ApplicationType `json:"appType"`
+	Nodes   *NodeGroupSpec  `json:"nodes,omitempty"`
+}
+
+type NodeGroupSpec struct {
+	NodeLabels map[string]string `json:"nodeLabels"`
+	NodeSize   string            `json:"nodeSize"`
+	// +kubebuilder:validation:Minimum:=1
+	Min int32 `json:"min"`
+	// +kubebuilder:validation:Minimum:=1
+	Max int32 `json:"max"`
+}
+
+type CloudType string
+
+const (
+	AWS   string = "aws"
+	GCP   string = "gcp"
+	AZURE string = "azure"
+)
 
 type CloudInfraConfig struct {
 	// CloudType
@@ -52,6 +90,12 @@ type EnvironmentStatus struct {
 	ObservedGeneration int64                  `json:"observedGeneration,omitempty"`
 	Conditions         []EnvironmentCondition `json:"conditions,omitempty"`
 	Version            string                 `json:"version,omitempty"`
+	// NodegroupStatus will contain a map of node group name & status
+	// Example:
+	// nodegroupStatus:
+	//    clickhouse: CREATING
+	//    druid:      ACTIVE
+	NodegroupStatus map[string]string `json:"nodegroupStatus,omitempty"`
 }
 
 type EnvironmentConditionType string
@@ -59,6 +103,8 @@ type EnvironmentConditionType string
 const (
 	ControlPlaneCreateInitiated EnvironmentConditionType = "ControlPlaneCreateInitiated"
 	ControlPlaneCreated         EnvironmentConditionType = "ControlPlaneCreated"
+	NodeGroupCreateInitiated    EnvironmentConditionType = "NodeGroupCreateInitiated"
+	NodeGroupCreated            EnvironmentConditionType = "NodeGroupCreated"
 	VersionUpgradeInitiated     EnvironmentConditionType = "VersionUpgradeInitiated"
 	VersionUpgradeSuccessful    EnvironmentConditionType = "VersionUpgradeSuccessful"
 )

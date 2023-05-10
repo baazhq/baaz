@@ -42,6 +42,25 @@ spec:
           spec:
             description: EnvironmentSpec defines the desired state of Environment
             properties:
+              application:
+                description: DataInfra describes the data config information
+                items:
+                  properties:
+                    appType:
+                      enum:
+                      - Druid
+                      - ClickHouse
+                      type: string
+                    name:
+                      type: string
+                    size:
+                      type: string
+                  required:
+                  - appType
+                  - name
+                  - size
+                  type: object
+                type: array
               cloudInfra:
                 description: Cloud can be any pubic name ie aws, gcp, azure.
                 properties:
@@ -92,9 +111,53 @@ spec:
               envType:
                 description: EnvType can be dev, stage, prod environments
                 type: string
+              size:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    spec:
+                      properties:
+                        appType:
+                          enum:
+                          - Druid
+                          - ClickHouse
+                          type: string
+                        nodes:
+                          properties:
+                            max:
+                              format: int32
+                              minimum: 1
+                              type: integer
+                            min:
+                              format: int32
+                              minimum: 1
+                              type: integer
+                            nodeLabels:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            nodeSize:
+                              type: string
+                          required:
+                          - max
+                          - min
+                          - nodeLabels
+                          - nodeSize
+                          type: object
+                      required:
+                      - appType
+                      type: object
+                  required:
+                  - name
+                  - spec
+                  type: object
+                type: array
             required:
+            - application
             - cloudInfra
             - envType
+            - size
             type: object
           status:
             description: EnvironmentStatus defines the observed state of Environment
@@ -146,6 +209,12 @@ spec:
                   - type
                   type: object
                 type: array
+              nodegroupStatus:
+                additionalProperties:
+                  type: string
+                description: 'NodegroupStatus will contain a map of node group name
+                  & status Example: nodegroupStatus: clickhouse: CREATING druid:      ACTIVE'
+                type: object
               observedGeneration:
                 format: int64
                 type: integer
