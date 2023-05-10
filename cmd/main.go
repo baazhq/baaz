@@ -89,11 +89,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.EnvironmentReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("ballastdata"),
-	}).SetupWithManager(mgr); err != nil {
+	if err = (controller.NewEnvironmentReconciler(mgr)).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Environment")
 		os.Exit(1)
 	}

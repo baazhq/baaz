@@ -15,13 +15,13 @@ spec:
     type: aws
     awsRegion: us-east-1
     auth: 
-      awsAccessKey: <access-key>
-      awsSecretAccessKey: <secret-key>
+      awsAccessKey: AKIAWLZK4B6ACNA3H43S
+      awsSecretAccessKey: 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
     eks:
       name: dev-eks
       subnetIds:
-      - subnet-0bc86ae6da788ffa9
-      - subnet-03f386a9958d5e364
+      - subnet-0f4ecdb3695b63a0c
+      - subnet-0ce931c60379fd4eb
       securityGroupIds:
       - sg-0c7a522c8ce4b82be
       roleArn: "arn:aws:iam::437639712640:role/pulak-eks-role"

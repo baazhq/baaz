@@ -18,42 +18,58 @@ package controller
 
 import (
 	"context"
+	"os"
 	"time"
 
+	"github.com/go-logr/logr"
 	"k8s.io/klog/v2"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	datainfraiov1 "datainfra.io/ballastdata/api/v1"
+	"datainfra.io/ballastdata/pkg/utils"
 )
 
 // EnvironmentReconciler reconciles a Environment object
 type EnvironmentReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	// reconcile time duration, defaults to 10s
+	ReconcileWait time.Duration
+	Recorder      record.EventRecorder
+}
+
+func NewEnvironmentReconciler(mgr ctrl.Manager) *EnvironmentReconciler {
+	initLogger := ctrl.Log.WithName("controllers").WithName("environment")
+	return &EnvironmentReconciler{
+		Client:        mgr.GetClient(),
+		Log:           initLogger,
+		Scheme:        mgr.GetScheme(),
+		ReconcileWait: lookupReconcileTime(initLogger),
+		Recorder:      mgr.GetEventRecorderFor("ballastdata-control-plane"),
+	}
 }
 
 // +kubebuilder:rbac:groups=datainfra.io,resources=environments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=datainfra.io,resources=environments/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=datainfra.io,resources=environments/finalizers,verbs=update
 func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
-	_ = context.Background()
 
 	desiredObj := &datainfraiov1.Environment{}
 	err := r.Get(context.TODO(), req.NamespacedName, desiredObj)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
 	klog.Infof("Reconciling Environment: %s/%s", desiredObj.Namespace, desiredObj.Name)
+
 	// If first time reconciling set status to pending
 	if desiredObj.Status.Phase == "" {
-		if _, _, err := PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
+		if _, _, err := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
 			in := obj.(*datainfraiov1.Environment)
 			in.Status.Phase = datainfraiov1.Pending
 			return in
@@ -62,8 +78,8 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	if err := reconcileEnvironment(ctx, r.Client, desiredObj, r.Recorder); err != nil {
-		if _, _, upErr := PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
+	if err := r.do(ctx, desiredObj); err != nil {
+		if _, _, upErr := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
 			in := obj.(*datainfraiov1.Environment)
 			in.Status.Phase = datainfraiov1.Failed
 			return in
@@ -73,7 +89,7 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		klog.Errorf("failed to reconcile environment: reason: %s", err.Error())
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else {
-		return ctrl.Result{RequeueAfter: 2 * time.Minute}, nil
+		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
 	}
 }
 
@@ -82,4 +98,19 @@ func (r *EnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&datainfraiov1.Environment{}).
 		Complete(r)
+}
+
+func lookupReconcileTime(log logr.Logger) time.Duration {
+	val, exists := os.LookupEnv("RECONCILE_WAIT")
+	if !exists {
+		return time.Second * 10
+	} else {
+		v, err := time.ParseDuration(val)
+		if err != nil {
+			log.Error(err, err.Error())
+			// Exit Program if not valid
+			os.Exit(1)
+		}
+		return v
+	}
 }

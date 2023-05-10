@@ -59,6 +59,14 @@ type NodeGroupSpec struct {
 	Max int32 `json:"max"`
 }
 
+type CloudType string
+
+const (
+	AWS   string = "aws"
+	GCP   string = "gcp"
+	AZURE string = "azure"
+)
+
 type CloudInfraConfig struct {
 	// CloudType
 	Type                string `json:"type"`
@@ -95,6 +103,8 @@ type EnvironmentConditionType string
 const (
 	ControlPlaneCreateInitiated EnvironmentConditionType = "ControlPlaneCreateInitiated"
 	ControlPlaneCreated         EnvironmentConditionType = "ControlPlaneCreated"
+	NodeGroupCreateInitiated    EnvironmentConditionType = "NodeGroupCreateInitiated"
+	NodeGroupCreated            EnvironmentConditionType = "NodeGroupCreated"
 	VersionUpgradeInitiated     EnvironmentConditionType = "VersionUpgradeInitiated"
 	VersionUpgradeSuccessful    EnvironmentConditionType = "VersionUpgradeSuccessful"
 )
