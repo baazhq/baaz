@@ -64,11 +64,38 @@ func createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment, c
 		}
 	}
 	if result.Result.Cluster.Status == eks.EKSStatusACTIVE {
-		return reconcileNodeGroup(ctx, eksEnv)
+		if err := reconcileNodeGroup(ctx, eksEnv); err != nil {
+			return err
+		}
+		return reconcileDefaultAddons(ctx, eksEnv)
 	}
-
 	return nil
+}
 
+func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) error {
+	ebsAddon, err := eksEnv.DescribeAddon(ctx, "aws-ebs-csi-driver", eksEnv.Env.Spec.CloudInfra.Eks.Name)
+	if err != nil {
+		var notFoundErr *types.ResourceNotFoundException
+		if errors.As(err, &notFoundErr) {
+			// create addon
+			_, cErr := eksEnv.CreateAddon(ctx, &eks.CreateAddonInput{
+				Name:        "aws-ebs-csi-driver",
+				ClusterName: eksEnv.Env.Spec.CloudInfra.Eks.Name,
+				RoleArn:     "arn:aws:iam::437639712640:role/ebs-sa-role",
+			})
+			if cErr != nil {
+				return cErr
+			}
+			klog.Info("aws-ebs-csi-driver addon creation is initiated")
+		} else {
+			return err
+		}
+		return nil
+	}
+	if ebsAddon.Result != nil && ebsAddon.Result.Addon != nil {
+		klog.Info("aws-ebs-csi-driver addon status: ", ebsAddon.Result.Addon.Status)
+	}
+	return nil
 }
 
 func reconcileNodeGroup(ctx context.Context, env *eks.EksEnvironment) error {

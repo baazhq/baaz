@@ -89,7 +89,7 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		klog.Errorf("failed to reconcile environment: reason: %s", err.Error())
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else {
-		return ctrl.Result{RequeueAfter: 2 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 }
 
