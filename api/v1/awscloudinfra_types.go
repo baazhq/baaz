@@ -20,9 +20,10 @@ type EksConfig struct {
 }
 
 type AwsCloudInfraConfigStatus struct {
-	EksStatus EksStatus `json:"eksStatus"`
+	EksStatus EksStatus `json:"eksStatus,omitempty"`
 }
 
 type EksStatus struct {
-	ClusterId string `json:"clusterId"`
+	ClusterId       string `json:"clusterId,omitempty"`
+	OIDCProviderArn string `json:"OIDCProviderArn,omitempty"`
 }

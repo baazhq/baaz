@@ -166,15 +166,14 @@ spec:
                 properties:
                   eksStatus:
                     properties:
+                      OIDCProviderArn:
+                        type: string
                       clusterId:
                         type: string
-                    required:
-                    - clusterId
                     type: object
                   type:
                     type: string
                 required:
-                - eksStatus
                 - type
                 type: object
               conditions:

@@ -2,9 +2,13 @@ package controller
 
 import (
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"time"
+
+	"datainfra.io/ballastdata/pkg/aws/iam"
 
 	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/aws/eks"
@@ -67,9 +71,60 @@ func createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment, c
 		if err := reconcileNodeGroup(ctx, eksEnv); err != nil {
 			return err
 		}
+		if err := reconcileOIDCProvider(ctx, eksEnv, result); err != nil {
+			return err
+		}
 		return reconcileDefaultAddons(ctx, eksEnv)
 	}
 	return nil
+}
+
+func reconcileOIDCProvider(ctx context.Context, eksEnv *eks.EksEnvironment, clusterOutput *eks.DescribeClusterOutput) error {
+	if clusterOutput == nil || clusterOutput.Result == nil || clusterOutput.Result.Cluster == nil ||
+		clusterOutput.Result.Cluster.Identity == nil || clusterOutput.Result.Cluster.Identity.Oidc == nil {
+		return errors.New("oidc provider url not found in cluster output")
+	}
+	oidcProviderUrl := *clusterOutput.Result.Cluster.Identity.Oidc.Issuer
+
+	// Compute the SHA-1 thumbprint of the OIDC provider certificate
+	thumbprintBytes := sha1.Sum([]byte(oidcProviderUrl))
+	thumbprint := hex.EncodeToString(thumbprintBytes[:])
+
+	input := &iam.CreateOIDCProviderInput{
+		URL:            oidcProviderUrl,
+		ThumbPrintList: []string{thumbprint},
+	}
+
+	oidcProviderArn := eksEnv.Env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn
+
+	if oidcProviderArn != "" {
+		// oidc provider is previously created
+		// looking for it
+		providers, err := iam.ListOIDCProvider(ctx, eksEnv)
+		if err != nil {
+			return err
+		}
+
+		for _, oidc := range providers.Result.OpenIDConnectProviderList {
+			if *oidc.Arn == eksEnv.Env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn {
+				// oidc provider is already created and existed
+				return nil
+			}
+		}
+	}
+
+	result, err := iam.CreateOIDCProvider(ctx, eksEnv, input)
+	if err != nil {
+		return err
+	}
+	fmt.Println("OIDC provider create initiated")
+	_, _, err = utils.PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
+		in := obj.(*v1.Environment)
+		in.Status.CloudInfraStatus.EksStatus.OIDCProviderArn = *result.Result.OpenIDConnectProviderArn
+
+		return in
+	})
+	return err
 }
 
 func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) error {
