@@ -73,14 +73,15 @@ func createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment, c
 }
 
 func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) error {
+	clusterName := eksEnv.Env.Spec.CloudInfra.Eks.Name
 	ebsAddon, err := eksEnv.DescribeAddon(ctx, "aws-ebs-csi-driver", eksEnv.Env.Spec.CloudInfra.Eks.Name)
 	if err != nil {
 		var notFoundErr *types.ResourceNotFoundException
 		if errors.As(err, &notFoundErr) {
-			// create addon
+			klog.Info("Creating aws-ebs-csi-driver addon")
 			_, cErr := eksEnv.CreateAddon(ctx, &eks.CreateAddonInput{
 				Name:        "aws-ebs-csi-driver",
-				ClusterName: eksEnv.Env.Spec.CloudInfra.Eks.Name,
+				ClusterName: clusterName,
 				RoleArn:     "arn:aws:iam::437639712640:role/ebs-sa-role",
 			})
 			if cErr != nil {
@@ -95,6 +96,30 @@ func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) err
 	if ebsAddon.Result != nil && ebsAddon.Result.Addon != nil {
 		klog.Info("aws-ebs-csi-driver addon status: ", ebsAddon.Result.Addon.Status)
 	}
+
+	coreDnsAddon, err := eksEnv.DescribeAddon(ctx, "coredns", eksEnv.Env.Spec.CloudInfra.Eks.Name)
+	if err != nil {
+		var notFoundErr *types.ResourceNotFoundException
+		if errors.As(err, &notFoundErr) {
+			klog.Info("Creating coredns addon")
+			_, cErr := eksEnv.CreateAddon(ctx, &eks.CreateAddonInput{
+				Name:        "coredns",
+				ClusterName: clusterName,
+				RoleArn:     eksEnv.Env.Spec.CloudInfra.Eks.RoleArn,
+			})
+			if cErr != nil {
+				return cErr
+			}
+			klog.Info("coredns addon creation is initiated")
+		} else {
+			return err
+		}
+		return nil
+	}
+	if coreDnsAddon != nil && coreDnsAddon.Result != nil && coreDnsAddon.Result.Addon != nil {
+		klog.Info("coredns addon status: ", coreDnsAddon.Result.Addon.Status)
+	}
+
 	return nil
 }
 
