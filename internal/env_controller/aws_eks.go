@@ -57,6 +57,8 @@ func createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment, c
 				klog.Info("Successfully initiated kubernetes control plane")
 				return nil
 
+			} else {
+				klog.Errorf(createEksResult.Result)
 			}
 
 		}
@@ -67,7 +69,7 @@ func createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment, c
 			return err
 		}
 	}
-	if result.Result.Cluster.Status == eks.EKSStatusACTIVE {
+	if result != nil && result.Result != nil && result.Result.Cluster != nil && result.Result.Cluster.Status == eks.EKSStatusACTIVE {
 		if err := reconcileNodeGroup(ctx, eksEnv); err != nil {
 			return err
 		}
