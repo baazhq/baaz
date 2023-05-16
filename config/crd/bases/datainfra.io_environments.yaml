@@ -64,15 +64,21 @@ spec:
               cloudInfra:
                 description: Cloud can be any pubic name ie aws, gcp, azure.
                 properties:
-                  auth:
+                  authSecretRef:
+                    description: AuthSecretRef holds the secret info which contains
+                      aws secret key & access key info Secret must be in the same
+                      namespace as environment
                     properties:
-                      awsAccessKey:
+                      accessKeyName:
                         type: string
-                      awsSecretAccessKey:
+                      secretKeyName:
+                        type: string
+                      secretName:
                         type: string
                     required:
-                    - awsAccessKey
-                    - awsSecretAccessKey
+                    - accessKeyName
+                    - secretKeyName
+                    - secretName
                     type: object
                   awsRegion:
                     type: string
@@ -103,7 +109,7 @@ spec:
                     description: CloudType
                     type: string
                 required:
-                - auth
+                - authSecretRef
                 - awsRegion
                 - eks
                 - type
@@ -173,8 +179,6 @@ spec:
                     type: object
                   type:
                     type: string
-                required:
-                - type
                 type: object
               conditions:
                 items:

@@ -126,7 +126,7 @@ type EnvironmentCondition struct {
 }
 
 type CloudInfraStatus struct {
-	Type                      string `json:"type"`
+	Type                      string `json:"type,omitempty"`
 	AwsCloudInfraConfigStatus `json:",inline,omitempty"`
 }
 
