@@ -199,17 +199,11 @@ func reconcileNodeGroup(ctx context.Context, env *eks.EksEnvironment) error {
 
 		ngs := eks.NewNodeGroup(ctx, env, &app, nodeSpec)
 
-		result, err := ngs.CreateNodeGroupForApp()
+		_, err = ngs.CreateNodeGroupForApp()
 		if err != nil {
 			return err
 		}
 
-		if result != nil && result.Result != nil && result.Result.Nodegroup != nil {
-			ngResult := result.Result.Nodegroup
-			if err := patchNodegroupStatus(ctx, env, *ngResult.NodegroupName, string(ngResult.Status)); err != nil {
-				return err
-			}
-		}
 	}
 
 	return nil
@@ -223,19 +217,6 @@ func patchAddonStatus(ctx context.Context, eksEnv *eks.EksEnvironment, addonName
 			in.Status.AddonStatus = make(map[string]string)
 		}
 		in.Status.AddonStatus[addonName] = status
-		return in
-	})
-	return err
-}
-
-func patchNodegroupStatus(ctx context.Context, eksEnv *eks.EksEnvironment, nodegroup, status string) error {
-	// update status with current nodegroup status
-	_, _, err := utils.PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
-		in := obj.(*v1.Environment)
-		if in.Status.NodegroupStatus == nil {
-			in.Status.NodegroupStatus = make(map[string]string)
-		}
-		in.Status.NodegroupStatus[nodegroup] = status
 		return in
 	})
 	return err
