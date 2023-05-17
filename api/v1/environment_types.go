@@ -96,6 +96,12 @@ type EnvironmentStatus struct {
 	//    clickhouse: CREATING
 	//    druid:      ACTIVE
 	NodegroupStatus map[string]string `json:"nodegroupStatus,omitempty"`
+	// AddonStatus holds a map of addon name & their current status
+	// Example:
+	// addonStatus:
+	//    aws-ebs-csi-driver: CREATING
+	//    coredns:            READY
+	AddonStatus map[string]string `json:"addonStatus,omitempty"`
 }
 
 type EnvironmentConditionType string
@@ -126,7 +132,7 @@ type EnvironmentCondition struct {
 }
 
 type CloudInfraStatus struct {
-	Type                      string `json:"type"`
+	Type                      string `json:"type,omitempty"`
 	AwsCloudInfraConfigStatus `json:",inline,omitempty"`
 }
 

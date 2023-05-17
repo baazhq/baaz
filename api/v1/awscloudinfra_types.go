@@ -1,14 +1,17 @@
 package v1
 
 type AwsCloudInfraConfig struct {
-	Auth      AwsAuthentication `json:"auth"`
-	AwsRegion string            `json:"awsRegion"`
-	Eks       EksConfig         `json:"eks"`
+	// AuthSecretRef holds the secret info which contains aws secret key & access key info
+	// Secret must be in the same namespace as environment
+	AuthSecretRef AWSAuthSecretRef `json:"authSecretRef"`
+	AwsRegion     string           `json:"awsRegion"`
+	Eks           EksConfig        `json:"eks"`
 }
 
-type AwsAuthentication struct {
-	AwsAccessKey       string `json:"awsAccessKey"`
-	AwsSecretAccessKey string `json:"awsSecretAccessKey"`
+type AWSAuthSecretRef struct {
+	SecretName    string `json:"secretName"`
+	AccessKeyName string `json:"accessKeyName"`
+	SecretKeyName string `json:"secretKeyName"`
 }
 
 type EksConfig struct {
@@ -20,9 +23,10 @@ type EksConfig struct {
 }
 
 type AwsCloudInfraConfigStatus struct {
-	EksStatus EksStatus `json:"eksStatus"`
+	EksStatus EksStatus `json:"eksStatus,omitempty"`
 }
 
 type EksStatus struct {
-	ClusterId string `json:"clusterId"`
+	ClusterId       string `json:"clusterId,omitempty"`
+	OIDCProviderArn string `json:"OIDCProviderArn,omitempty"`
 }

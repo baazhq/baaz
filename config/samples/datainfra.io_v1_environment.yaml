@@ -14,18 +14,19 @@ spec:
   cloudInfra:
     type: aws
     awsRegion: us-east-1
-    auth: 
-      awsAccessKey: AKIAWLZK4B6ACNA3H43S
-      awsSecretAccessKey: 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
+    authSecretRef:
+      secretName: aws-secret
+      accessKeyName: accessKey
+      secretKeyName: secretKey
     eks:
-      name: dev-eks
+      name: dev-eks-pulak
       subnetIds:
-      - subnet-0f4ecdb3695b63a0c
-      - subnet-0ce931c60379fd4eb
+      - subnet-0dafc6c1dbdec3cd8
+      - subnet-02952bc502311285b
       securityGroupIds:
-      - sg-0c7a522c8ce4b82be
+      - sg-07841b20dd2180cc4
       roleArn: "arn:aws:iam::437639712640:role/pulak-eks-role"
-      version: "1.22"
+      version: "1.25"
   application:
     - name: clickhouse-datascience
       appType: ClickHouse

@@ -5,6 +5,9 @@ import (
 	"errors"
 	"fmt"
 
+	"datainfra.io/ballastdata/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v1 "datainfra.io/ballastdata/api/v1"
 	app "datainfra.io/ballastdata/pkg/application"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -60,7 +63,7 @@ func (ng *NodeGroup) CreateNodeGroupForApp() (*CreateNodeGroupOutput, error) {
 		zkChiNgName := *aws.String(app.MakeZkChiNodeGroupName(ng.AppConfig.Name))
 
 		// System Pool
-		_, err := ng.describeNodegroup(systemNgName)
+		describeRes, err := ng.describeNodegroup(systemNgName)
 		if err != nil {
 			var ngNotFound *types.ResourceNotFoundException
 			if errors.As(err, &ngNotFound) {
@@ -69,13 +72,24 @@ func (ng *NodeGroup) CreateNodeGroupForApp() (*CreateNodeGroupOutput, error) {
 				if err != nil {
 					return nil, err
 				}
-				klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
+
+				if result != nil && result.Nodegroup != nil {
+					klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
+					if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
+						return nil, err
+					}
+				}
 			}
 			return nil, err
 		}
+		if describeRes != nil && describeRes.Result != nil && describeRes.Result.Nodegroup != nil {
+			if err := ng.patchStatus(*describeRes.Result.Nodegroup.NodegroupName, string(describeRes.Result.Nodegroup.Status)); err != nil {
+				return nil, err
+			}
+		}
 
 		// Clickhouse Pool
-		_, err = ng.describeNodegroup(chiNgName)
+		describeRes, err = ng.describeNodegroup(chiNgName)
 		if err != nil {
 			var ngNotFound *types.ResourceNotFoundException
 			if errors.As(err, &ngNotFound) {
@@ -84,13 +98,25 @@ func (ng *NodeGroup) CreateNodeGroupForApp() (*CreateNodeGroupOutput, error) {
 				if err != nil {
 					return nil, err
 				}
-				klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
+
+				if result != nil && result.Nodegroup != nil {
+					klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
+					if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
+						return nil, err
+					}
+				}
 			}
 			return nil, err
 		}
 
+		if describeRes != nil && describeRes.Result != nil && describeRes.Result.Nodegroup != nil {
+			if err := ng.patchStatus(*describeRes.Result.Nodegroup.NodegroupName, string(describeRes.Result.Nodegroup.Status)); err != nil {
+				return nil, err
+			}
+		}
+
 		// Zk Pool
-		_, err = ng.describeNodegroup(zkChiNgName)
+		describeRes, err = ng.describeNodegroup(zkChiNgName)
 		if err != nil {
 			var ngNotFound *types.ResourceNotFoundException
 			if errors.As(err, &ngNotFound) {
@@ -99,9 +125,20 @@ func (ng *NodeGroup) CreateNodeGroupForApp() (*CreateNodeGroupOutput, error) {
 				if err != nil {
 					return nil, err
 				}
-				klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
+
+				if result != nil && result.Nodegroup != nil {
+					klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
+					if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
+						return nil, err
+					}
+				}
 			}
 			return nil, err
+		}
+		if describeRes != nil && describeRes.Result != nil && describeRes.Result.Nodegroup != nil {
+			if err := ng.patchStatus(*describeRes.Result.Nodegroup.NodegroupName, string(describeRes.Result.Nodegroup.Status)); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -150,4 +187,17 @@ func (ng *NodeGroup) describeNodegroup(name string) (*DescribeNodegroupOutput, e
 		return nil, err
 	}
 	return &DescribeNodegroupOutput{Result: result}, nil
+}
+
+func (ng *NodeGroup) patchStatus(name, status string) error {
+	// update status with current nodegroup status
+	_, _, err := utils.PatchStatus(ng.Ctx, ng.EksEnv.Client, ng.EksEnv.Env, func(obj client.Object) client.Object {
+		in := obj.(*v1.Environment)
+		if in.Status.NodegroupStatus == nil {
+			in.Status.NodegroupStatus = make(map[string]string)
+		}
+		in.Status.NodegroupStatus[name] = status
+		return in
+	})
+	return err
 }

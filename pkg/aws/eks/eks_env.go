@@ -217,3 +217,46 @@ func (eksEnv *EksEnvironment) syncEksControlPlane(clusterResult *DescribeCluster
 	}
 	return nil
 }
+
+type DescribeAddonOutput struct {
+	Result *eks.DescribeAddonOutput `json:"result"`
+}
+
+func (eksEnv *EksEnvironment) DescribeAddon(ctx context.Context, addonName, clusterName string) (*DescribeAddonOutput, error) {
+	eksClient := awseks.NewFromConfig(eksEnv.Config)
+
+	input := &awseks.DescribeAddonInput{
+		AddonName:   aws.String(addonName),
+		ClusterName: aws.String(clusterName),
+	}
+	result, err := eksClient.DescribeAddon(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	return &DescribeAddonOutput{Result: result}, nil
+}
+
+type CreateAddonOutput struct {
+	Result *eks.CreateAddonOutput `json:"result"`
+}
+
+type CreateAddonInput struct {
+	Name        string `json:"name"`
+	ClusterName string `json:"clusterName"`
+	RoleArn     string `json:"roleArn"`
+}
+
+func (eksEnv *EksEnvironment) CreateAddon(ctx context.Context, params *CreateAddonInput) (*CreateAddonOutput, error) {
+	eksClient := awseks.NewFromConfig(eksEnv.Config)
+
+	input := &awseks.CreateAddonInput{
+		AddonName:             aws.String(params.Name),
+		ClusterName:           aws.String(params.ClusterName),
+		ServiceAccountRoleArn: aws.String(params.RoleArn),
+	}
+	result, err := eksClient.CreateAddon(ctx, input)
+	if err != nil {
+		return nil, err
+	}
+	return &CreateAddonOutput{Result: result}, nil
+}

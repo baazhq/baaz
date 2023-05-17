@@ -64,15 +64,21 @@ spec:
               cloudInfra:
                 description: Cloud can be any pubic name ie aws, gcp, azure.
                 properties:
-                  auth:
+                  authSecretRef:
+                    description: AuthSecretRef holds the secret info which contains
+                      aws secret key & access key info Secret must be in the same
+                      namespace as environment
                     properties:
-                      awsAccessKey:
+                      accessKeyName:
                         type: string
-                      awsSecretAccessKey:
+                      secretKeyName:
+                        type: string
+                      secretName:
                         type: string
                     required:
-                    - awsAccessKey
-                    - awsSecretAccessKey
+                    - accessKeyName
+                    - secretKeyName
+                    - secretName
                     type: object
                   awsRegion:
                     type: string
@@ -103,7 +109,7 @@ spec:
                     description: CloudType
                     type: string
                 required:
-                - auth
+                - authSecretRef
                 - awsRegion
                 - eks
                 - type
@@ -162,20 +168,23 @@ spec:
           status:
             description: EnvironmentStatus defines the observed state of Environment
             properties:
+              addonStatus:
+                additionalProperties:
+                  type: string
+                description: 'AddonStatus holds a map of addon name & their current
+                  status Example: addonStatus: aws-ebs-csi-driver: CREATING coredns:            READY'
+                type: object
               cloudInfraStatus:
                 properties:
                   eksStatus:
                     properties:
+                      OIDCProviderArn:
+                        type: string
                       clusterId:
                         type: string
-                    required:
-                    - clusterId
                     type: object
                   type:
                     type: string
-                required:
-                - eksStatus
-                - type
                 type: object
               conditions:
                 items:
