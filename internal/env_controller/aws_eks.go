@@ -151,7 +151,11 @@ func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) err
 		return nil
 	}
 	if ebsAddon.Result != nil && ebsAddon.Result.Addon != nil {
-		klog.Info("aws-ebs-csi-driver addon status: ", ebsAddon.Result.Addon.Status)
+		addonRes := ebsAddon.Result.Addon
+		klog.Info("aws-ebs-csi-driver addon status: ", addonRes.Status)
+		if err := patchAddonStatus(ctx, eksEnv, *addonRes.AddonName, string(addonRes.Status)); err != nil {
+			return err
+		}
 	}
 
 	coreDnsAddon, err := eksEnv.DescribeAddon(ctx, "coredns", eksEnv.Env.Spec.CloudInfra.Eks.Name)
@@ -174,7 +178,11 @@ func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) err
 		return nil
 	}
 	if coreDnsAddon != nil && coreDnsAddon.Result != nil && coreDnsAddon.Result.Addon != nil {
-		klog.Info("coredns addon status: ", coreDnsAddon.Result.Addon.Status)
+		addonRes := coreDnsAddon.Result.Addon
+		klog.Info("coredns addon status: ", addonRes.Status)
+		if err := patchAddonStatus(ctx, eksEnv, *addonRes.AddonName, string(addonRes.Status)); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -191,17 +199,36 @@ func reconcileNodeGroup(ctx context.Context, env *eks.EksEnvironment) error {
 
 		ngs := eks.NewNodeGroup(ctx, env, &app, nodeSpec)
 
-		_, err = ngs.CreateNodeGroupForApp()
+		result, err := ngs.CreateNodeGroupForApp()
 		if err != nil {
 			return err
 		}
 
+		if result != nil && result.Result != nil && result.Result.Nodegroup != nil {
+			ngResult := result.Result.Nodegroup
+			if err := patchNodegroupStatus(ctx, env, *ngResult.NodegroupName, string(ngResult.Status)); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
 }
 
-func updateStatusWithNodegroup(ctx context.Context, eksEnv *eks.EksEnvironment, nodegroup, status string) error {
+func patchAddonStatus(ctx context.Context, eksEnv *eks.EksEnvironment, addonName, status string) error {
+	// update status with current addon status
+	_, _, err := utils.PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
+		in := obj.(*v1.Environment)
+		if in.Status.AddonStatus == nil {
+			in.Status.AddonStatus = make(map[string]string)
+		}
+		in.Status.AddonStatus[addonName] = status
+		return in
+	})
+	return err
+}
+
+func patchNodegroupStatus(ctx context.Context, eksEnv *eks.EksEnvironment, nodegroup, status string) error {
 	// update status with current nodegroup status
 	_, _, err := utils.PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
 		in := obj.(*v1.Environment)

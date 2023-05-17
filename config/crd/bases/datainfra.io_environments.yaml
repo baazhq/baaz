@@ -168,6 +168,12 @@ spec:
           status:
             description: EnvironmentStatus defines the observed state of Environment
             properties:
+              addonStatus:
+                additionalProperties:
+                  type: string
+                description: 'AddonStatus holds a map of addon name & their current
+                  status Example: addonStatus: aws-ebs-csi-driver: CREATING coredns:            READY'
+                type: object
               cloudInfraStatus:
                 properties:
                   eksStatus:

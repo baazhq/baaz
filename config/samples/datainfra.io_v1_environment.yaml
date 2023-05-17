@@ -21,10 +21,10 @@ spec:
     eks:
       name: dev-eks-pulak
       subnetIds:
-      - subnet-0c5f93cb1a6f23067
-      - subnet-05edde4b86a073f75
+      - subnet-0dafc6c1dbdec3cd8
+      - subnet-02952bc502311285b
       securityGroupIds:
-      - sg-0aa6fc40e072f8fbc
+      - sg-07841b20dd2180cc4
       roleArn: "arn:aws:iam::437639712640:role/pulak-eks-role"
       version: "1.25"
   application:
