@@ -139,7 +139,7 @@ func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) err
 			_, cErr := eksEnv.CreateAddon(ctx, &eks.CreateAddonInput{
 				Name:        "aws-ebs-csi-driver",
 				ClusterName: clusterName,
-				RoleArn:     "arn:aws:iam::437639712640:role/ebs-sa-role",
+				RoleArn:     "arn:aws:iam::437639712640:role/ebs-csi-irsa-role",
 			})
 			if cErr != nil {
 				return cErr
