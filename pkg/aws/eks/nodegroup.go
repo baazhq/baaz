@@ -9,11 +9,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "datainfra.io/ballastdata/api/v1"
-	app "datainfra.io/ballastdata/pkg/application"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"k8s.io/klog/v2"
+)
+
+type nodeGroupType string
+
+const (
+	app    nodeGroupType = "application"
+	system nodeGroupType = "system"
 )
 
 type CreateNodeGroupOutput struct {
@@ -52,100 +58,74 @@ func NewNodeGroup(
 
 func (ng *NodeGroup) CreateNodeGroupForApp() (*CreateNodeGroupOutput, error) {
 
-	eksClient := awseks.NewFromConfig(ng.EksEnv.Config)
-
 	switch ng.AppConfig.AppType {
 
 	case v1.ClickHouse:
 
-		systemNgName := *aws.String(app.MakeSystemNodeGroupName(ng.AppConfig.Name))
-		chiNgName := *aws.String(app.MakeChiNodeGroupName(ng.AppConfig.Name))
-		zkChiNgName := *aws.String(app.MakeZkChiNodeGroupName(ng.AppConfig.Name))
+		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
+		chiNgName := *aws.String(makeChiNodeGroupName(ng.AppConfig.Name))
+		zkChiNgName := *aws.String(makeZkChiNodeGroupName(ng.AppConfig.Name))
 
-		// System Pool
-		describeRes, err := ng.describeNodegroup(systemNgName)
+		// system nodepool
+		_, err := ng.createOrUpdateNodeGroup(systemNgName, system)
 		if err != nil {
-			var ngNotFound *types.ResourceNotFoundException
-			if errors.As(err, &ngNotFound) {
-				systemNodeGroup := ng.getNodeGroup(systemNgName)
-				result, err := eksClient.CreateNodegroup(ng.Ctx, systemNodeGroup)
-				if err != nil {
-					return nil, err
-				}
-
-				if result != nil && result.Nodegroup != nil {
-					klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
-					if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
-						return nil, err
-					}
-				}
-			}
-			return nil, err
-		}
-		if describeRes != nil && describeRes.Result != nil && describeRes.Result.Nodegroup != nil {
-			if err := ng.patchStatus(*describeRes.Result.Nodegroup.NodegroupName, string(describeRes.Result.Nodegroup.Status)); err != nil {
-				return nil, err
-			}
+			return &CreateNodeGroupOutput{}, nil
 		}
 
-		// Clickhouse Pool
-		describeRes, err = ng.describeNodegroup(chiNgName)
+		// clickhouse nodepool
+		_, err = ng.createOrUpdateNodeGroup(chiNgName, app)
 		if err != nil {
-			var ngNotFound *types.ResourceNotFoundException
-			if errors.As(err, &ngNotFound) {
-				chiNodeGroup := ng.getNodeGroup(chiNgName)
-				result, err := eksClient.CreateNodegroup(ng.Ctx, chiNodeGroup)
-				if err != nil {
-					return nil, err
-				}
-
-				if result != nil && result.Nodegroup != nil {
-					klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
-					if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
-						return nil, err
-					}
-				}
-			}
-			return nil, err
+			return &CreateNodeGroupOutput{}, nil
 		}
 
-		if describeRes != nil && describeRes.Result != nil && describeRes.Result.Nodegroup != nil {
-			if err := ng.patchStatus(*describeRes.Result.Nodegroup.NodegroupName, string(describeRes.Result.Nodegroup.Status)); err != nil {
-				return nil, err
-			}
-		}
-
-		// Zk Pool
-		describeRes, err = ng.describeNodegroup(zkChiNgName)
+		// zookeeper nodepool
+		_, err = ng.createOrUpdateNodeGroup(zkChiNgName, app)
 		if err != nil {
-			var ngNotFound *types.ResourceNotFoundException
-			if errors.As(err, &ngNotFound) {
-				zkChiNodeGroup := ng.getNodeGroup(zkChiNgName)
-				result, err := eksClient.CreateNodegroup(ng.Ctx, zkChiNodeGroup)
-				if err != nil {
-					return nil, err
-				}
+			return &CreateNodeGroupOutput{}, nil
+		}
 
-				if result != nil && result.Nodegroup != nil {
-					klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
-					if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
-						return nil, err
-					}
-				}
-			}
-			return nil, err
+	case v1.Druid:
+
+		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
+		druidDataNodeNgName := *aws.String(makeDruidDataNodeGroupName(ng.AppConfig.Name))
+		druidQueryNodeNgName := *aws.String(makeDruidQueryNodeNodeGroupName(ng.AppConfig.Name))
+		druidMasterNodeNgName := *aws.String(makeDruidMasterNodeNodeGroupName(ng.AppConfig.Name))
+
+		// system nodepool
+		_, err := ng.createOrUpdateNodeGroup(systemNgName, system)
+		if err != nil {
+			return &CreateNodeGroupOutput{}, nil
 		}
-		if describeRes != nil && describeRes.Result != nil && describeRes.Result.Nodegroup != nil {
-			if err := ng.patchStatus(*describeRes.Result.Nodegroup.NodegroupName, string(describeRes.Result.Nodegroup.Status)); err != nil {
-				return nil, err
-			}
+
+		// druid datanodes nodepool
+		_, err = ng.createOrUpdateNodeGroup(druidDataNodeNgName, app)
+		if err != nil {
+			return &CreateNodeGroupOutput{}, nil
 		}
+		// druid querynode nodepool
+		_, err = ng.createOrUpdateNodeGroup(druidQueryNodeNgName, app)
+		if err != nil {
+			return &CreateNodeGroupOutput{}, nil
+		}
+
+		// druid masternode nodepool
+		_, err = ng.createOrUpdateNodeGroup(druidMasterNodeNgName, app)
+		if err != nil {
+			return &CreateNodeGroupOutput{}, nil
+		}
+
 	}
 
 	return &CreateNodeGroupOutput{}, nil
 }
 
-func (ng *NodeGroup) getNodeGroup(name string) *awseks.CreateNodegroupInput {
+func (ng *NodeGroup) getNodeGroup(name string, ngType nodeGroupType) *awseks.CreateNodegroupInput {
+
+	var taints = []types.Taint{}
+
+	if ngType == app {
+		taints = *makeTaints(name)
+	}
 
 	return &awseks.CreateNodegroupInput{
 		ClusterName:        aws.String(ng.EksEnv.Env.Spec.CloudInfra.Eks.Name),
@@ -169,7 +149,7 @@ func (ng *NodeGroup) getNodeGroup(name string) *awseks.CreateNodegroupInput {
 		Tags: map[string]string{
 			fmt.Sprintf("kubernetes.io/cluster/%s", ng.EksEnv.Env.Spec.CloudInfra.Eks.Name): "owned",
 		},
-		Taints:       *app.MakeTaints(name),
+		Taints:       taints,
 		UpdateConfig: nil,
 		Version:      nil,
 	}
@@ -200,4 +180,34 @@ func (ng *NodeGroup) patchStatus(name, status string) error {
 		return in
 	})
 	return err
+}
+
+func (ng *NodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGroupType) (*CreateNodeGroupOutput, error) {
+	eksClient := awseks.NewFromConfig(ng.EksEnv.Config)
+
+	describeRes, err := ng.describeNodegroup(nodeGroupName)
+	if err != nil {
+		var ngNotFound *types.ResourceNotFoundException
+		if errors.As(err, &ngNotFound) {
+			nodeGroup := ng.getNodeGroup(nodeGroupName, ngType)
+			result, err := eksClient.CreateNodegroup(ng.Ctx, nodeGroup)
+			if err != nil {
+				return nil, err
+			}
+
+			if result != nil && result.Nodegroup != nil {
+				klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
+				if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
+					return nil, err
+				}
+			}
+		}
+		return nil, err
+	}
+	if describeRes != nil && describeRes.Result != nil && describeRes.Result.Nodegroup != nil {
+		if err := ng.patchStatus(*describeRes.Result.Nodegroup.NodegroupName, string(describeRes.Result.Nodegroup.Status)); err != nil {
+			return nil, err
+		}
+	}
+	return &CreateNodeGroupOutput{}, nil
 }
