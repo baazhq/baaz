@@ -11,7 +11,7 @@ $ OIDC_PROVIDER=$(aws eks describe-cluster --name $EKS_CLUSTER_NAME \
   --query "cluster.identity.oidc.issuer" --output text | sed -e 's|^https://||')
 
 # in trust.json we have to make sure that aws-ebs-csi-driver controller will be running in the
-# kube-system namespace with service account named "aws-ebs-csi-driver"
+# kube-system namespace with service account named "ebs-csi-controller-sa"
 cat <<-EOF > trust.json
 {
     "Version": "2012-10-17",
@@ -24,7 +24,7 @@ cat <<-EOF > trust.json
             "Action": "sts:AssumeRoleWithWebIdentity",
             "Condition": {
                 "StringEquals": {
-                    "$OIDC_PROVIDER:sub": "system:serviceaccount:kube-system:aws-ebs-csi-driver", 
+                    "$OIDC_PROVIDER:sub": "system:serviceaccount:kube-system:ebs-csi-controller-sa", 
                     "$OIDC_PROVIDER:aud": "sts.amazonaws.com"
                 }
             }
@@ -38,8 +38,8 @@ aws iam create-role --role-name $IRSA_ROLE --assume-role-policy-document file://
 
 # attach policy with the role 
 # you can manually attach `AmazonEBSCSIDriverPolicy` policy with the Role
-$ POLICY_ARN="arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-$ aws iam attach-role-policy --role-name $IRSA_ROLE --policy-arn $POLICY_ARN
+POLICY_ARN="arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+aws iam attach-role-policy --role-name $IRSA_ROLE --policy-arn $POLICY_ARN
 ```
 
 Note: For coredns we can use same role that is used for eks. For that, it seems we don't need any irsa.
