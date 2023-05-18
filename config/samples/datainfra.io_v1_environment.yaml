@@ -21,16 +21,19 @@ spec:
     eks:
       name: dev-eks-pulak
       subnetIds:
-      - subnet-0dafc6c1dbdec3cd8
-      - subnet-02952bc502311285b
+      - subnet-0f4ecdb3695b63a0c
+      - subnet-0ce931c60379fd4eb
       securityGroupIds:
-      - sg-07841b20dd2180cc4
+      - sg-049b9e990b8a8e35f
       roleArn: "arn:aws:iam::437639712640:role/pulak-eks-role"
       version: "1.25"
   application:
     - name: clickhouse-datascience
       appType: ClickHouse
       size: clickhouse-small
+    - name: clickhouse-new
+      appType: ClickHouse
+      size: clickhouse-medium
   size:
     - name: clickhouse-small
       spec:
@@ -39,5 +42,14 @@ spec:
           nodeLabels:
             app: clickhouse
           nodeSize: t2.small
+          min: 1
+          max: 3
+    - name: clickhouse-medium
+      spec:
+        appType: ClickHouse
+        nodes:
+          nodeLabels:
+            app: clickhouse
+          nodeSize: t2.medium
           min: 1
           max: 3
