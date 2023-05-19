@@ -127,9 +127,14 @@ func (ng *NodeGroup) getNodeGroup(name string, ngType nodeGroupType) *awseks.Cre
 		taints = *makeTaints(name)
 	}
 
+	nodeRole, err := ng.EksEnv.createNodeIamRole(name)
+	if err != nil {
+		return &awseks.CreateNodegroupInput{}
+	}
+
 	return &awseks.CreateNodegroupInput{
 		ClusterName:        aws.String(ng.EksEnv.Env.Spec.CloudInfra.Eks.Name),
-		NodeRole:           aws.String("arn:aws:iam::437639712640:role/pulak-eks-node-role"),
+		NodeRole:           aws.String(*nodeRole.Role.Arn),
 		NodegroupName:      aws.String(name),
 		Subnets:            ng.EksEnv.Env.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
 		AmiType:            "",
