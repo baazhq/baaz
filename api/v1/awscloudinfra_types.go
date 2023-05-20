@@ -18,7 +18,6 @@ type EksConfig struct {
 	Name             string   `json:"name"`
 	SubnetIds        []string `json:"subnetIds"`
 	SecurityGroupIds []string `json:"securityGroupIds"`
-	RoleArn          string   `json:"roleArn"`
 	Version          string   `json:"version"`
 }
 

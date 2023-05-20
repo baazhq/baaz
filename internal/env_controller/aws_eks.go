@@ -128,6 +128,11 @@ func reconcileOIDCProvider(ctx context.Context, eksEnv *eks.EksEnvironment, clus
 }
 
 func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) error {
+	oidcProvider := eksEnv.Env.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
+	if oidcProvider == "" {
+		klog.Info("ebs-csi-driver creation: waiting for oidcProvider to be created")
+		return nil
+	}
 	clusterName := eksEnv.Env.Spec.CloudInfra.Eks.Name
 	ebsAddon, err := eksEnv.DescribeAddon(ctx, "aws-ebs-csi-driver", eksEnv.Env.Spec.CloudInfra.Eks.Name)
 	if err != nil {
@@ -137,7 +142,6 @@ func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) err
 			_, cErr := eksEnv.CreateAddon(ctx, &eks.CreateAddonInput{
 				Name:        "aws-ebs-csi-driver",
 				ClusterName: clusterName,
-				RoleArn:     "arn:aws:iam::437639712640:role/AmazonEKS_EBS_CSI_DriverRoles",
 			})
 			if cErr != nil {
 				return cErr

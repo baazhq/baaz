@@ -86,8 +86,6 @@ spec:
                     properties:
                       name:
                         type: string
-                      roleArn:
-                        type: string
                       securityGroupIds:
                         items:
                           type: string
@@ -100,7 +98,6 @@ spec:
                         type: string
                     required:
                     - name
-                    - roleArn
                     - securityGroupIds
                     - subnetIds
                     - version
