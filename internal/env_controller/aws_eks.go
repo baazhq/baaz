@@ -164,6 +164,7 @@ func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) err
 }
 
 func reconcileNodeGroup(ctx context.Context, env *eks.EksEnvironment) error {
+	klog.Info("Reconciling node groups")
 
 	for _, app := range env.Env.Spec.Application {
 

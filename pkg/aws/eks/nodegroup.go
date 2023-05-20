@@ -69,19 +69,19 @@ func (ng *NodeGroup) CreateNodeGroupForApp() (*CreateNodeGroupOutput, error) {
 		// system nodepool
 		_, err := ng.createOrUpdateNodeGroup(systemNgName, system)
 		if err != nil {
-			return &CreateNodeGroupOutput{}, nil
+			return nil, err
 		}
 
 		// clickhouse nodepool
 		_, err = ng.createOrUpdateNodeGroup(chiNgName, app)
 		if err != nil {
-			return &CreateNodeGroupOutput{}, nil
+			return nil, err
 		}
 
 		// zookeeper nodepool
 		_, err = ng.createOrUpdateNodeGroup(zkChiNgName, app)
 		if err != nil {
-			return &CreateNodeGroupOutput{}, nil
+			return nil, err
 		}
 
 	case v1.Druid:
@@ -94,24 +94,24 @@ func (ng *NodeGroup) CreateNodeGroupForApp() (*CreateNodeGroupOutput, error) {
 		// system nodepool
 		_, err := ng.createOrUpdateNodeGroup(systemNgName, system)
 		if err != nil {
-			return &CreateNodeGroupOutput{}, nil
+			return nil, err
 		}
 
 		// druid datanodes nodepool
 		_, err = ng.createOrUpdateNodeGroup(druidDataNodeNgName, app)
 		if err != nil {
-			return &CreateNodeGroupOutput{}, nil
+			return nil, err
 		}
 		// druid querynode nodepool
 		_, err = ng.createOrUpdateNodeGroup(druidQueryNodeNgName, app)
 		if err != nil {
-			return &CreateNodeGroupOutput{}, nil
+			return nil, err
 		}
 
 		// druid masternode nodepool
 		_, err = ng.createOrUpdateNodeGroup(druidMasterNodeNgName, app)
 		if err != nil {
-			return &CreateNodeGroupOutput{}, nil
+			return nil, err
 		}
 
 	}
@@ -119,7 +119,7 @@ func (ng *NodeGroup) CreateNodeGroupForApp() (*CreateNodeGroupOutput, error) {
 	return &CreateNodeGroupOutput{}, nil
 }
 
-func (ng *NodeGroup) getNodeGroup(name string, ngType nodeGroupType) *awseks.CreateNodegroupInput {
+func (ng *NodeGroup) getNodeGroup(name string, ngType nodeGroupType) (*awseks.CreateNodegroupInput, error) {
 
 	var taints = []types.Taint{}
 
@@ -129,7 +129,11 @@ func (ng *NodeGroup) getNodeGroup(name string, ngType nodeGroupType) *awseks.Cre
 
 	nodeRole, err := ng.EksEnv.createNodeIamRole(name)
 	if err != nil {
-		return &awseks.CreateNodegroupInput{}
+		return nil, err
+	}
+
+	if nodeRole.Role == nil {
+		return nil, errors.New("node role is nil")
 	}
 
 	return &awseks.CreateNodegroupInput{
@@ -157,7 +161,7 @@ func (ng *NodeGroup) getNodeGroup(name string, ngType nodeGroupType) *awseks.Cre
 		Taints:       taints,
 		UpdateConfig: nil,
 		Version:      nil,
-	}
+	}, nil
 }
 
 func (ng *NodeGroup) describeNodegroup(name string) (*DescribeNodegroupOutput, error) {
@@ -194,7 +198,10 @@ func (ng *NodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGr
 	if err != nil {
 		var ngNotFound *types.ResourceNotFoundException
 		if errors.As(err, &ngNotFound) {
-			nodeGroup := ng.getNodeGroup(nodeGroupName, ngType)
+			nodeGroup, err := ng.getNodeGroup(nodeGroupName, ngType)
+			if err != nil {
+				return nil, err
+			}
 			result, err := eksClient.CreateNodegroup(ng.Ctx, nodeGroup)
 			if err != nil {
 				return nil, err

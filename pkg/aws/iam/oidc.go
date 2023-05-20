@@ -9,6 +9,10 @@ import (
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 )
 
+const (
+	defaultClientID = "sts.amazonaws.com"
+)
+
 type CreateOIDCProviderInput struct {
 	URL            string   `json:"url"`
 	ThumbPrintList []string `json:"thumbPrintList"`
@@ -39,6 +43,7 @@ func CreateOIDCProvider(ctx context.Context, eksEnv *eks.EksEnvironment, param *
 	result, err := iamClient.CreateOpenIDConnectProvider(ctx, &awsiam.CreateOpenIDConnectProviderInput{
 		ThumbprintList: param.ThumbPrintList,
 		Url:            aws.String(param.URL),
+		ClientIDList:   []string{defaultClientID},
 	})
 	if err != nil {
 		return nil, err
