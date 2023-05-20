@@ -3,9 +3,10 @@ package controller
 import (
 	"context"
 	"crypto/sha1"
-	"encoding/hex"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"datainfra.io/ballastdata/pkg/aws/iam"
@@ -80,6 +81,31 @@ func createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment, c
 	return nil
 }
 
+func getIssuerCAThumbprint(isserURL string) (string, error) {
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+				MinVersion:         tls.VersionTLS12,
+			},
+			Proxy: http.ProxyFromEnvironment,
+		},
+	}
+
+	response, err := client.Get(isserURL)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	if response.TLS != nil {
+		if numCerts := len(response.TLS.PeerCertificates); numCerts >= 1 {
+			root := response.TLS.PeerCertificates[numCerts-1]
+			return fmt.Sprintf("%x", sha1.Sum(root.Raw)), nil
+		}
+	}
+	return "", errors.New("unable to get OIDC issuer's certificate")
+}
+
 func reconcileOIDCProvider(ctx context.Context, eksEnv *eks.EksEnvironment, clusterOutput *eks.DescribeClusterOutput) error {
 	if clusterOutput == nil || clusterOutput.Result == nil || clusterOutput.Result.Cluster == nil ||
 		clusterOutput.Result.Cluster.Identity == nil || clusterOutput.Result.Cluster.Identity.Oidc == nil {
@@ -88,8 +114,10 @@ func reconcileOIDCProvider(ctx context.Context, eksEnv *eks.EksEnvironment, clus
 	oidcProviderUrl := *clusterOutput.Result.Cluster.Identity.Oidc.Issuer
 
 	// Compute the SHA-1 thumbprint of the OIDC provider certificate
-	thumbprintBytes := sha1.Sum([]byte(oidcProviderUrl))
-	thumbprint := hex.EncodeToString(thumbprintBytes[:])
+	thumbprint, err := getIssuerCAThumbprint(oidcProviderUrl)
+	if err != nil {
+		return err
+	}
 
 	input := &iam.CreateOIDCProviderInput{
 		URL:            oidcProviderUrl,
@@ -128,6 +156,11 @@ func reconcileOIDCProvider(ctx context.Context, eksEnv *eks.EksEnvironment, clus
 }
 
 func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) error {
+	oidcProvider := eksEnv.Env.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
+	if oidcProvider == "" {
+		klog.Info("ebs-csi-driver creation: waiting for oidcProvider to be created")
+		return nil
+	}
 	clusterName := eksEnv.Env.Spec.CloudInfra.Eks.Name
 	ebsAddon, err := eksEnv.DescribeAddon(ctx, "aws-ebs-csi-driver", eksEnv.Env.Spec.CloudInfra.Eks.Name)
 	if err != nil {
@@ -137,7 +170,6 @@ func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) err
 			_, cErr := eksEnv.CreateAddon(ctx, &eks.CreateAddonInput{
 				Name:        "aws-ebs-csi-driver",
 				ClusterName: clusterName,
-				RoleArn:     "arn:aws:iam::437639712640:role/AmazonEKS_EBS_CSI_DriverRoles",
 			})
 			if cErr != nil {
 				return cErr
@@ -160,6 +192,7 @@ func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) err
 }
 
 func reconcileNodeGroup(ctx context.Context, env *eks.EksEnvironment) error {
+	klog.Info("Reconciling node groups")
 
 	for _, app := range env.Env.Spec.Application {
 

@@ -80,26 +80,19 @@ func NewConfig(awsRegion string) *aws.Config {
 }
 
 func (eksEnv *EksEnvironment) CreateEks() EksOutput {
-
-	errChannel := make(chan error)
-
-	go eksEnv.createEks(errChannel)
-
-	for err := range errChannel {
-		if err != nil {
-			return EksOutput{Result: err.Error()}
-		}
-		break
+	if err := eksEnv.createEks(); err != nil {
+		return EksOutput{Result: err.Error()}
 	}
+
 	return EksOutput{Result: string(EksControlPlaneInitatedMsg), Success: true}
 }
 
-func (eksEnv *EksEnvironment) createEks(errorChan chan<- error) {
+func (eksEnv *EksEnvironment) createEks() error {
 	eksClient := eks.NewFromConfig(eksEnv.Config)
 
 	roleName, err := eksEnv.createClusterIamRole()
 	if err != nil {
-		errorChan <- err
+		return err
 	}
 	_, err = eksClient.CreateCluster(eksEnv.Context, &eks.CreateClusterInput{
 		Name: &eksEnv.Env.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
@@ -110,7 +103,7 @@ func (eksEnv *EksEnvironment) createEks(errorChan chan<- error) {
 		Version: aws.String(eksEnv.Env.Spec.CloudInfra.Eks.Version),
 	})
 
-	errorChan <- err
+	return err
 }
 
 func (eksEnv *EksEnvironment) UpdateEks() EksOutput {
@@ -247,16 +240,21 @@ type CreateAddonOutput struct {
 type CreateAddonInput struct {
 	Name        string `json:"name"`
 	ClusterName string `json:"clusterName"`
-	RoleArn     string `json:"roleArn"`
 }
 
 func (eksEnv *EksEnvironment) CreateAddon(ctx context.Context, params *CreateAddonInput) (*CreateAddonOutput, error) {
 	eksClient := awseks.NewFromConfig(eksEnv.Config)
 
+	role, err := eksEnv.createEbsCSIRole(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	input := &awseks.CreateAddonInput{
 		AddonName:             aws.String(params.Name),
 		ClusterName:           aws.String(params.ClusterName),
-		ServiceAccountRoleArn: aws.String(params.RoleArn),
+		ResolveConflicts:      types.ResolveConflictsOverwrite,
+		ServiceAccountRoleArn: role.Role.Arn,
 	}
 	result, err := eksClient.CreateAddon(ctx, input)
 	if err != nil {
