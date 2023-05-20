@@ -40,14 +40,20 @@ const (
 	EKSStatusUpdating = "UPDATING"
 )
 
+type EksEnv interface {
+	CreateEks() *EksOutput
+	UpdateEks() *EksOutput
+	DescribeEks() (*awseks.DescribeClusterOutput, error)
+	UpdateAwsEksEnvironment(clusterResult *awseks.DescribeClusterOutput) error
+	ReconcileNodeGroup() error
+	ReconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOutput) error
+	ReconcileDefaultAddons() error
+}
+
 type EksOutput struct {
 	Result     string
 	Properties map[string]string
 	Success    bool
-}
-
-type DescribeClusterOutput struct {
-	Result *awseks.DescribeClusterOutput `json:"result"`
 }
 
 type EksEnvironment struct {
@@ -62,7 +68,7 @@ func NewEksEnvironment(
 	client client.Client,
 	env *v1.Environment,
 	config aws.Config,
-) *EksEnvironment {
+) EksEnv {
 	return &EksEnvironment{
 		Context: ctx,
 		Client:  client,
@@ -79,12 +85,12 @@ func NewConfig(awsRegion string) *aws.Config {
 	return &cfg
 }
 
-func (eksEnv *EksEnvironment) CreateEks() EksOutput {
+func (eksEnv *EksEnvironment) CreateEks() *EksOutput {
 	if err := eksEnv.createEks(); err != nil {
-		return EksOutput{Result: err.Error()}
+		return &EksOutput{Result: err.Error()}
 	}
 
-	return EksOutput{Result: string(EksControlPlaneInitatedMsg), Success: true}
+	return &EksOutput{Result: string(EksControlPlaneInitatedMsg), Success: true}
 }
 
 func (eksEnv *EksEnvironment) createEks() error {
@@ -106,7 +112,7 @@ func (eksEnv *EksEnvironment) createEks() error {
 	return err
 }
 
-func (eksEnv *EksEnvironment) UpdateEks() EksOutput {
+func (eksEnv *EksEnvironment) UpdateEks() *EksOutput {
 
 	errChannel := make(chan error)
 
@@ -114,11 +120,11 @@ func (eksEnv *EksEnvironment) UpdateEks() EksOutput {
 
 	for err := range errChannel {
 		if err != nil {
-			return EksOutput{Result: err.Error()}
+			return &EksOutput{Result: err.Error()}
 		}
 		break
 	}
-	return EksOutput{
+	return &EksOutput{
 		Result:  string(EksControlPlaneInitatedMsg),
 		Success: true,
 	}
@@ -137,21 +143,21 @@ func (eksEnv *EksEnvironment) updateEks(errorChan chan<- error) {
 	}
 }
 
-func (eksEnv *EksEnvironment) DescribeEks() (*DescribeClusterOutput, error) {
+func (eksEnv *EksEnvironment) DescribeEks() (*awseks.DescribeClusterOutput, error) {
 	eksClient := awseks.NewFromConfig(eksEnv.Config)
 
 	result, err := eksClient.DescribeCluster(eksEnv.Context, &awseks.DescribeClusterInput{Name: aws.String(eksEnv.Env.Spec.CloudInfra.Eks.Name)})
 	if err != nil {
 		return nil, err
 	}
-	return &DescribeClusterOutput{Result: result}, nil
+	return result, nil
 }
 
-func (eksEnv *EksEnvironment) UpdateAwsEksEnvironment(clusterResult *DescribeClusterOutput) error {
+func (eksEnv *EksEnvironment) UpdateAwsEksEnvironment(clusterResult *awseks.DescribeClusterOutput) error {
 
 	klog.Infof("Syncing Environment: %s/%s", eksEnv.Env.Namespace, eksEnv.Env.Name)
 
-	switch clusterResult.Result.Cluster.Status {
+	switch clusterResult.Cluster.Status {
 
 	case EKSStatusCreating:
 		klog.Info("Waiting for eks control plane to be created")
@@ -166,11 +172,11 @@ func (eksEnv *EksEnvironment) UpdateAwsEksEnvironment(clusterResult *DescribeClu
 	return nil
 }
 
-func (eksEnv *EksEnvironment) syncEksControlPlane(clusterResult *DescribeClusterOutput) error {
+func (eksEnv *EksEnvironment) syncEksControlPlane(clusterResult *awseks.DescribeClusterOutput) error {
 	// checking for version upgrade
 	statusVersion := eksEnv.Env.Status.Version
 	specVersion := eksEnv.Env.Spec.CloudInfra.Eks.Version
-	if statusVersion != "" && statusVersion != specVersion && *clusterResult.Result.Cluster.Version != specVersion {
+	if statusVersion != "" && statusVersion != specVersion && *clusterResult.Cluster.Version != specVersion {
 		klog.Info("Updating Kubernetes version to: ", eksEnv.Env.Spec.CloudInfra.Eks.Version)
 		if _, _, err := utils.PatchStatus(eksEnv.Context, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
 			in := obj.(*v1.Environment)
@@ -213,52 +219,4 @@ func (eksEnv *EksEnvironment) syncEksControlPlane(clusterResult *DescribeCluster
 		return err
 	}
 	return nil
-}
-
-type DescribeAddonOutput struct {
-	Result *eks.DescribeAddonOutput `json:"result"`
-}
-
-func (eksEnv *EksEnvironment) DescribeAddon(ctx context.Context, addonName, clusterName string) (*DescribeAddonOutput, error) {
-	eksClient := awseks.NewFromConfig(eksEnv.Config)
-
-	input := &awseks.DescribeAddonInput{
-		AddonName:   aws.String(addonName),
-		ClusterName: aws.String(clusterName),
-	}
-	result, err := eksClient.DescribeAddon(ctx, input)
-	if err != nil {
-		return nil, err
-	}
-	return &DescribeAddonOutput{Result: result}, nil
-}
-
-type CreateAddonOutput struct {
-	Result *eks.CreateAddonOutput `json:"result"`
-}
-
-type CreateAddonInput struct {
-	Name        string `json:"name"`
-	ClusterName string `json:"clusterName"`
-}
-
-func (eksEnv *EksEnvironment) CreateAddon(ctx context.Context, params *CreateAddonInput) (*CreateAddonOutput, error) {
-	eksClient := awseks.NewFromConfig(eksEnv.Config)
-
-	role, err := eksEnv.createEbsCSIRole(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	input := &awseks.CreateAddonInput{
-		AddonName:             aws.String(params.Name),
-		ClusterName:           aws.String(params.ClusterName),
-		ResolveConflicts:      types.ResolveConflictsOverwrite,
-		ServiceAccountRoleArn: role.Role.Arn,
-	}
-	result, err := eksClient.CreateAddon(ctx, input)
-	if err != nil {
-		return nil, err
-	}
-	return &CreateAddonOutput{Result: result}, nil
 }

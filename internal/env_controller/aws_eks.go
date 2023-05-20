@@ -2,14 +2,8 @@ package controller
 
 import (
 	"context"
-	"crypto/sha1"
-	"crypto/tls"
 	"errors"
-	"fmt"
-	"net/http"
 	"time"
-
-	"datainfra.io/ballastdata/pkg/aws/iam"
 
 	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/aws/eks"
@@ -17,14 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment, c client.Client, record record.EventRecorder) error {
+func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment) error {
 
-	eksEnv := eks.NewEksEnvironment(ctx, c, env, *eks.NewConfig(env.Spec.CloudInfra.AwsRegion))
+	eksEnv := eks.NewEksEnvironment(ctx, r.Client, env, *eks.NewConfig(env.Spec.CloudInfra.AwsRegion))
 
 	result, err := eksEnv.DescribeEks()
 
@@ -38,7 +31,7 @@ func createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment, c
 
 			createEksResult := eksEnv.CreateEks()
 			if createEksResult.Success {
-				if _, _, err := utils.PatchStatus(ctx, c, env, func(obj client.Object) client.Object {
+				if _, _, err := utils.PatchStatus(ctx, r.Client, env, func(obj client.Object) client.Object {
 					in := obj.(*v1.Environment)
 					in.Status.Phase = v1.Creating
 					in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
@@ -69,173 +62,14 @@ func createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment, c
 			return err
 		}
 	}
-	if result != nil && result.Result != nil && result.Result.Cluster != nil && result.Result.Cluster.Status == eks.EKSStatusACTIVE {
-		if err := reconcileNodeGroup(ctx, eksEnv); err != nil {
+	if result != nil && result.Cluster != nil && result.Cluster.Status == eks.EKSStatusACTIVE {
+		if err := eksEnv.ReconcileNodeGroup(); err != nil {
 			return err
 		}
-		if err := reconcileOIDCProvider(ctx, eksEnv, result); err != nil {
+		if err := eksEnv.ReconcileOIDCProvider(result); err != nil {
 			return err
 		}
-		return reconcileDefaultAddons(ctx, eksEnv)
+		return eksEnv.ReconcileDefaultAddons()
 	}
 	return nil
-}
-
-func getIssuerCAThumbprint(isserURL string) (string, error) {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-				MinVersion:         tls.VersionTLS12,
-			},
-			Proxy: http.ProxyFromEnvironment,
-		},
-	}
-
-	response, err := client.Get(isserURL)
-	if err != nil {
-		return "", err
-	}
-	defer response.Body.Close()
-	if response.TLS != nil {
-		if numCerts := len(response.TLS.PeerCertificates); numCerts >= 1 {
-			root := response.TLS.PeerCertificates[numCerts-1]
-			return fmt.Sprintf("%x", sha1.Sum(root.Raw)), nil
-		}
-	}
-	return "", errors.New("unable to get OIDC issuer's certificate")
-}
-
-func reconcileOIDCProvider(ctx context.Context, eksEnv *eks.EksEnvironment, clusterOutput *eks.DescribeClusterOutput) error {
-	if clusterOutput == nil || clusterOutput.Result == nil || clusterOutput.Result.Cluster == nil ||
-		clusterOutput.Result.Cluster.Identity == nil || clusterOutput.Result.Cluster.Identity.Oidc == nil {
-		return errors.New("oidc provider url not found in cluster output")
-	}
-	oidcProviderUrl := *clusterOutput.Result.Cluster.Identity.Oidc.Issuer
-
-	// Compute the SHA-1 thumbprint of the OIDC provider certificate
-	thumbprint, err := getIssuerCAThumbprint(oidcProviderUrl)
-	if err != nil {
-		return err
-	}
-
-	input := &iam.CreateOIDCProviderInput{
-		URL:            oidcProviderUrl,
-		ThumbPrintList: []string{thumbprint},
-	}
-
-	oidcProviderArn := eksEnv.Env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn
-
-	if oidcProviderArn != "" {
-		// oidc provider is previously created
-		// looking for it
-		providers, err := iam.ListOIDCProvider(ctx, eksEnv)
-		if err != nil {
-			return err
-		}
-
-		for _, oidc := range providers.Result.OpenIDConnectProviderList {
-			if *oidc.Arn == eksEnv.Env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn {
-				// oidc provider is already created and existed
-				return nil
-			}
-		}
-	}
-
-	result, err := iam.CreateOIDCProvider(ctx, eksEnv, input)
-	if err != nil {
-		return err
-	}
-	_, _, err = utils.PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
-		in := obj.(*v1.Environment)
-		in.Status.CloudInfraStatus.EksStatus.OIDCProviderArn = *result.Result.OpenIDConnectProviderArn
-
-		return in
-	})
-	return err
-}
-
-func reconcileDefaultAddons(ctx context.Context, eksEnv *eks.EksEnvironment) error {
-	oidcProvider := eksEnv.Env.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
-	if oidcProvider == "" {
-		klog.Info("ebs-csi-driver creation: waiting for oidcProvider to be created")
-		return nil
-	}
-	clusterName := eksEnv.Env.Spec.CloudInfra.Eks.Name
-	ebsAddon, err := eksEnv.DescribeAddon(ctx, "aws-ebs-csi-driver", eksEnv.Env.Spec.CloudInfra.Eks.Name)
-	if err != nil {
-		var notFoundErr *types.ResourceNotFoundException
-		if errors.As(err, &notFoundErr) {
-			klog.Info("Creating aws-ebs-csi-driver addon")
-			_, cErr := eksEnv.CreateAddon(ctx, &eks.CreateAddonInput{
-				Name:        "aws-ebs-csi-driver",
-				ClusterName: clusterName,
-			})
-			if cErr != nil {
-				return cErr
-			}
-			klog.Info("aws-ebs-csi-driver addon creation is initiated")
-		} else {
-			return err
-		}
-		return nil
-	}
-	if ebsAddon.Result != nil && ebsAddon.Result.Addon != nil {
-		addonRes := ebsAddon.Result.Addon
-		klog.Info("aws-ebs-csi-driver addon status: ", addonRes.Status)
-		if err := patchAddonStatus(ctx, eksEnv, *addonRes.AddonName, string(addonRes.Status)); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func reconcileNodeGroup(ctx context.Context, env *eks.EksEnvironment) error {
-	klog.Info("Reconciling node groups")
-
-	for _, app := range env.Env.Spec.Application {
-
-		nodeSpec, err := getNodegroupSpecForAppSize(env.Env, app)
-		if err != nil {
-			return err
-		}
-
-		ngs := eks.NewNodeGroup(ctx, env, &app, nodeSpec)
-
-		_, err = ngs.CreateNodeGroupForApp()
-		if err != nil {
-			return err
-		}
-
-	}
-
-	return nil
-}
-
-func patchAddonStatus(ctx context.Context, eksEnv *eks.EksEnvironment, addonName, status string) error {
-	// update status with current addon status
-	_, _, err := utils.PatchStatus(ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
-		in := obj.(*v1.Environment)
-		if in.Status.AddonStatus == nil {
-			in.Status.AddonStatus = make(map[string]string)
-		}
-		in.Status.AddonStatus[addonName] = status
-		return in
-	})
-	return err
-}
-
-func syncNodegroup(ctx context.Context, eksEnv *eks.EksEnvironment) error {
-	// update node group if spec node group is updated
-	return nil
-}
-
-func getNodegroupSpecForAppSize(env *v1.Environment, app v1.ApplicationConfig) (*v1.NodeGroupSpec, error) {
-	for _, size := range env.Spec.Size {
-		if size.Name == app.Size && size.Spec.AppType == app.AppType {
-			return size.Spec.Nodes, nil
-		}
-	}
-	return nil, fmt.Errorf("no NodegroupSpec for app %s & size %s", app.Name, app.Size)
 }

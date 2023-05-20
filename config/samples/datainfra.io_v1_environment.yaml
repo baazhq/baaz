@@ -21,10 +21,10 @@ spec:
     eks:
       name: dev-eks-pulak
       subnetIds:
-      - subnet-0d0ef0b95f7e0a3e1
-      - subnet-01c698088e596bbcf
+      - subnet-02a0cccde6c324558
+      - subnet-037a30ccca71ee1db
       securityGroupIds:
-      - sg-02cab951d4798928b
+      - sg-0525da1d4c2697b12
       version: "1.25"
   application:
     - name: clickhouse-datascience
