@@ -97,12 +97,16 @@ func (eksEnv *EksEnvironment) CreateEks() EksOutput {
 func (eksEnv *EksEnvironment) createEks(errorChan chan<- error) {
 	eksClient := eks.NewFromConfig(eksEnv.Config)
 
-	_, err := eksClient.CreateCluster(eksEnv.Context, &eks.CreateClusterInput{
+	roleName, err := eksEnv.createClusterIamRole()
+	if err != nil {
+		errorChan <- err
+	}
+	_, err = eksClient.CreateCluster(eksEnv.Context, &eks.CreateClusterInput{
 		Name: &eksEnv.Env.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
 		ResourcesVpcConfig: &types.VpcConfigRequest{
 			SubnetIds: eksEnv.Env.Spec.CloudInfra.Eks.SubnetIds,
 		},
-		RoleArn: aws.String(eksEnv.Env.Spec.CloudInfra.Eks.RoleArn),
+		RoleArn: roleName.Role.Arn,
 		Version: aws.String(eksEnv.Env.Spec.CloudInfra.Eks.Version),
 	})
 

@@ -13,7 +13,7 @@ spec:
   envType: dev
   cloudInfra:
     type: aws
-    awsRegion: us-east-1
+    awsRegion: us-west-2
     authSecretRef:
       secretName: aws-secret
       accessKeyName: accessKey
@@ -21,30 +21,19 @@ spec:
     eks:
       name: dev-eks
       subnetIds:
-      - subnet-0f4ecdb3695b63a0c
-      - subnet-0ce931c60379fd4eb
+      - subnet-0082133989e9658a2
+      - subnet-0b947b189519a4131
       securityGroupIds:
-      - sg-049b9e990b8a8e35f
-      roleArn: "arn:aws:iam::437639712640:role/pulak-eks-role"
+      - sg-0f73e8dae6f8e61a8
+      - sg-00363b093ce9ad413
+      roleArn: "arn:aws:iam::437639712640:role/terraform-eks-demo-cluster"
       version: "1.25"
   application:
     - name: clickhouse-datascience
       appType: ClickHouse
       size: clickhouse-small
-    - name: clickhouse-new
-      appType: ClickHouse
-      size: clickhouse-medium
   size:
     - name: clickhouse-small
-      spec:
-        appType: ClickHouse
-        nodes:
-          nodeLabels:
-            app: clickhouse
-          nodeSize: t2.small
-          min: 1
-          max: 3
-    - name: clickhouse-medium
       spec:
         appType: ClickHouse
         nodes:
