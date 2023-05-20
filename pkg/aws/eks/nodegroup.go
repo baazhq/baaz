@@ -1,7 +1,6 @@
 package eks
 
 import (
-	"context"
 	"errors"
 	"fmt"
 
@@ -22,33 +21,18 @@ const (
 	system nodeGroupType = "system"
 )
 
-type CreateNodeGroupOutput struct {
-	Result *awseks.CreateNodegroupOutput `json:"result"`
-}
-
-type DescribeNodegroupOutput struct {
-	Result *awseks.DescribeNodegroupOutput `json:"result"`
-}
-
-type NodeGroups interface {
-	CreateNodeGroupForApp() (*CreateNodeGroupOutput, error)
-}
-
-type NodeGroup struct {
-	Ctx       context.Context
+type nodeGroup struct {
 	EksEnv    *EksEnvironment
 	AppConfig *v1.ApplicationConfig
 	NodeSpec  *v1.NodeGroupSpec
 }
 
-func NewNodeGroup(
-	ctx context.Context,
+func newNodeGroup(
 	eksEnv *EksEnvironment,
 	appConfig *v1.ApplicationConfig,
 	nodeSpec *v1.NodeGroupSpec,
-) NodeGroups {
-	ngs := &NodeGroup{
-		Ctx:       ctx,
+) *nodeGroup {
+	ngs := &nodeGroup{
 		EksEnv:    eksEnv,
 		AppConfig: appConfig,
 		NodeSpec:  nodeSpec,
@@ -56,7 +40,29 @@ func NewNodeGroup(
 	return ngs
 }
 
-func (ng *NodeGroup) CreateNodeGroupForApp() (*CreateNodeGroupOutput, error) {
+func (eksEnv *EksEnvironment) ReconcileNodeGroup() error {
+	klog.Info("Reconciling node groups")
+
+	for _, app := range eksEnv.Env.Spec.Application {
+
+		nodeSpec, err := getNodegroupSpecForAppSize(eksEnv.Env, app)
+		if err != nil {
+			return err
+		}
+
+		ngs := newNodeGroup(eksEnv, &app, nodeSpec)
+
+		_, err = ngs.createNodeGroupForApp()
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+func (ng *nodeGroup) createNodeGroupForApp() (*awseks.CreateNodegroupOutput, error) {
 
 	switch ng.AppConfig.AppType {
 
@@ -116,10 +122,10 @@ func (ng *NodeGroup) CreateNodeGroupForApp() (*CreateNodeGroupOutput, error) {
 
 	}
 
-	return &CreateNodeGroupOutput{}, nil
+	return &awseks.CreateNodegroupOutput{}, nil
 }
 
-func (ng *NodeGroup) getNodeGroup(name string, ngType nodeGroupType) (*awseks.CreateNodegroupInput, error) {
+func (ng *nodeGroup) getNodeGroup(name string, ngType nodeGroupType) (*awseks.CreateNodegroupInput, error) {
 
 	var taints = []types.Taint{}
 
@@ -164,23 +170,23 @@ func (ng *NodeGroup) getNodeGroup(name string, ngType nodeGroupType) (*awseks.Cr
 	}, nil
 }
 
-func (ng *NodeGroup) describeNodegroup(name string) (*DescribeNodegroupOutput, error) {
+func (ng *nodeGroup) describeNodegroup(name string) (*awseks.DescribeNodegroupOutput, error) {
 	eksClient := awseks.NewFromConfig(ng.EksEnv.Config)
 	input := &awseks.DescribeNodegroupInput{
 		ClusterName:   aws.String(ng.EksEnv.Env.Spec.CloudInfra.Eks.Name),
 		NodegroupName: aws.String(name),
 	}
 
-	result, err := eksClient.DescribeNodegroup(ng.Ctx, input)
+	result, err := eksClient.DescribeNodegroup(ng.EksEnv.Context, input)
 	if err != nil {
 		return nil, err
 	}
-	return &DescribeNodegroupOutput{Result: result}, nil
+	return result, nil
 }
 
-func (ng *NodeGroup) patchStatus(name, status string) error {
+func (ng *nodeGroup) patchStatus(name, status string) error {
 	// update status with current nodegroup status
-	_, _, err := utils.PatchStatus(ng.Ctx, ng.EksEnv.Client, ng.EksEnv.Env, func(obj client.Object) client.Object {
+	_, _, err := utils.PatchStatus(ng.EksEnv.Context, ng.EksEnv.Client, ng.EksEnv.Env, func(obj client.Object) client.Object {
 		in := obj.(*v1.Environment)
 		if in.Status.NodegroupStatus == nil {
 			in.Status.NodegroupStatus = make(map[string]string)
@@ -191,7 +197,7 @@ func (ng *NodeGroup) patchStatus(name, status string) error {
 	return err
 }
 
-func (ng *NodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGroupType) (*CreateNodeGroupOutput, error) {
+func (ng *nodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGroupType) (*awseks.CreateNodegroupOutput, error) {
 	eksClient := awseks.NewFromConfig(ng.EksEnv.Config)
 
 	describeRes, err := ng.describeNodegroup(nodeGroupName)
@@ -202,7 +208,7 @@ func (ng *NodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGr
 			if err != nil {
 				return nil, err
 			}
-			result, err := eksClient.CreateNodegroup(ng.Ctx, nodeGroup)
+			result, err := eksClient.CreateNodegroup(ng.EksEnv.Context, nodeGroup)
 			if err != nil {
 				return nil, err
 			}
@@ -216,10 +222,24 @@ func (ng *NodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGr
 		}
 		return nil, err
 	}
-	if describeRes != nil && describeRes.Result != nil && describeRes.Result.Nodegroup != nil {
-		if err := ng.patchStatus(*describeRes.Result.Nodegroup.NodegroupName, string(describeRes.Result.Nodegroup.Status)); err != nil {
+	if describeRes != nil && describeRes.Nodegroup != nil {
+		if err := ng.patchStatus(*describeRes.Nodegroup.NodegroupName, string(describeRes.Nodegroup.Status)); err != nil {
 			return nil, err
 		}
 	}
-	return &CreateNodeGroupOutput{}, nil
+	return &awseks.CreateNodegroupOutput{}, nil
+}
+
+func (eksEnv *EksEnvironment) syncNodegroup() error {
+	// update node group if spec node group is updated
+	return nil
+}
+
+func getNodegroupSpecForAppSize(env *v1.Environment, app v1.ApplicationConfig) (*v1.NodeGroupSpec, error) {
+	for _, size := range env.Spec.Size {
+		if size.Name == app.Size && size.Spec.AppType == app.AppType {
+			return size.Spec.Nodes, nil
+		}
+	}
+	return nil, fmt.Errorf("no NodegroupSpec for app %s & size %s", app.Name, app.Size)
 }

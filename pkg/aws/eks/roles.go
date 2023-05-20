@@ -76,7 +76,7 @@ var clusterRolePolicyArns = []string{
 	"arn:aws:iam::aws:policy/AmazonEKSVPCResourceController",
 }
 
-type EBSCSIRoleTemplateInput struct {
+type eBSCSIRoleTemplateInput struct {
 	AccountID    string
 	OIDCProvider string
 }
@@ -168,7 +168,7 @@ func (eksEnv *EksEnvironment) createEbsCSIRole(ctx context.Context) (*awsiam.Cre
 	}
 	var tmplOutput bytes.Buffer
 
-	if err := tmpl.Execute(&tmplOutput, EBSCSIRoleTemplateInput{
+	if err := tmpl.Execute(&tmplOutput, eBSCSIRoleTemplateInput{
 		AccountID:    accountID,
 		OIDCProvider: oidcProviderURL,
 	}); err != nil {
