@@ -3,9 +3,10 @@ package controller
 import (
 	"context"
 	"crypto/sha1"
-	"encoding/hex"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"datainfra.io/ballastdata/pkg/aws/iam"
@@ -80,6 +81,31 @@ func createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment, c
 	return nil
 }
 
+func getIssuerCAThumbprint(isserURL string) (string, error) {
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+				MinVersion:         tls.VersionTLS12,
+			},
+			Proxy: http.ProxyFromEnvironment,
+		},
+	}
+
+	response, err := client.Get(isserURL)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+	if response.TLS != nil {
+		if numCerts := len(response.TLS.PeerCertificates); numCerts >= 1 {
+			root := response.TLS.PeerCertificates[numCerts-1]
+			return fmt.Sprintf("%x", sha1.Sum(root.Raw)), nil
+		}
+	}
+	return "", errors.New("unable to get OIDC issuer's certificate")
+}
+
 func reconcileOIDCProvider(ctx context.Context, eksEnv *eks.EksEnvironment, clusterOutput *eks.DescribeClusterOutput) error {
 	if clusterOutput == nil || clusterOutput.Result == nil || clusterOutput.Result.Cluster == nil ||
 		clusterOutput.Result.Cluster.Identity == nil || clusterOutput.Result.Cluster.Identity.Oidc == nil {
@@ -88,8 +114,10 @@ func reconcileOIDCProvider(ctx context.Context, eksEnv *eks.EksEnvironment, clus
 	oidcProviderUrl := *clusterOutput.Result.Cluster.Identity.Oidc.Issuer
 
 	// Compute the SHA-1 thumbprint of the OIDC provider certificate
-	thumbprintBytes := sha1.Sum([]byte(oidcProviderUrl))
-	thumbprint := hex.EncodeToString(thumbprintBytes[:])
+	thumbprint, err := getIssuerCAThumbprint(oidcProviderUrl)
+	if err != nil {
+		return err
+	}
 
 	input := &iam.CreateOIDCProviderInput{
 		URL:            oidcProviderUrl,
