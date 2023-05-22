@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"datainfra.io/ballastdata/pkg/store"
 	"datainfra.io/ballastdata/pkg/utils"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -40,7 +41,7 @@ func newNodeGroup(
 	return ngs
 }
 
-func (eksEnv *EksEnvironment) ReconcileNodeGroup() error {
+func (eksEnv *EksEnvironment) ReconcileNodeGroup(store store.Store) error {
 	klog.Info("Reconciling node groups")
 
 	for _, app := range eksEnv.Env.Spec.Application {
@@ -52,7 +53,7 @@ func (eksEnv *EksEnvironment) ReconcileNodeGroup() error {
 
 		ngs := newNodeGroup(eksEnv, &app, nodeSpec)
 
-		_, err = ngs.createNodeGroupForApp()
+		_, err = ngs.createNodeGroupForApp(store)
 		if err != nil {
 			return err
 		}
@@ -62,7 +63,7 @@ func (eksEnv *EksEnvironment) ReconcileNodeGroup() error {
 	return nil
 }
 
-func (ng *nodeGroup) createNodeGroupForApp() (*awseks.CreateNodegroupOutput, error) {
+func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNodegroupOutput, error) {
 
 	switch ng.AppConfig.AppType {
 
@@ -73,19 +74,19 @@ func (ng *nodeGroup) createNodeGroupForApp() (*awseks.CreateNodegroupOutput, err
 		zkChiNgName := *aws.String(makeZkChiNodeGroupName(ng.AppConfig.Name))
 
 		// system nodepool
-		_, err := ng.createOrUpdateNodeGroup(systemNgName, system)
+		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
 		if err != nil {
 			return nil, err
 		}
 
 		// clickhouse nodepool
-		_, err = ng.createOrUpdateNodeGroup(chiNgName, app)
+		_, err = ng.createOrUpdateNodeGroup(chiNgName, app, store)
 		if err != nil {
 			return nil, err
 		}
 
 		// zookeeper nodepool
-		_, err = ng.createOrUpdateNodeGroup(zkChiNgName, app)
+		_, err = ng.createOrUpdateNodeGroup(zkChiNgName, app, store)
 		if err != nil {
 			return nil, err
 		}
@@ -98,24 +99,24 @@ func (ng *nodeGroup) createNodeGroupForApp() (*awseks.CreateNodegroupOutput, err
 		druidMasterNodeNgName := *aws.String(makeDruidMasterNodeNodeGroupName(ng.AppConfig.Name))
 
 		// system nodepool
-		_, err := ng.createOrUpdateNodeGroup(systemNgName, system)
+		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
 		if err != nil {
 			return nil, err
 		}
 
 		// druid datanodes nodepool
-		_, err = ng.createOrUpdateNodeGroup(druidDataNodeNgName, app)
+		_, err = ng.createOrUpdateNodeGroup(druidDataNodeNgName, app, store)
 		if err != nil {
 			return nil, err
 		}
 		// druid querynode nodepool
-		_, err = ng.createOrUpdateNodeGroup(druidQueryNodeNgName, app)
+		_, err = ng.createOrUpdateNodeGroup(druidQueryNodeNgName, app, store)
 		if err != nil {
 			return nil, err
 		}
 
 		// druid masternode nodepool
-		_, err = ng.createOrUpdateNodeGroup(druidMasterNodeNgName, app)
+		_, err = ng.createOrUpdateNodeGroup(druidMasterNodeNgName, app, store)
 		if err != nil {
 			return nil, err
 		}
@@ -197,7 +198,7 @@ func (ng *nodeGroup) patchStatus(name, status string) error {
 	return err
 }
 
-func (ng *nodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGroupType) (*awseks.CreateNodegroupOutput, error) {
+func (ng *nodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGroupType, store store.Store) (*awseks.CreateNodegroupOutput, error) {
 	eksClient := awseks.NewFromConfig(ng.EksEnv.Config)
 
 	describeRes, err := ng.describeNodegroup(nodeGroupName)
@@ -222,17 +223,38 @@ func (ng *nodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGr
 		}
 		return nil, err
 	}
+
 	if describeRes != nil && describeRes.Nodegroup != nil {
 		if err := ng.patchStatus(*describeRes.Nodegroup.NodegroupName, string(describeRes.Nodegroup.Status)); err != nil {
 			return nil, err
 		}
 	}
+
+	store.AddNodeGroup(ng.EksEnv.Env.Spec.CloudInfra.Eks.Name, nodeGroupName)
+
 	return &awseks.CreateNodegroupOutput{}, nil
 }
 
 func (eksEnv *EksEnvironment) syncNodegroup() error {
 	// update node group if spec node group is updated
 	return nil
+}
+
+func (eksEnv *EksEnvironment) NodeGroupExists(ngName string) bool {
+	eksClient := awseks.NewFromConfig(eksEnv.Config)
+
+	_, err := eksClient.DescribeNodegroup(eksEnv.Context, &awseks.DescribeNodegroupInput{
+		ClusterName:   &eksEnv.Env.Spec.CloudInfra.Eks.Name,
+		NodegroupName: &ngName,
+	})
+	if err != nil {
+		var ngNotFound *types.ResourceNotFoundException
+		if errors.As(err, &ngNotFound) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func getNodegroupSpecForAppSize(env *v1.Environment, app v1.ApplicationConfig) (*v1.NodeGroupSpec, error) {

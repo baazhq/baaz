@@ -2,11 +2,8 @@ apiVersion: datainfra.io/v1
 kind: Environment
 metadata:
   labels:
-    app.kubernetes.io/name: environment
-    app.kubernetes.io/instance: environment-sample
-    app.kubernetes.io/part-of: ballastdata
-    app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: ballastdata
+    app: ballastdata
+    env: clickhouse
   name: environment-dev
   namespace: demo
 spec:

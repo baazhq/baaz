@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"html/template"
 	"strings"
 
@@ -153,48 +154,61 @@ func (eksEnv *EksEnvironment) createClusterIamRole() (*awsiam.GetRoleOutput, err
 
 func (eksEnv *EksEnvironment) createEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, error) {
 	oidcProvider := eksEnv.Env.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
-	_, oidcProviderURL, found := strings.Cut(oidcProvider, "oidc-provider/")
-	if !found {
-		return nil, errors.New("invalid oidc provider arn")
-	}
-	accountID, err := eksEnv.getAccountID(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	tmpl, err := template.New("ebs-template").Parse(ebsCSIRoleTrustJsonTemplate)
-	if err != nil {
-		return nil, err
-	}
-	var tmplOutput bytes.Buffer
-
-	if err := tmpl.Execute(&tmplOutput, eBSCSIRoleTemplateInput{
-		AccountID:    accountID,
-		OIDCProvider: oidcProviderURL,
-	}); err != nil {
-		return nil, err
-	}
-
-	roleName := makeEBSCSIRoleName(eksEnv.Env.Spec.CloudInfra.AwsRegion, eksEnv.Env.Spec.CloudInfra.Eks.Name)
-	trustPolicy := tmplOutput.String()
-
-	roleInput := awsiam.CreateRoleInput{
-		AssumeRolePolicyDocument: aws.String(strings.TrimSpace(trustPolicy)),
-		RoleName:                 &roleName,
-	}
 
 	iamClient := awsiam.NewFromConfig(eksEnv.Config)
-	roleOutput, err := iamClient.CreateRole(ctx, &roleInput)
+	roleName := makeEBSCSIRoleName(eksEnv.Env.Spec.CloudInfra.AwsRegion, eksEnv.Env.Spec.CloudInfra.Eks.Name)
+
+	_, err := iamClient.GetRole(eksEnv.Context, &awsiam.GetRoleInput{
+		RoleName: aws.String(roleName),
+	})
+
 	if err != nil {
-		return nil, err
+
+		fmt.Println(err)
+
+		_, oidcProviderURL, found := strings.Cut(oidcProvider, "oidc-provider/")
+		if !found {
+			return nil, errors.New("invalid oidc provider arn")
+		}
+		accountID, err := eksEnv.getAccountID(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		tmpl, err := template.New("ebs-template").Parse(ebsCSIRoleTrustJsonTemplate)
+		if err != nil {
+			return nil, err
+		}
+		var tmplOutput bytes.Buffer
+
+		if err := tmpl.Execute(&tmplOutput, eBSCSIRoleTemplateInput{
+			AccountID:    accountID,
+			OIDCProvider: oidcProviderURL,
+		}); err != nil {
+			return nil, err
+		}
+
+		trustPolicy := tmplOutput.String()
+
+		roleInput := awsiam.CreateRoleInput{
+			AssumeRolePolicyDocument: aws.String(strings.TrimSpace(trustPolicy)),
+			RoleName:                 &roleName,
+		}
+
+		roleOutput, err := iamClient.CreateRole(ctx, &roleInput)
+		if err != nil {
+			return nil, err
+		}
+
+		attachPolicyInput := awsiam.AttachRolePolicyInput{
+			PolicyArn: &ebsCSIPolicyARN,
+			RoleName:  roleOutput.Role.RoleName,
+		}
+		if _, err := iamClient.AttachRolePolicy(ctx, &attachPolicyInput); err != nil {
+			return nil, err
+		}
+		return roleOutput, nil
 	}
 
-	attachPolicyInput := awsiam.AttachRolePolicyInput{
-		PolicyArn: &ebsCSIPolicyARN,
-		RoleName:  roleOutput.Role.RoleName,
-	}
-	if _, err := iamClient.AttachRolePolicy(ctx, &attachPolicyInput); err != nil {
-		return nil, err
-	}
-	return roleOutput, nil
+	return &awsiam.CreateRoleOutput{}, nil
 }
