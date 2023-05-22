@@ -93,8 +93,9 @@ type EnvironmentStatus struct {
 	// NodegroupStatus will contain a map of node group name & status
 	// Example:
 	// nodegroupStatus:
-	//    clickhouse: CREATING
-	//    druid:      ACTIVE
+	//    clickhouse-ng1: CREATING
+	//    druid-ng2:      ACTIVE
+	//    pinot-ng3:      DELETING
 	NodegroupStatus map[string]string `json:"nodegroupStatus,omitempty"`
 	// AddonStatus holds a map of addon name & their current status
 	// Example:

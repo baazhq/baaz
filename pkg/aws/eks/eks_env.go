@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "datainfra.io/ballastdata/api/v1"
+	"datainfra.io/ballastdata/pkg/store"
 	"datainfra.io/ballastdata/pkg/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -45,9 +46,11 @@ type EksEnv interface {
 	UpdateEks() *EksOutput
 	DescribeEks() (*awseks.DescribeClusterOutput, error)
 	UpdateAwsEksEnvironment(clusterResult *awseks.DescribeClusterOutput) error
-	ReconcileNodeGroup() error
+	ReconcileNodeGroup(store store.Store) error
 	ReconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOutput) error
 	ReconcileDefaultAddons() error
+	ReconcileDeployer() error
+	DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOutput, error)
 }
 
 type EksOutput struct {
@@ -143,6 +146,19 @@ func (eksEnv *EksEnvironment) updateEks(errorChan chan<- error) {
 	}
 }
 
+func (eksEnv *EksEnvironment) deleteEks() (*awseks.DeleteClusterOutput, error) {
+	eksClient := eks.NewFromConfig(eksEnv.Config)
+
+	result, err := eksClient.DeleteCluster(eksEnv.Context, &eks.DeleteClusterInput{
+		Name: &eksEnv.Env.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func (eksEnv *EksEnvironment) DescribeEks() (*awseks.DescribeClusterOutput, error) {
 	eksClient := awseks.NewFromConfig(eksEnv.Config)
 
@@ -219,4 +235,18 @@ func (eksEnv *EksEnvironment) syncEksControlPlane(clusterResult *awseks.Describe
 		return err
 	}
 	return nil
+}
+
+func (eksEnv *EksEnvironment) DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOutput, error) {
+
+	eksClient := awseks.NewFromConfig(eksEnv.Config)
+
+	result, err := eksClient.DeleteNodegroup(eksEnv.Context, &awseks.DeleteNodegroupInput{
+		ClusterName:   &eksEnv.Env.Spec.CloudInfra.Eks.Name,
+		NodegroupName: &nodeGroupName,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
