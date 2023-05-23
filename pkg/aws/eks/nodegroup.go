@@ -230,7 +230,7 @@ func (ng *nodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGr
 		}
 	}
 
-	store.AddNodeGroup(ng.EksEnv.Env.Spec.CloudInfra.Eks.Name, nodeGroupName)
+	store.Add(ng.EksEnv.Env.Spec.CloudInfra.Eks.Name, nodeGroupName)
 
 	return &awseks.CreateNodegroupOutput{}, nil
 }

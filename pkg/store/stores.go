@@ -1,30 +1,38 @@
 package store
 
+import "sync"
+
 type InternalStore struct {
-	ClusterNameNodeGroupName map[string][]string
+	locker              *sync.RWMutex
+	clusterResourceName map[string][]string
 }
 
 type Store interface {
-	AddNodeGroup(clusterName string, nodeGroupName string)
-	GetNodeGroups(clusterName string) []string
+	Add(clusterName string, resourceName string)
+	List(clusterName string) []string
 }
 
 // Constructor for InternalStore
 func NewInternalStore() Store {
 	return &InternalStore{
-		ClusterNameNodeGroupName: make(map[string][]string),
+		locker:              &sync.RWMutex{},
+		clusterResourceName: make(map[string][]string),
 	}
 }
 
-// Method to add a node group to the store
-func (store *InternalStore) AddNodeGroup(clusterName string, nodeGroupName string) {
-	if store.ClusterNameNodeGroupName == nil {
-		store.ClusterNameNodeGroupName = make(map[string][]string)
+// AddNodeGroup to add a node group to the store
+func (store *InternalStore) Add(clusterName string, nodeGroupName string) {
+	store.locker.Lock()
+	defer store.locker.Unlock()
+	if store.clusterResourceName == nil {
+		store.clusterResourceName = make(map[string][]string)
 	}
-	store.ClusterNameNodeGroupName[clusterName] = append(store.ClusterNameNodeGroupName[clusterName], nodeGroupName)
+	store.clusterResourceName[clusterName] = append(store.clusterResourceName[clusterName], nodeGroupName)
 }
 
-// Method to get all node groups for a given cluster name
-func (store *InternalStore) GetNodeGroups(clusterName string) []string {
-	return store.ClusterNameNodeGroupName[clusterName]
+// GetNodeGroups to get all node groups for a given cluster name
+func (store *InternalStore) List(clusterName string) []string {
+	store.locker.RLock()
+	defer store.locker.RUnlock()
+	return store.clusterResourceName[clusterName]
 }
