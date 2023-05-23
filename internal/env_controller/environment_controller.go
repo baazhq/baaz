@@ -86,7 +86,7 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// if it is normal reconcile, then add finalizer if not already
-	if controllerutil.ContainsFinalizer(desiredObj, BallasdataFinalizer) {
+	if !controllerutil.ContainsFinalizer(desiredObj, BallasdataFinalizer) {
 		controllerutil.AddFinalizer(desiredObj, BallasdataFinalizer)
 		if err := r.Update(ctx, desiredObj); err != nil {
 			return ctrl.Result{}, err
