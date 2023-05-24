@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
@@ -46,6 +48,7 @@ type EksEnv interface {
 	UpdateEks() *EksOutput
 	DescribeEks() (*awseks.DescribeClusterOutput, error)
 	DeleteEKS() (*awseks.DeleteClusterOutput, error)
+	DeleteOIDCProvider(providerArn string) (*iam.DeleteOpenIDConnectProviderOutput, error)
 	UpdateAwsEksEnvironment(clusterResult *awseks.DescribeClusterOutput) error
 	ReconcileNodeGroup(store store.Store) error
 	ReconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOutput) error
@@ -154,6 +157,22 @@ func (eksEnv *EksEnvironment) DeleteEKS() (*awseks.DeleteClusterOutput, error) {
 	return eksClient.DeleteCluster(eksEnv.Context, &eks.DeleteClusterInput{
 		Name: &eksEnv.Env.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
 	})
+}
+
+func (eksEnv *EksEnvironment) DeleteOIDCProvider(providerArn string) (*iam.DeleteOpenIDConnectProviderOutput, error) {
+	iamClient := iam.NewFromConfig(eksEnv.Config)
+
+	output, err := iamClient.DeleteOpenIDConnectProvider(context.TODO(), &iam.DeleteOpenIDConnectProviderInput{
+		OpenIDConnectProviderArn: &providerArn,
+	})
+	if err != nil {
+		var notFound *types.ResourceNotFoundException
+		if errors.As(err, &notFound) {
+			return output, nil
+		}
+		return nil, err
+	}
+	return output, nil
 }
 
 func (eksEnv *EksEnvironment) DescribeEks() (*awseks.DescribeClusterOutput, error) {

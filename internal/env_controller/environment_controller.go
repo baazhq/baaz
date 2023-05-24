@@ -155,6 +155,14 @@ func (r *EnvironmentReconciler) reconcileDelete(ctx context.Context, env *datain
 		}
 	}
 
+	// delete oidc provider associated with the cluster(if any)
+	if env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn != "" {
+		_, err := eksEnv.DeleteOIDCProvider(env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn)
+		if err != nil {
+			return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		}
+	}
+
 	if _, err := eksEnv.DeleteEKS(); err != nil {
 		return ctrl.Result{RequeueAfter: time.Second * 10}, err
 	}

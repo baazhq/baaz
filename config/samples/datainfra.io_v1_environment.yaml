@@ -16,7 +16,7 @@ spec:
       accessKeyName: accessKey
       secretKeyName: secretKey
     eks:
-      name: dev-eks-pulak
+      name: test-pulak
       subnetIds:
       - subnet-02a0cccde6c324558
       - subnet-037a30ccca71ee1db
