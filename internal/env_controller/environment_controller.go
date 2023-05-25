@@ -21,6 +21,12 @@ import (
 	"os"
 	"time"
 
+	"datainfra.io/ballastdata/pkg/aws/eks"
+
+	"datainfra.io/ballastdata/pkg/store"
+
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
 	"github.com/go-logr/logr"
 	"k8s.io/klog/v2"
 
@@ -30,7 +36,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	datainfraiov1 "datainfra.io/ballastdata/api/v1"
+	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/utils"
+)
+
+const (
+	BallasdataFinalizer = "environment.datainfra.io/finalizer"
 )
 
 // EnvironmentReconciler reconciles a Environment object
@@ -41,6 +52,7 @@ type EnvironmentReconciler struct {
 	// reconcile time duration, defaults to 10s
 	ReconcileWait time.Duration
 	Recorder      record.EventRecorder
+	NgStore       store.Store
 }
 
 func NewEnvironmentReconciler(mgr ctrl.Manager) *EnvironmentReconciler {
@@ -51,6 +63,7 @@ func NewEnvironmentReconciler(mgr ctrl.Manager) *EnvironmentReconciler {
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
 		Recorder:      mgr.GetEventRecorderFor("ballastdata-control-plane"),
+		NgStore:       store.NewInternalStore(),
 	}
 }
 
@@ -66,6 +79,19 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	klog.Infof("Reconciling Environment: %s/%s", desiredObj.Namespace, desiredObj.Name)
+	// check for deletion time stamp
+	if desiredObj.DeletionTimestamp != nil {
+		// object is going to be deleted
+		return r.reconcileDelete(ctx, desiredObj)
+	}
+
+	// if it is normal reconcile, then add finalizer if not already
+	if !controllerutil.ContainsFinalizer(desiredObj, BallasdataFinalizer) {
+		controllerutil.AddFinalizer(desiredObj, BallasdataFinalizer)
+		if err := r.Update(ctx, desiredObj); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	// If first time reconciling set status to pending
 	if desiredObj.Status.Phase == "" {
@@ -91,6 +117,62 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	} else {
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
+}
+
+func (r *EnvironmentReconciler) reconcileDelete(ctx context.Context, env *datainfraiov1.Environment) (ctrl.Result, error) {
+	ngList := r.NgStore.List(env.Spec.CloudInfra.Eks.Name)
+	eksEnv := eks.NewEksEnvironment(ctx, r.Client, env, *eks.NewConfig(env.Spec.CloudInfra.AwsRegion))
+
+	for _, ng := range ngList {
+		if env.Status.NodegroupStatus[ng] != "DELETING" {
+			_, err := eksEnv.DeleteNodeGroup(ng)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			// update status with current nodegroup status
+			_, _, err = utils.PatchStatus(ctx, r.Client, env, func(obj client.Object) client.Object {
+				in := obj.(*v1.Environment)
+				if in.Status.NodegroupStatus == nil {
+					in.Status.NodegroupStatus = make(map[string]string)
+				}
+				in.Status.NodegroupStatus[ng] = "DELETING"
+				return in
+			})
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	for _, ng := range ngList {
+		_, found, err := eksEnv.DescribeNodeGroup(ng)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if found {
+			klog.Infof("waiting for nodegroup %s to be deleted", ng)
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		}
+	}
+
+	// delete oidc provider associated with the cluster(if any)
+	if env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn != "" {
+		_, err := eksEnv.DeleteOIDCProvider(env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn)
+		if err != nil {
+			return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		}
+	}
+
+	if _, err := eksEnv.DeleteEKS(); err != nil {
+		return ctrl.Result{RequeueAfter: time.Second * 10}, err
+	}
+
+	// remove our finalizer from the list and update it.
+	controllerutil.RemoveFinalizer(env, envFinalizer)
+	if err := r.Update(ctx, env.DeepCopyObject().(*v1.Environment)); err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

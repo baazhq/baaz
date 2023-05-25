@@ -3,6 +3,7 @@ module datainfra.io/ballastdata
 go 1.19
 
 require (
+	github.com/aws/aws-sdk-go v1.44.213
 	github.com/aws/aws-sdk-go-v2 v1.18.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.19
 	github.com/aws/aws-sdk-go-v2/service/eks v1.27.8
@@ -20,7 +21,6 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go v1.44.213 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.18 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.13.1 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.33 // indirect

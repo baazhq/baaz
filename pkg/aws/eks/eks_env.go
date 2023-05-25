@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
@@ -45,12 +47,15 @@ type EksEnv interface {
 	CreateEks() *EksOutput
 	UpdateEks() *EksOutput
 	DescribeEks() (*awseks.DescribeClusterOutput, error)
+	DeleteEKS() (*awseks.DeleteClusterOutput, error)
+	DeleteOIDCProvider(providerArn string) (*iam.DeleteOpenIDConnectProviderOutput, error)
 	UpdateAwsEksEnvironment(clusterResult *awseks.DescribeClusterOutput) error
 	ReconcileNodeGroup(store store.Store) error
 	ReconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOutput) error
 	ReconcileDefaultAddons() error
 	ReconcileDeployer() error
 	DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOutput, error)
+	DescribeNodeGroup(nodeGroupName string) (output *awseks.DescribeNodegroupOutput, found bool, err error)
 }
 
 type EksOutput struct {
@@ -146,17 +151,28 @@ func (eksEnv *EksEnvironment) updateEks(errorChan chan<- error) {
 	}
 }
 
-func (eksEnv *EksEnvironment) deleteEks() (*awseks.DeleteClusterOutput, error) {
+func (eksEnv *EksEnvironment) DeleteEKS() (*awseks.DeleteClusterOutput, error) {
 	eksClient := eks.NewFromConfig(eksEnv.Config)
 
-	result, err := eksClient.DeleteCluster(eksEnv.Context, &eks.DeleteClusterInput{
+	return eksClient.DeleteCluster(eksEnv.Context, &eks.DeleteClusterInput{
 		Name: &eksEnv.Env.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
 	})
+}
 
+func (eksEnv *EksEnvironment) DeleteOIDCProvider(providerArn string) (*iam.DeleteOpenIDConnectProviderOutput, error) {
+	iamClient := iam.NewFromConfig(eksEnv.Config)
+
+	output, err := iamClient.DeleteOpenIDConnectProvider(context.TODO(), &iam.DeleteOpenIDConnectProviderInput{
+		OpenIDConnectProviderArn: &providerArn,
+	})
 	if err != nil {
+		var notFound *types.ResourceNotFoundException
+		if errors.As(err, &notFound) {
+			return output, nil
+		}
 		return nil, err
 	}
-	return result, nil
+	return output, nil
 }
 
 func (eksEnv *EksEnvironment) DescribeEks() (*awseks.DescribeClusterOutput, error) {
@@ -249,4 +265,21 @@ func (eksEnv *EksEnvironment) DeleteNodeGroup(nodeGroupName string) (*awseks.Del
 		return nil, err
 	}
 	return result, nil
+}
+
+func (eksEnv *EksEnvironment) DescribeNodeGroup(nodeGroupName string) (output *awseks.DescribeNodegroupOutput, found bool, err error) {
+	eksClient := awseks.NewFromConfig(eksEnv.Config)
+
+	result, err := eksClient.DescribeNodegroup(eksEnv.Context, &awseks.DescribeNodegroupInput{
+		ClusterName:   &eksEnv.Env.Spec.CloudInfra.Eks.Name,
+		NodegroupName: &nodeGroupName,
+	})
+	if err != nil {
+		var notFoundErr *types.ResourceNotFoundException
+		if errors.As(err, &notFoundErr) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	return result, true, nil
 }
