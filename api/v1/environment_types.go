@@ -39,15 +39,23 @@ type ApplicationSize struct {
 
 type ApplicationConfig struct {
 	Name string `json:"name"`
-	// +kubebuilder:validation:Enum:=Druid;ClickHouse
+	// +kubebuilder:validation:Enum:=Druid;ClickHouse;Pinot
 	AppType ApplicationType `json:"appType"`
 	Size    string          `json:"size"`
 }
 
+type NodeGroupName string
+
+const (
+	DataNodes   NodeGroupName = "datanodes"
+	QueryNodes  NodeGroupName = "querynodes"
+	MasterNodes NodeGroupName = "masternodes"
+)
+
 type AppSizeSpec struct {
-	// +kubebuilder:validation:Enum:=Druid;ClickHouse
-	AppType ApplicationType `json:"appType"`
-	Nodes   *NodeGroupSpec  `json:"nodes,omitempty"`
+	// +kubebuilder:validation:Enum:=Druid;ClickHouse;Pinot
+	AppType ApplicationType                  `json:"appType"`
+	Nodes   map[NodeGroupName]*NodeGroupSpec `json:"nodes,omitempty"`
 }
 
 type NodeGroupSpec struct {

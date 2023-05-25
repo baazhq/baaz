@@ -45,8 +45,18 @@ func (in *AppSizeSpec) DeepCopyInto(out *AppSizeSpec) {
 	*out = *in
 	if in.Nodes != nil {
 		in, out := &in.Nodes, &out.Nodes
-		*out = new(NodeGroupSpec)
-		(*in).DeepCopyInto(*out)
+		*out = make(map[NodeGroupName]*NodeGroupSpec, len(*in))
+		for key, val := range *in {
+			var outVal *NodeGroupSpec
+			if val == nil {
+				(*out)[key] = nil
+			} else {
+				in, out := &val, &outVal
+				*out = new(NodeGroupSpec)
+				(*in).DeepCopyInto(*out)
+			}
+			(*out)[key] = outVal
+		}
 	}
 }
 

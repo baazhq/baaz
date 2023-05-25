@@ -1,39 +1,28 @@
 package eks
 
 import (
+	v1 "datainfra.io/ballastdata/api/v1"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 )
 
 const (
-	application           string = "application"
-	systemNgPrefix        string = "-system"
-	chiNgPrefix           string = "-chi-ng"
-	chiZkNgPrefix         string = "-chi-zk-ng"
-	druidDataNodePrefix   string = "-druid-datanode-ng"
-	druidMasterNodePrefix string = "-druid-masternode-ng"
-	druidQueryNodePrefix  string = "-druid-querynode-ng"
+	application    string = "application"
+	systemNgPrefix string = "-system"
 )
 
 func makeSystemNodeGroupName(appConfigName string) string { return appConfigName + systemNgPrefix }
 
-// Clickhouse
-func makeChiNodeGroupName(appConfigName string) string {
-	return appConfigName + chiNgPrefix
-}
-func makeZkChiNodeGroupName(appConfigName string) string {
-	return appConfigName + chiZkNgPrefix
+func makeDruidNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
+	return appConfigName + "-" + "druid" + "-" + string(ngName)
 }
 
-// Druid
-func makeDruidDataNodeGroupName(appConfigName string) string {
-	return appConfigName + druidDataNodePrefix
+func makeChiNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
+	return appConfigName + "-" + "clickhouse" + "-" + string(ngName)
 }
-func makeDruidMasterNodeNodeGroupName(appConfigName string) string {
-	return appConfigName + druidMasterNodePrefix
-}
-func makeDruidQueryNodeNodeGroupName(appConfigName string) string {
-	return appConfigName + druidQueryNodePrefix
+
+func makePinotNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
+	return appConfigName + "-" + "pinot" + "-" + string(ngName)
 }
 
 // NewTaints constructs taints for nodes specific to application type.

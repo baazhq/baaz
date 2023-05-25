@@ -50,6 +50,7 @@ spec:
                       enum:
                       - Druid
                       - ClickHouse
+                      - Pinot
                       type: string
                     name:
                       type: string
@@ -125,28 +126,31 @@ spec:
                           enum:
                           - Druid
                           - ClickHouse
+                          - Pinot
                           type: string
                         nodes:
-                          properties:
-                            max:
-                              format: int32
-                              minimum: 1
-                              type: integer
-                            min:
-                              format: int32
-                              minimum: 1
-                              type: integer
-                            nodeLabels:
-                              additionalProperties:
+                          additionalProperties:
+                            properties:
+                              max:
+                                format: int32
+                                minimum: 1
+                                type: integer
+                              min:
+                                format: int32
+                                minimum: 1
+                                type: integer
+                              nodeLabels:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                              nodeSize:
                                 type: string
-                              type: object
-                            nodeSize:
-                              type: string
-                          required:
-                          - max
-                          - min
-                          - nodeLabels
-                          - nodeSize
+                            required:
+                            - max
+                            - min
+                            - nodeLabels
+                            - nodeSize
+                            type: object
                           type: object
                       required:
                       - appType

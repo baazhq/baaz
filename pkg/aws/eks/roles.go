@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"html/template"
 	"strings"
 
@@ -163,9 +162,6 @@ func (eksEnv *EksEnvironment) createEbsCSIRole(ctx context.Context) (*awsiam.Cre
 	})
 
 	if err != nil {
-
-		fmt.Println(err)
-
 		_, oidcProviderURL, found := strings.Cut(oidcProvider, "oidc-provider/")
 		if !found {
 			return nil, errors.New("invalid oidc provider arn")
