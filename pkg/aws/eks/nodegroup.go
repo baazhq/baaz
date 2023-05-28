@@ -24,14 +24,14 @@ const (
 
 type nodeGroup struct {
 	EksEnv        *EksEnvironment
-	AppConfig     *v1.ApplicationConfig
+	AppConfig     *v1.TenantConfig
 	NodeGroupName v1.NodeGroupName
 	NodeGroupSpec *v1.NodeGroupSpec
 }
 
 func newNodeGroup(
 	eksEnv *EksEnvironment,
-	appConfig *v1.ApplicationConfig,
+	appConfig *v1.TenantConfig,
 	nodeGroupSpec *v1.NodeGroupSpec,
 	nodeGroupName v1.NodeGroupName,
 ) *nodeGroup {
@@ -47,7 +47,7 @@ func newNodeGroup(
 func (eksEnv *EksEnvironment) ReconcileNodeGroup(store store.Store) error {
 	klog.Info("Reconciling node groups")
 
-	for _, app := range eksEnv.Env.Spec.Application {
+	for _, app := range eksEnv.Env.Spec.Tenant {
 
 		ngNameNgSpec, err := getNodegroupSpecForAppSize(eksEnv.Env, app)
 		if err != nil {
@@ -55,11 +55,15 @@ func (eksEnv *EksEnvironment) ReconcileNodeGroup(store store.Store) error {
 		}
 
 		for ngName, ngNodeSpec := range ngNameNgSpec {
-			ngs := newNodeGroup(eksEnv, &app, ngNodeSpec, ngName)
 
-			_, err = ngs.createNodeGroupForApp(store)
-			if err != nil {
-				return err
+			if eksEnv.Env.Status.NodegroupStatus[string(ngName)] != "DELETING" {
+
+				ngs := newNodeGroup(eksEnv, &app, ngNodeSpec, ngName)
+
+				_, err = ngs.createNodeGroupForApp(store)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -72,36 +76,11 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 
 	switch ng.AppConfig.AppType {
 
-	// case v1.ClickHouse:
-
-	// 	systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-	// 	chiNgName := *aws.String(makeChiNodeGroupName(ng.AppConfig.Name))
-	// 	zkChiNgName := *aws.String(makeZkChiNodeGroupName(ng.AppConfig.Name))
-
-	// 	// system nodepool
-	// 	_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	// clickhouse nodepool
-	// 	_, err = ng.createOrUpdateNodeGroup(chiNgName, app, store)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	// zookeeper nodepool
-	// 	_, err = ng.createOrUpdateNodeGroup(zkChiNgName, app, store)
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	case v1.Druid:
+	case v1.ClickHouse:
 
 		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-		druidDataNodeNgName := *aws.String(makeDruidNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
-		druidQueryNodeNgName := *aws.String(makeDruidNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
-		druidMasterNodeNgName := *aws.String(makeDruidNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
+		chiNgName := *aws.String(makeChiNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
+		zkChiNgName := *aws.String(makeZkChiNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
 
 		// system nodepool
 		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
@@ -109,69 +88,59 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 			return nil, err
 		}
 
-		// druid datanodes nodepool
-		_, err = ng.createOrUpdateNodeGroup(druidDataNodeNgName, app, store)
-		if err != nil {
-			return nil, err
-		}
-		// druid querynode nodepool
-		_, err = ng.createOrUpdateNodeGroup(druidQueryNodeNgName, app, store)
+		// clickhouse nodepool
+		_, err = ng.createOrUpdateNodeGroup(chiNgName, app, store)
 		if err != nil {
 			return nil, err
 		}
 
-		// druid masternode nodepool
-		_, err = ng.createOrUpdateNodeGroup(druidMasterNodeNgName, app, store)
+		// zookeeper nodepool
+		_, err = ng.createOrUpdateNodeGroup(zkChiNgName, app, store)
 		if err != nil {
 			return nil, err
 		}
 
-		// case v1.Pinot:
+	case v1.Druid:
 
-		// 	systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-		// 	pinotBrokerNodeNgName := *aws.String(makePinotBrokerNodeGroupName(ng.AppConfig.Name))
-		// 	pinotServerNodeNgName := *aws.String(makePinotServerNodeGroupName(ng.AppConfig.Name))
-		// 	pinotMinionNodeNgName := *aws.String(makePinotMinionNodeGroupName(ng.AppConfig.Name))
-		// 	pinotControllerNodeNgName := *aws.String(makePinotControllerNodeGroupName(ng.AppConfig.Name))
-		// 	pinotZkNodeNgName := *aws.String(makePinotZkGroupName(ng.AppConfig.Name))
+		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
+		druidNodeNgName := *aws.String(makeDruidNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
 
-		// 	// create system nodepool
-		// 	_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
+		// system nodepool
+		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
+		if err != nil {
+			return nil, err
+		}
 
-		// 	// create broker nodepool
-		// 	_, err = ng.createOrUpdateNodeGroup(pinotBrokerNodeNgName, app, store)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
+		// druid nodepool
+		_, err = ng.createOrUpdateNodeGroup(druidNodeNgName, app, store)
+		if err != nil {
+			return nil, err
+		}
 
-		// 	// create server nodepool
-		// 	_, err = ng.createOrUpdateNodeGroup(pinotServerNodeNgName, app, store)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
+	case v1.Pinot:
 
-		// 	// create minion nodepool
-		// 	_, err = ng.createOrUpdateNodeGroup(pinotMinionNodeNgName, app, store)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
+		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
+		pinotNodeNgName := *aws.String(makePinotNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
+		pinotZkNodeNgName := *aws.String(makeZkPinotNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
 
-		// 	// create controller nodepool
-		// 	_, err = ng.createOrUpdateNodeGroup(pinotControllerNodeNgName, app, store)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
+		// create system nodepool
+		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
+		if err != nil {
+			return nil, err
+		}
 
-		// 	// create zk nodepool
-		// 	_, err = ng.createOrUpdateNodeGroup(pinotZkNodeNgName, app, store)
-		// 	if err != nil {
-		// 		return nil, err
-		// 	}
+		// create broker nodepool
+		_, err = ng.createOrUpdateNodeGroup(pinotNodeNgName, app, store)
+		if err != nil {
+			return nil, err
+		}
 
-		// }
+		// create zk nodepool
+		_, err = ng.createOrUpdateNodeGroup(pinotZkNodeNgName, app, store)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 	return &awseks.CreateNodegroupOutput{}, nil
 }
@@ -255,19 +224,22 @@ func (ng *nodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGr
 	if err != nil {
 		var ngNotFound *types.ResourceNotFoundException
 		if errors.As(err, &ngNotFound) {
-			nodeGroup, err := ng.getNodeGroup(nodeGroupName, ngType)
-			if err != nil {
-				return nil, err
-			}
-			result, err := eksClient.CreateNodegroup(ng.EksEnv.Context, nodeGroup)
-			if err != nil {
-				return nil, err
-			}
 
-			if result != nil && result.Nodegroup != nil {
-				klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
-				if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
+			if ng.EksEnv.Env.DeletionTimestamp == nil {
+				nodeGroup, err := ng.getNodeGroup(nodeGroupName, ngType)
+				if err != nil {
 					return nil, err
+				}
+				result, err := eksClient.CreateNodegroup(ng.EksEnv.Context, nodeGroup)
+				if err != nil {
+					return nil, err
+				}
+
+				if result != nil && result.Nodegroup != nil {
+					klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
+					if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
+						return nil, err
+					}
 				}
 			}
 		}
@@ -307,7 +279,7 @@ func (eksEnv *EksEnvironment) NodeGroupExists(ngName string) bool {
 	return true
 }
 
-func getNodegroupSpecForAppSize(env *v1.Environment, app v1.ApplicationConfig) (map[v1.NodeGroupName]*v1.NodeGroupSpec, error) {
+func getNodegroupSpecForAppSize(env *v1.Environment, app v1.TenantConfig) (map[v1.NodeGroupName]*v1.NodeGroupSpec, error) {
 	for _, size := range env.Spec.Size {
 		if size.Name == app.Size && size.Spec.AppType == app.AppType {
 			return size.Spec.Nodes, nil

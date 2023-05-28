@@ -3,7 +3,7 @@ kind: Environment
 metadata:
   labels:
     app: ballastdata
-    env: clickhouse
+    env: druid
   name: environment-dev
   namespace: demo
 spec:
@@ -16,21 +16,35 @@ spec:
       accessKeyName: accessKey
       secretKeyName: secretKey
     eks:
-      name: test-pulak
+      name: datainfra
       subnetIds:
       - subnet-02a0cccde6c324558
       - subnet-037a30ccca71ee1db
       securityGroupIds:
       - sg-0525da1d4c2697b12
       version: "1.25"
-  application:
+  tenant:
     - name: druid-datascience
-      appType: Druid
+      appType: druid
       size: druid-small
+    - name: clickhouse
+      appType: clickhouse
+      size: chi-small
   size:
+    - name: chi-small
+      spec:
+        appType: clickhouse
+        nodes:
+          chinodes:
+            nodeLabels:
+              app: chi
+              nodeType: query
+            nodeSize: t2.small
+            min: 1
+            max: 3
     - name: druid-small
       spec:
-        appType: Druid
+        appType: druid
         nodes:
           querynodes:
             nodeLabels:
@@ -53,11 +67,3 @@ spec:
             nodeSize: t2.small
             min: 1
             max: 3
-          systemNodes:
-            nodeLabels:
-              app: druid
-              nodeType: system
-            nodeSize: t2.small
-            min: 1
-            max: 3
-          

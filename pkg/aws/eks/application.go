@@ -21,8 +21,16 @@ func makeChiNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string 
 	return appConfigName + "-" + "clickhouse" + "-" + string(ngName)
 }
 
+func makeZkChiNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
+	return appConfigName + "-" + "clickhouse-zk" + "-" + string(ngName)
+}
+
 func makePinotNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
 	return appConfigName + "-" + "pinot" + "-" + string(ngName)
+}
+
+func makeZkPinotNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
+	return appConfigName + "-" + "pinot-zk" + "-" + string(ngName)
 }
 
 // NewTaints constructs taints for nodes specific to application type.
