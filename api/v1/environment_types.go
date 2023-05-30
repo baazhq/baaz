@@ -28,8 +28,8 @@ type EnvironmentSpec struct {
 	// Cloud can be any pubic name ie aws, gcp, azure.
 	CloudInfra CloudInfraConfig `json:"cloudInfra"`
 	// DataInfra describes the data config information
-	Application []ApplicationConfig `json:"application"`
-	Size        []ApplicationSize   `json:"size"`
+	Tenant []TenantConfig    `json:"tenant"`
+	Size   []ApplicationSize `json:"size"`
 }
 
 type ApplicationSize struct {
@@ -37,17 +37,26 @@ type ApplicationSize struct {
 	Spec AppSizeSpec `json:"spec"`
 }
 
-type ApplicationConfig struct {
+type TenantConfig struct {
 	Name string `json:"name"`
-	// +kubebuilder:validation:Enum:=Druid;ClickHouse
+	// +kubebuilder:validation:Enum:=druid;clickhouse;pinot
 	AppType ApplicationType `json:"appType"`
 	Size    string          `json:"size"`
 }
 
+type NodeGroupName string
+
+const (
+	DataNodes   NodeGroupName = "datanodes"
+	QueryNodes  NodeGroupName = "querynodes"
+	MasterNodes NodeGroupName = "masternodes"
+	ChiNode     NodeGroupName = "chinodes"
+)
+
 type AppSizeSpec struct {
-	// +kubebuilder:validation:Enum:=Druid;ClickHouse
-	AppType ApplicationType `json:"appType"`
-	Nodes   *NodeGroupSpec  `json:"nodes,omitempty"`
+	// +kubebuilder:validation:Enum:=druid;clickhouse;pinot
+	AppType ApplicationType                  `json:"appType"`
+	Nodes   map[NodeGroupName]*NodeGroupSpec `json:"nodes,omitempty"`
 }
 
 type NodeGroupSpec struct {

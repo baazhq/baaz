@@ -42,25 +42,6 @@ spec:
           spec:
             description: EnvironmentSpec defines the desired state of Environment
             properties:
-              application:
-                description: DataInfra describes the data config information
-                items:
-                  properties:
-                    appType:
-                      enum:
-                      - Druid
-                      - ClickHouse
-                      type: string
-                    name:
-                      type: string
-                    size:
-                      type: string
-                  required:
-                  - appType
-                  - name
-                  - size
-                  type: object
-                type: array
               cloudInfra:
                 description: Cloud can be any pubic name ie aws, gcp, azure.
                 properties:
@@ -123,30 +104,33 @@ spec:
                       properties:
                         appType:
                           enum:
-                          - Druid
-                          - ClickHouse
+                          - druid
+                          - clickhouse
+                          - pinot
                           type: string
                         nodes:
-                          properties:
-                            max:
-                              format: int32
-                              minimum: 1
-                              type: integer
-                            min:
-                              format: int32
-                              minimum: 1
-                              type: integer
-                            nodeLabels:
-                              additionalProperties:
+                          additionalProperties:
+                            properties:
+                              max:
+                                format: int32
+                                minimum: 1
+                                type: integer
+                              min:
+                                format: int32
+                                minimum: 1
+                                type: integer
+                              nodeLabels:
+                                additionalProperties:
+                                  type: string
+                                type: object
+                              nodeSize:
                                 type: string
-                              type: object
-                            nodeSize:
-                              type: string
-                          required:
-                          - max
-                          - min
-                          - nodeLabels
-                          - nodeSize
+                            required:
+                            - max
+                            - min
+                            - nodeLabels
+                            - nodeSize
+                            type: object
                           type: object
                       required:
                       - appType
@@ -156,11 +140,31 @@ spec:
                   - spec
                   type: object
                 type: array
+              tenant:
+                description: DataInfra describes the data config information
+                items:
+                  properties:
+                    appType:
+                      enum:
+                      - druid
+                      - clickhouse
+                      - pinot
+                      type: string
+                    name:
+                      type: string
+                    size:
+                      type: string
+                  required:
+                  - appType
+                  - name
+                  - size
+                  type: object
+                type: array
             required:
-            - application
             - cloudInfra
             - envType
             - size
+            - tenant
             type: object
           status:
             description: EnvironmentStatus defines the observed state of Environment

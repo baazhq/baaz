@@ -152,6 +152,8 @@ func (eksEnv *EksEnvironment) updateEks(errorChan chan<- error) {
 }
 
 func (eksEnv *EksEnvironment) DeleteEKS() (*awseks.DeleteClusterOutput, error) {
+	klog.Infof("Deleting EKS Control Plane [%s]", eksEnv.Env.Spec.CloudInfra.Eks.Name)
+
 	eksClient := eks.NewFromConfig(eksEnv.Config)
 
 	return eksClient.DeleteCluster(eksEnv.Context, &eks.DeleteClusterInput{
@@ -160,18 +162,18 @@ func (eksEnv *EksEnvironment) DeleteEKS() (*awseks.DeleteClusterOutput, error) {
 }
 
 func (eksEnv *EksEnvironment) DeleteOIDCProvider(providerArn string) (*iam.DeleteOpenIDConnectProviderOutput, error) {
+	klog.Infof("Deleting Oidc Provider [%s]", providerArn)
+
 	iamClient := iam.NewFromConfig(eksEnv.Config)
 
-	output, err := iamClient.DeleteOpenIDConnectProvider(context.TODO(), &iam.DeleteOpenIDConnectProviderInput{
+	output, err := iamClient.DeleteOpenIDConnectProvider(eksEnv.Context, &iam.DeleteOpenIDConnectProviderInput{
 		OpenIDConnectProviderArn: &providerArn,
 	})
 	if err != nil {
-		var notFound *types.ResourceNotFoundException
-		if errors.As(err, &notFound) {
-			return output, nil
-		}
-		return nil, err
+		klog.Infof("Response Deleting Oidc Provider [%s]", err.Error())
+		return output, nil
 	}
+
 	return output, nil
 }
 

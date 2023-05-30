@@ -2,36 +2,60 @@ package eks
 
 import (
 	"encoding/base64"
-	"fmt"
-	"log"
 
+	v1 "datainfra.io/ballastdata/api/v1"
+	"datainfra.io/ballastdata/pkg/helm"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go/aws"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
+// druid
+const (
+	druidControlPlaneReleaseName string = "druid-control-plane"
+	druidControlPlaneNamespace   string = "druid-control-plane"
+	druidControlPlaneChartName   string = "druid-operator"
+	repoName                     string = "datainfra"
+	repoUrl                      string = "https://charts.datainfra.io"
+)
+
 // Deployer is responsible for deploying apps
 func (eksEnv *EksEnvironment) ReconcileDeployer() error {
-	clientset, err := eksEnv.getEksConfig()
+	restConfig, err := eksEnv.getEksConfig()
 	if err != nil {
 		return err
 	}
 
-	nodes, err := clientset.CoreV1().Nodes().List(eksEnv.Context, metav1.ListOptions{})
-	if err != nil {
-		log.Fatalf("Error getting EKS nodes: %v", err)
+	for _, app := range eksEnv.Env.Spec.Tenant {
+
+		switch app.AppType {
+		case v1.Druid:
+			// deploy druid operator
+			druidOperatorHelm := helm.NewHelm(
+				druidControlPlaneReleaseName,
+				druidControlPlaneNamespace,
+				druidControlPlaneChartName,
+				repoName,
+				repoUrl,
+				nil)
+			err := druidOperatorHelm.HelmList(restConfig)
+			if err != nil {
+				return nil
+			}
+
+			err = druidOperatorHelm.HelmInstall(restConfig)
+			if err != nil {
+				return err
+			}
+
+		}
 	}
-
-	fmt.Println(nodes.Items)
-
 	return nil
 }
 
-func (eksEnv *EksEnvironment) getEksConfig() (*kubernetes.Clientset, error) {
+func (eksEnv *EksEnvironment) getEksConfig() (*rest.Config, error) {
 	eksClient := awseks.NewFromConfig(eksEnv.Config)
 
 	resultDescribe, err := eksClient.DescribeCluster(eksEnv.Context, &awseks.DescribeClusterInput{
@@ -41,12 +65,12 @@ func (eksEnv *EksEnvironment) getEksConfig() (*kubernetes.Clientset, error) {
 		return nil, err
 	}
 
-	return newClientset(resultDescribe.Cluster)
+	return newRestConfig(resultDescribe.Cluster)
 
 }
 
-func newClientset(cluster *types.Cluster) (*kubernetes.Clientset, error) {
-	log.Printf("%+v", cluster)
+func newRestConfig(cluster *types.Cluster) (*rest.Config, error) {
+
 	gen, err := token.NewGenerator(true, false)
 	if err != nil {
 		return nil, err
@@ -62,17 +86,14 @@ func newClientset(cluster *types.Cluster) (*kubernetes.Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	clientset, err := kubernetes.NewForConfig(
-		&rest.Config{
-			Host:        *cluster.Endpoint,
-			BearerToken: tok.Token,
-			TLSClientConfig: rest.TLSClientConfig{
-				CAData: ca,
-			},
+
+	restConfig := &rest.Config{
+		Host:        *cluster.Endpoint,
+		BearerToken: tok.Token,
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData: ca,
 		},
-	)
-	if err != nil {
-		return nil, err
 	}
-	return clientset, nil
+
+	return restConfig, nil
 }

@@ -123,11 +123,20 @@ func (r *EnvironmentReconciler) reconcileDelete(ctx context.Context, env *datain
 	ngList := r.NgStore.List(env.Spec.CloudInfra.Eks.Name)
 	eksEnv := eks.NewEksEnvironment(ctx, r.Client, env, *eks.NewConfig(env.Spec.CloudInfra.AwsRegion))
 
+	// when the controller restarts and the finalizer is still in place
+	// in memory store can be empty
+	// this way we re-populate the store with nodegroups.
+	if ngList == nil {
+		eksEnv := eks.NewEksEnvironment(ctx, r.Client, env, *eks.NewConfig(env.Spec.CloudInfra.AwsRegion))
+		_ = eksEnv.ReconcileNodeGroup(r.NgStore)
+	}
+
 	for _, ng := range ngList {
+
 		if env.Status.NodegroupStatus[ng] != "DELETING" {
 			_, err := eksEnv.DeleteNodeGroup(ng)
 			if err != nil {
-				return ctrl.Result{}, err
+				//return ctrl.Result{}, err
 			}
 			// update status with current nodegroup status
 			_, _, err = utils.PatchStatus(ctx, r.Client, env, func(obj client.Object) client.Object {
@@ -159,7 +168,7 @@ func (r *EnvironmentReconciler) reconcileDelete(ctx context.Context, env *datain
 	if env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn != "" {
 		_, err := eksEnv.DeleteOIDCProvider(env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn)
 		if err != nil {
-			return ctrl.Result{RequeueAfter: time.Second * 10}, err
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 	}
 
@@ -169,6 +178,7 @@ func (r *EnvironmentReconciler) reconcileDelete(ctx context.Context, env *datain
 
 	// remove our finalizer from the list and update it.
 	controllerutil.RemoveFinalizer(env, envFinalizer)
+	klog.Info("Deleted Environment [%s]", env.GetName())
 	if err := r.Update(ctx, env.DeepCopyObject().(*v1.Environment)); err != nil {
 		return ctrl.Result{}, err
 	}

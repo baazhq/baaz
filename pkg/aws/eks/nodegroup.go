@@ -23,20 +23,23 @@ const (
 )
 
 type nodeGroup struct {
-	EksEnv    *EksEnvironment
-	AppConfig *v1.ApplicationConfig
-	NodeSpec  *v1.NodeGroupSpec
+	EksEnv        *EksEnvironment
+	AppConfig     *v1.TenantConfig
+	NodeGroupName v1.NodeGroupName
+	NodeGroupSpec *v1.NodeGroupSpec
 }
 
 func newNodeGroup(
 	eksEnv *EksEnvironment,
-	appConfig *v1.ApplicationConfig,
-	nodeSpec *v1.NodeGroupSpec,
+	appConfig *v1.TenantConfig,
+	nodeGroupSpec *v1.NodeGroupSpec,
+	nodeGroupName v1.NodeGroupName,
 ) *nodeGroup {
 	ngs := &nodeGroup{
-		EksEnv:    eksEnv,
-		AppConfig: appConfig,
-		NodeSpec:  nodeSpec,
+		EksEnv:        eksEnv,
+		AppConfig:     appConfig,
+		NodeGroupSpec: nodeGroupSpec,
+		NodeGroupName: nodeGroupName,
 	}
 	return ngs
 }
@@ -44,18 +47,24 @@ func newNodeGroup(
 func (eksEnv *EksEnvironment) ReconcileNodeGroup(store store.Store) error {
 	klog.Info("Reconciling node groups")
 
-	for _, app := range eksEnv.Env.Spec.Application {
+	for _, app := range eksEnv.Env.Spec.Tenant {
 
-		nodeSpec, err := getNodegroupSpecForAppSize(eksEnv.Env, app)
+		ngNameNgSpec, err := getNodegroupSpecForAppSize(eksEnv.Env, app)
 		if err != nil {
 			return err
 		}
 
-		ngs := newNodeGroup(eksEnv, &app, nodeSpec)
+		for ngName, ngNodeSpec := range ngNameNgSpec {
 
-		_, err = ngs.createNodeGroupForApp(store)
-		if err != nil {
-			return err
+			if eksEnv.Env.Status.NodegroupStatus[string(ngName)] != "DELETING" {
+
+				ngs := newNodeGroup(eksEnv, &app, ngNodeSpec, ngName)
+
+				_, err = ngs.createNodeGroupForApp(store)
+				if err != nil {
+					return err
+				}
+			}
 		}
 
 	}
@@ -70,8 +79,8 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 	case v1.ClickHouse:
 
 		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-		chiNgName := *aws.String(makeChiNodeGroupName(ng.AppConfig.Name))
-		zkChiNgName := *aws.String(makeZkChiNodeGroupName(ng.AppConfig.Name))
+		chiNgName := *aws.String(makeChiNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
+		zkChiNgName := *aws.String(makeZkChiNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
 
 		// system nodepool
 		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
@@ -94,9 +103,7 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 	case v1.Druid:
 
 		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-		druidDataNodeNgName := *aws.String(makeDruidDataNodeGroupName(ng.AppConfig.Name))
-		druidQueryNodeNgName := *aws.String(makeDruidQueryNodeNodeGroupName(ng.AppConfig.Name))
-		druidMasterNodeNgName := *aws.String(makeDruidMasterNodeNodeGroupName(ng.AppConfig.Name))
+		druidNodeNgName := *aws.String(makeDruidNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
 
 		// system nodepool
 		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
@@ -104,25 +111,37 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 			return nil, err
 		}
 
-		// druid datanodes nodepool
-		_, err = ng.createOrUpdateNodeGroup(druidDataNodeNgName, app, store)
-		if err != nil {
-			return nil, err
-		}
-		// druid querynode nodepool
-		_, err = ng.createOrUpdateNodeGroup(druidQueryNodeNgName, app, store)
+		// druid nodepool
+		_, err = ng.createOrUpdateNodeGroup(druidNodeNgName, app, store)
 		if err != nil {
 			return nil, err
 		}
 
-		// druid masternode nodepool
-		_, err = ng.createOrUpdateNodeGroup(druidMasterNodeNgName, app, store)
+	case v1.Pinot:
+
+		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
+		pinotNodeNgName := *aws.String(makePinotNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
+		pinotZkNodeNgName := *aws.String(makeZkPinotNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
+
+		// create system nodepool
+		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
+		if err != nil {
+			return nil, err
+		}
+
+		// create broker nodepool
+		_, err = ng.createOrUpdateNodeGroup(pinotNodeNgName, app, store)
+		if err != nil {
+			return nil, err
+		}
+
+		// create zk nodepool
+		_, err = ng.createOrUpdateNodeGroup(pinotZkNodeNgName, app, store)
 		if err != nil {
 			return nil, err
 		}
 
 	}
-
 	return &awseks.CreateNodegroupOutput{}, nil
 }
 
@@ -152,15 +171,15 @@ func (ng *nodeGroup) getNodeGroup(name string, ngType nodeGroupType) (*awseks.Cr
 		CapacityType:       "",
 		ClientRequestToken: nil,
 		DiskSize:           nil,
-		InstanceTypes:      []string{ng.NodeSpec.NodeSize},
-		Labels:             ng.NodeSpec.NodeLabels,
+		InstanceTypes:      []string{ng.NodeGroupSpec.NodeSize},
+		Labels:             ng.NodeGroupSpec.NodeLabels,
 		LaunchTemplate:     nil,
 		ReleaseVersion:     nil,
 		RemoteAccess:       nil,
 		ScalingConfig: &types.NodegroupScalingConfig{
-			DesiredSize: aws.Int32(ng.NodeSpec.Min),
-			MaxSize:     aws.Int32(ng.NodeSpec.Max),
-			MinSize:     aws.Int32(ng.NodeSpec.Min),
+			DesiredSize: aws.Int32(ng.NodeGroupSpec.Min),
+			MaxSize:     aws.Int32(ng.NodeGroupSpec.Max),
+			MinSize:     aws.Int32(ng.NodeGroupSpec.Min),
 		},
 		Tags: map[string]string{
 			fmt.Sprintf("kubernetes.io/cluster/%s", ng.EksEnv.Env.Spec.CloudInfra.Eks.Name): "owned",
@@ -205,19 +224,22 @@ func (ng *nodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGr
 	if err != nil {
 		var ngNotFound *types.ResourceNotFoundException
 		if errors.As(err, &ngNotFound) {
-			nodeGroup, err := ng.getNodeGroup(nodeGroupName, ngType)
-			if err != nil {
-				return nil, err
-			}
-			result, err := eksClient.CreateNodegroup(ng.EksEnv.Context, nodeGroup)
-			if err != nil {
-				return nil, err
-			}
 
-			if result != nil && result.Nodegroup != nil {
-				klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
-				if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
+			if ng.EksEnv.Env.DeletionTimestamp == nil {
+				nodeGroup, err := ng.getNodeGroup(nodeGroupName, ngType)
+				if err != nil {
 					return nil, err
+				}
+				result, err := eksClient.CreateNodegroup(ng.EksEnv.Context, nodeGroup)
+				if err != nil {
+					return nil, err
+				}
+
+				if result != nil && result.Nodegroup != nil {
+					klog.Infof("Initated NodeGroup Launch [%s]", *result.Nodegroup.ClusterName)
+					if err := ng.patchStatus(*result.Nodegroup.NodegroupName, string(result.Nodegroup.Status)); err != nil {
+						return nil, err
+					}
 				}
 			}
 		}
@@ -257,7 +279,7 @@ func (eksEnv *EksEnvironment) NodeGroupExists(ngName string) bool {
 	return true
 }
 
-func getNodegroupSpecForAppSize(env *v1.Environment, app v1.ApplicationConfig) (*v1.NodeGroupSpec, error) {
+func getNodegroupSpecForAppSize(env *v1.Environment, app v1.TenantConfig) (map[v1.NodeGroupName]*v1.NodeGroupSpec, error) {
 	for _, size := range env.Spec.Size {
 		if size.Name == app.Size && size.Spec.AppType == app.AppType {
 			return size.Spec.Nodes, nil
