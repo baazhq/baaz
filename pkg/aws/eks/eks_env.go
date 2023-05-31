@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "datainfra.io/ballastdata/api/v1"
-	"datainfra.io/ballastdata/pkg/store"
 	"datainfra.io/ballastdata/pkg/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -42,21 +41,6 @@ const (
 	EKSStatusACTIVE   = "ACTIVE"
 	EKSStatusUpdating = "UPDATING"
 )
-
-type EksEnv interface {
-	CreateEks() *EksOutput
-	UpdateEks() *EksOutput
-	DescribeEks() (*awseks.DescribeClusterOutput, error)
-	DeleteEKS() (*awseks.DeleteClusterOutput, error)
-	DeleteOIDCProvider(providerArn string) (*iam.DeleteOpenIDConnectProviderOutput, error)
-	UpdateAwsEksEnvironment(clusterResult *awseks.DescribeClusterOutput) error
-	ReconcileNodeGroup(store store.Store) error
-	ReconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOutput) error
-	ReconcileDefaultAddons() error
-	ReconcileDeployer() error
-	DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOutput, error)
-	DescribeNodeGroup(nodeGroupName string) (output *awseks.DescribeNodegroupOutput, found bool, err error)
-}
 
 type EksOutput struct {
 	Result     string

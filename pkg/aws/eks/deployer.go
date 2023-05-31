@@ -3,8 +3,7 @@ package eks
 import (
 	"encoding/base64"
 
-	v1 "datainfra.io/ballastdata/api/v1"
-	"datainfra.io/ballastdata/pkg/helm"
+	"datainfra.io/ballastdata/pkg/deployer"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,46 +11,19 @@ import (
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
 
-// druid
-const (
-	druidControlPlaneReleaseName string = "druid-control-plane"
-	druidControlPlaneNamespace   string = "druid-control-plane"
-	druidControlPlaneChartName   string = "druid-operator"
-	repoName                     string = "datainfra"
-	repoUrl                      string = "https://charts.datainfra.io"
-)
-
 // Deployer is responsible for deploying apps
-func (eksEnv *EksEnvironment) ReconcileDeployer() error {
+func (eksEnv *EksEnvironment) ReconcileApplicationDeployer() error {
 	restConfig, err := eksEnv.getEksConfig()
 	if err != nil {
 		return err
 	}
 
-	for _, app := range eksEnv.Env.Spec.Tenant {
+	deploy := deployer.NewDeployer(restConfig, eksEnv.Env)
 
-		switch app.AppType {
-		case v1.Druid:
-			// deploy druid operator
-			druidOperatorHelm := helm.NewHelm(
-				druidControlPlaneReleaseName,
-				druidControlPlaneNamespace,
-				druidControlPlaneChartName,
-				repoName,
-				repoUrl,
-				nil)
-			err := druidOperatorHelm.HelmList(restConfig)
-			if err != nil {
-				return nil
-			}
-
-			err = druidOperatorHelm.HelmInstall(restConfig)
-			if err != nil {
-				return err
-			}
-
-		}
+	if err := deploy.ReconcileDeployer(); err != nil {
+		return err
 	}
+
 	return nil
 }
 

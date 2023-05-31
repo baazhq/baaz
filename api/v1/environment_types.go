@@ -47,10 +47,10 @@ type TenantConfig struct {
 type NodeGroupName string
 
 const (
-	DataNodes   NodeGroupName = "datanodes"
-	QueryNodes  NodeGroupName = "querynodes"
-	MasterNodes NodeGroupName = "masternodes"
-	ChiNode     NodeGroupName = "chinodes"
+	DataNodes   NodeGroupName = "data"
+	QueryNodes  NodeGroupName = "query"
+	MasterNodes NodeGroupName = "master"
+	ChiNode     NodeGroupName = "chi"
 )
 
 type AppSizeSpec struct {
