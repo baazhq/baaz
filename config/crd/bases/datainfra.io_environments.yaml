@@ -131,6 +131,11 @@ spec:
                             - nodeLabels
                             - nodeSize
                             type: object
+                          enum:
+                          - data
+                          - query
+                          - master
+                          - chi
                           type: object
                       required:
                       - appType
