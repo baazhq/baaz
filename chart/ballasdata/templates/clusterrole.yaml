@@ -1,0 +1,21 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "ballasdata.fullname" . }}
+  labels:
+    {{- include "ballasdata.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - datainfra.io
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - nodes
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
