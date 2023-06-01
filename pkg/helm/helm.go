@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -35,42 +34,46 @@ var settings *cli.EnvSettings
 
 type HelmAct interface {
 	HelmInstall(rest *rest.Config) error
-	HelmList(rest *rest.Config) error
+	HelmList(rest *rest.Config) (bool, error)
 }
 
 type Helm struct {
-	Action      *action.Configuration
-	ReleaseName string
-	Namespace   string
-	Values      []string
-	RepoName    string
-	ChartName   string
-	RepoUrl     string
+	Action       *action.Configuration
+	ReleaseName  string
+	Namespace    string
+	ValuesFile   []string
+	Values       []string
+	StringValues []string
+	RepoName     string
+	ChartName    string
+	RepoUrl      string
 }
 
 func NewHelm(
-	releaseName, namespace, chartName, repoName, repoUrl string,
-	values []string) HelmAct {
+	releaseName, namespace, chartName, repoName, repoUrl string, valuesFile []string,
+	values []string, stringValues []string) HelmAct {
 	return &Helm{
-		Action:      new(action.Configuration),
-		ReleaseName: releaseName,
-		Namespace:   namespace,
-		RepoName:    repoName,
-		RepoUrl:     repoUrl,
-		ChartName:   chartName,
-		Values:      values,
+		Action:       new(action.Configuration),
+		ReleaseName:  releaseName,
+		Namespace:    namespace,
+		RepoName:     repoName,
+		RepoUrl:      repoUrl,
+		ChartName:    chartName,
+		ValuesFile:   valuesFile,
+		Values:       values,
+		StringValues: stringValues,
 	}
 }
 
 // HelmList Method installs the chart.
 // https://helm.sh/docs/topics/advanced/#simple-example
-func (h *Helm) HelmList(rest *rest.Config) error {
+func (h *Helm) HelmList(rest *rest.Config) (bool, error) {
 
 	settings := cli.New()
 	restGetter := NewRESTClientGetter(rest, h.Namespace)
 
 	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
-		return err
+		return false, err
 	}
 
 	clientList := action.NewList(h.Action)
@@ -81,15 +84,15 @@ func (h *Helm) HelmList(rest *rest.Config) error {
 	clientList.Deployed = true
 	results, err := clientList.Run()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	for _, result := range results {
 		if result.Name == h.ReleaseName {
-			return errors.New(fmt.Sprintf("Err: Helm Chart exists [%s]", h.ReleaseName))
+			return true, nil
 		}
 	}
-	return err
+	return false, nil
 }
 
 // HelmInstall Method installs the chart.
@@ -117,7 +120,7 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
-		log.Fatal(err)
+		klog.Error(err)
 	}
 
 	client.ReleaseName = h.ReleaseName
@@ -130,7 +133,8 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 	client.IncludeCRDs = true
 
 	values := values.Options{
-		ValueFiles: h.Values,
+		ValueFiles: h.ValuesFile,
+		Values:     h.Values,
 	}
 
 	vals, err := values.MergeValues(getter.All(settings))
@@ -140,7 +144,7 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 
 	release, err := client.Run(chartRequested, vals)
 	if err != nil {
-		log.Printf("%+v", err)
+		return err
 	}
 
 	klog.Infof("Release Name: [%s] Namespace [%s] Status [%s]", release.Name, release.Namespace, release.Info.Status)

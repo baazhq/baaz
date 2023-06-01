@@ -74,7 +74,7 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 		if err := eksEnv.ReconcileDefaultAddons(); err != nil {
 			return err
 		}
-		if err := eksEnv.ReconcileDeployer(); err != nil {
+		if err := eksEnv.ReconcileApplicationDeployer(); err != nil {
 			return err
 		}
 	}

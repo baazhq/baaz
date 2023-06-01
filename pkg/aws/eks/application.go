@@ -11,26 +11,16 @@ const (
 	systemNgPrefix string = "-system"
 )
 
-func makeSystemNodeGroupName(appConfigName string) string { return appConfigName + systemNgPrefix }
-
-func makeDruidNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
-	return appConfigName + "-" + "druid" + "-" + string(ngName)
+func makeSystemNodeGroupName(tenantConfigName string) string {
+	return tenantConfigName + systemNgPrefix
 }
 
-func makeChiNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
-	return appConfigName + "-" + "clickhouse" + "-" + string(ngName)
+func makeTenantNodeGroupName(tenantConfigName string, appType v1.ApplicationType, ngName v1.NodeGroupName) string {
+	return tenantConfigName + "-" + string(appType) + "-" + string(ngName)
 }
 
-func makeZkChiNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
-	return appConfigName + "-" + "clickhouse-zk" + "-" + string(ngName)
-}
-
-func makePinotNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
-	return appConfigName + "-" + "pinot" + "-" + string(ngName)
-}
-
-func makeZkPinotNodeGroupName(appConfigName string, ngName v1.NodeGroupName) string {
-	return appConfigName + "-" + "pinot-zk" + "-" + string(ngName)
+func makeZkTenantNodeGroupName(tenantConfigName string, appType v1.ApplicationType) string {
+	return tenantConfigName + "-" + string(appType) + "-" + "zk"
 }
 
 // NewTaints constructs taints for nodes specific to application type.

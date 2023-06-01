@@ -1,0 +1,55 @@
+apiVersion: datainfra.io/v1
+kind: Environment
+metadata:
+  labels:
+    app: ballastdata
+    env: druid
+  name: environment-dev
+  namespace: demo
+spec:
+  envType: dev
+  cloudInfra:
+    type: aws
+    awsRegion: us-east-1
+    authSecretRef:
+      secretName: aws-secret
+      accessKeyName: accessKey
+      secretKeyName: secretKey
+    eks:
+      name: datainfra
+      subnetIds:
+      - subnet-02a0cccde6c324558
+      - subnet-037a30ccca71ee1db
+      securityGroupIds:
+      - sg-0525da1d4c2697b12
+      version: "1.25"
+  tenant:
+    - name: druid-datascience
+      appType: druid
+      size: druid-small
+  size:
+    - name: druid-small
+      spec:
+        appType: druid
+        nodes:
+          querynodes:
+            nodeLabels:
+              app: druid
+              nodeType: query
+            nodeSize: t2.small
+            min: 1
+            max: 3
+          datanodes:
+            nodeLabels:
+              app: druid
+              nodeType: data
+            nodeSize: t2.small
+            min: 1
+            max: 3
+          masternodes:
+            nodeLabels:
+              app: druid
+              nodeType: master
+            nodeSize: t2.small
+            min: 1
+            max: 3

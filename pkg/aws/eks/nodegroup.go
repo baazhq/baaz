@@ -79,8 +79,8 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 	case v1.ClickHouse:
 
 		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-		chiNgName := *aws.String(makeChiNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
-		zkChiNgName := *aws.String(makeZkChiNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
+		chiNgName := *aws.String(makeTenantNodeGroupName(ng.AppConfig.Name, ng.AppConfig.AppType, ng.NodeGroupName))
+		zkChiNgName := *aws.String(makeZkTenantNodeGroupName(ng.AppConfig.Name, ng.AppConfig.AppType))
 
 		// system nodepool
 		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
@@ -103,7 +103,7 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 	case v1.Druid:
 
 		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-		druidNodeNgName := *aws.String(makeDruidNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
+		druidNodeNgName := *aws.String(makeTenantNodeGroupName(ng.AppConfig.Name, ng.AppConfig.AppType, ng.NodeGroupName))
 
 		// system nodepool
 		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
@@ -120,8 +120,8 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 	case v1.Pinot:
 
 		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-		pinotNodeNgName := *aws.String(makePinotNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
-		pinotZkNodeNgName := *aws.String(makeZkPinotNodeGroupName(ng.AppConfig.Name, ng.NodeGroupName))
+		pinotNodeNgName := *aws.String(makeTenantNodeGroupName(ng.AppConfig.Name, ng.AppConfig.AppType, ng.NodeGroupName))
+		pinotZkNodeNgName := *aws.String(makeZkTenantNodeGroupName(ng.AppConfig.Name, ng.AppConfig.AppType))
 
 		// create system nodepool
 		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
@@ -145,7 +145,7 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 	return &awseks.CreateNodegroupOutput{}, nil
 }
 
-func (ng *nodeGroup) getNodeGroup(name string, ngType nodeGroupType) (*awseks.CreateNodegroupInput, error) {
+func (ng *nodeGroup) getNodeGroupInput(name string, ngType nodeGroupType) (*awseks.CreateNodegroupInput, error) {
 
 	var taints = []types.Taint{}
 
@@ -226,7 +226,7 @@ func (ng *nodeGroup) createOrUpdateNodeGroup(nodeGroupName string, ngType nodeGr
 		if errors.As(err, &ngNotFound) {
 
 			if ng.EksEnv.Env.DeletionTimestamp == nil {
-				nodeGroup, err := ng.getNodeGroup(nodeGroupName, ngType)
+				nodeGroup, err := ng.getNodeGroupInput(nodeGroupName, ngType)
 				if err != nil {
 					return nil, err
 				}

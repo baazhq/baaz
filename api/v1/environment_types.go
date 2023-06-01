@@ -47,16 +47,17 @@ type TenantConfig struct {
 type NodeGroupName string
 
 const (
-	DataNodes   NodeGroupName = "datanodes"
-	QueryNodes  NodeGroupName = "querynodes"
-	MasterNodes NodeGroupName = "masternodes"
-	ChiNode     NodeGroupName = "chinodes"
+	DataNodes   NodeGroupName = "data"
+	QueryNodes  NodeGroupName = "query"
+	MasterNodes NodeGroupName = "master"
+	ChiNode     NodeGroupName = "chi"
 )
 
 type AppSizeSpec struct {
 	// +kubebuilder:validation:Enum:=druid;clickhouse;pinot
-	AppType ApplicationType                  `json:"appType"`
-	Nodes   map[NodeGroupName]*NodeGroupSpec `json:"nodes,omitempty"`
+	AppType ApplicationType `json:"appType"`
+	// +kubebuilder:validation:Enum:=data;query;master;chi
+	Nodes map[NodeGroupName]*NodeGroupSpec `json:"nodes,omitempty"`
 }
 
 type NodeGroupSpec struct {
