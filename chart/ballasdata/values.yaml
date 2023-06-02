@@ -6,10 +6,10 @@ replicaCount: 1
 
 # todo: update image repository & tag
 image:
-  repository: nginx
+  repository: pkbhowmick/ballasdata
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: "v0.0.1"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -39,7 +39,7 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 80
+  port: 8080
 
 ingress:
   enabled: false
