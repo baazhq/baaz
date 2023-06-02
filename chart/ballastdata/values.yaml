@@ -6,10 +6,10 @@ replicaCount: 1
 
 # todo: update image repository & tag
 image:
-  repository: pkbhowmick/ballasdata
+  repository: controller
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "v0.0.1"
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""

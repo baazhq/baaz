@@ -5,9 +5,7 @@ metadata:
   labels:
     {{- include "ballasdata.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "ballasdata.selectorLabels" . | nindent 6 }}
