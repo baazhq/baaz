@@ -22,7 +22,6 @@ const (
 	zkChartName   string = "zookeeper"
 	zkRepoName    string = "pravega"
 	zkRepoUrl     string = "https://charts.pravega.io"
-	zkValuesPath  string = "pkg/deployer/applications/values/zk.yaml"
 )
 
 type Zookeeper interface {
