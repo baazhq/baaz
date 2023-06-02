@@ -12,15 +12,6 @@ const (
 	zkControlPlaneVersion string = "0.2.15"
 )
 
-// druid
-const (
-	druidOperatorReleaseName string = "druid-operator"
-	druidOperatorNamespace   string = "druid-operator"
-	druidOperatorChartName   string = "druid-operator"
-	druidRepoName            string = "datainfra"
-	druidRepoUrl             string = "https://charts.datainfra.io"
-)
-
 type Deploy interface {
 	ReconcileDeployer() error
 }
@@ -53,6 +44,16 @@ func (deploy *Deployer) ReconcileDeployer() error {
 			)
 
 			if err := zk.ReconcileZookeeper(); err != nil {
+				return err
+			}
+
+			ch := applications.NewCh(
+				deploy.RestConfig,
+				tenant,
+				makeNamespace(tenant.Name, tenant.AppType),
+			)
+
+			if err := ch.ReconcileClickhouse(); err != nil {
 				return err
 			}
 

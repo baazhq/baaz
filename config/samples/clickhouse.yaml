@@ -32,7 +32,7 @@ spec:
       spec:
         appType: clickhouse
         nodes:
-          chinodes:
+          chi:
             nodeLabels:
               app: chi
               nodeType: query

@@ -118,6 +118,11 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 		return err
 	}
 
+	// err = h.RepoUpdate()
+	// if err != nil {
+	// 	return err
+	// }
+
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
 		klog.Error(err)
