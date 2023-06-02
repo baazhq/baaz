@@ -17,6 +17,10 @@ import (
 
 var envFinalizer = "environment.datainfra.io/finalizer"
 
+const (
+	awsEbsCsiDriver string = "aws-ebs-csi-driver"
+)
+
 func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment) error {
 
 	eksEnv := eks.NewEksEnvironment(ctx, r.Client, env, *eks.NewConfig(env.Spec.CloudInfra.AwsRegion))
@@ -64,6 +68,7 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 			return err
 		}
 	}
+
 	if result != nil && result.Cluster != nil && result.Cluster.Status == eks.EKSStatusACTIVE {
 		if err := eksEnv.ReconcileNodeGroup(r.NgStore); err != nil {
 			return err
@@ -74,8 +79,11 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 		if err := eksEnv.ReconcileDefaultAddons(); err != nil {
 			return err
 		}
-		if err := eksEnv.ReconcileApplicationDeployer(); err != nil {
-			return err
+
+		if env.Status.AddonStatus[awsEbsCsiDriver] == string(types.AddonStatusDegraded) || env.Status.AddonStatus[awsEbsCsiDriver] == string(types.AddonStatusActive) {
+			if err := eksEnv.ReconcileApplicationDeployer(); err != nil {
+				return err
+			}
 		}
 	}
 
