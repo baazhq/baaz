@@ -13,7 +13,7 @@ import (
 func (r *EnvironmentReconciler) do(ctx context.Context, env *v1.Environment) error {
 	switch env.Spec.CloudInfra.Type {
 
-	case v1.AWS:
+	case v1.CloudType(v1.AWS):
 
 		awsSecret, err := getSecret(ctx, r.Client, client.ObjectKey{
 			Name:      env.Spec.CloudInfra.AuthSecretRef.SecretName,

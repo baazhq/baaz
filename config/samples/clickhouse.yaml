@@ -27,6 +27,9 @@ spec:
     - name: team-1
       appType: clickhouse
       size: chi-small
+    - name: team-2
+      appType: clickhouse
+      size: chi-small
   size:
     - name: chi-small
       spec:

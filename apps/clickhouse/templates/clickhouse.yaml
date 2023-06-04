@@ -1,0 +1,44 @@
+apiVersion: "clickhouse.altinity.com/v1"
+kind: "ClickHouseInstallation"
+metadata:
+  name: {{ .Release.Name }}-chi
+spec:
+  configuration:
+    zookeeper:
+      nodes:
+        - host: {{ .Values.ZkHost }}
+          port: 2181
+    clusters:
+      - name: clickhouse
+        templates:
+          podTemplate: chi
+        layout:
+          shardsCount: 1
+          replicasCount: 2
+  templates:
+    podTemplates:
+      - name: chi
+        spec:
+        {{- with .Values.pod.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 10 }}
+        {{- end }}
+        {{- with .Values.pod.tolerations }}
+          tolerations:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+          containers:
+            - name: clickhouse-pod
+              image: clickhouse/clickhouse-server:22.3
+              volumeMounts:
+                - name: clickhouse-storage-template
+                  mountPath: /var/lib/clickhouse
+    volumeClaimTemplates:
+      - name: clickhouse-storage-template
+        spec:
+          storageClassName: gp2
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi

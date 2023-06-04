@@ -101,7 +101,7 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 
 	settings := cli.New()
 
-	repoAdd(h.RepoName, h.RepoUrl)
+	//	repoAdd(h.RepoName, h.RepoUrl)
 
 	restGetter := NewRESTClientGetter(rest, h.Namespace)
 
@@ -112,6 +112,8 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 	client := action.NewInstall(h.Action)
 
 	settings.EnvVars()
+
+	fmt.Printf("%s/%s", h.RepoName, h.ChartName)
 
 	cp, err := client.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", h.RepoName, h.ChartName), settings)
 	if err != nil {
@@ -125,7 +127,7 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
-		klog.Error(err)
+		return err
 	}
 
 	client.ReleaseName = h.ReleaseName

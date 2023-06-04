@@ -8,9 +8,9 @@ import (
 
 const (
 	chOperatorReleaseName string = "clickhouse-operator"
-	chOperatorNamespace   string = "clickhouse-operator"
+	chOperatorNamespace   string = "kube-system"
 	chOperatorChartName   string = "clickhouse-operator"
-	chOperatorRepoName    string = "datainfrao"
+	chOperatorRepoName    string = "datainfra"
 	chOperatorRepoUrl     string = "https://charts.datainfra.io"
 )
 
@@ -22,24 +22,33 @@ type Ch struct {
 	RestConfig   *rest.Config
 	TenantConfig v1.TenantConfig
 	Namespace    string
+	Cloud        v1.CloudType
 }
 
 func NewCh(
 	restConfig *rest.Config,
 	tenantConfig v1.TenantConfig,
 	namespace string,
+	cloud v1.CloudType,
 ) Clickhouse {
 	return &Ch{
 		RestConfig:   restConfig,
 		TenantConfig: tenantConfig,
 		Namespace:    namespace,
+		Cloud:        cloud,
 	}
 
 }
 
 func (ch *Ch) ReconcileClickhouse() error {
-	// deploy zk operator
+	// deploy ch operator
 	err := ch.deployChOperator()
+	if err != nil {
+		return err
+	}
+
+	// deploy ch
+	err = ch.deployChi()
 	if err != nil {
 		return err
 	}
@@ -56,7 +65,9 @@ func (ch *Ch) deployChOperator() error {
 		chOperatorRepoName,
 		chOperatorRepoUrl,
 		nil,
-		nil,
+		[]string{
+			"nameOverride=" + chOperatorReleaseName,
+		},
 		nil,
 	)
 
@@ -72,39 +83,39 @@ func (ch *Ch) deployChOperator() error {
 
 }
 
-// func (zk *Zk) deployZk() error {
-// 	// deploy zk operator
+func (ch *Ch) deployChi() error {
 
-// 	zkCrNameNodeName := makeZkCrNameSelectorName(zk.TenantConfig.Name, zk.TenantConfig.AppType)
+	chCrNameNodeName := makeChCrNameSelectorName(ch.TenantConfig.Name, ch.TenantConfig.AppType)
 
-// 	zkOperatorHelm := helm.NewHelm(
-// 		zkCrNameNodeName,
-// 		zk.Namespace,
-// 		zkChartName,
-// 		zkRepoName,
-// 		zkRepoUrl,
-// 		nil,
-// 		[]string{
-// 			"pod.nodeSelector.eks\\.amazonaws\\.com/nodegroup=" + zkCrNameNodeName,
-// 			"pod.tolerations[0].key=application",
-// 			"pod.tolerations[0].operator=Equal",
-// 			"pod.tolerations[0].value=" + zkCrNameNodeName,
-// 			"pod.tolerations[0].effect=NoSchedule",
-// 		},
-// 		nil,
-// 	)
+	chHelm := helm.NewHelm(
+		chCrNameNodeName,
+		ch.Namespace,
+		"clickhouse",
+		"apps",
+		"",
+		nil,
+		[]string{
+			"ZkHost=" + ch.Namespace + "-zk-zookeeper-headless",
+			"pod.nodeSelector." + getNodeSelector(ch.Cloud) + "=" + chCrNameNodeName,
+			"pod.tolerations[0].key=application",
+			"pod.tolerations[0].operator=Equal",
+			"pod.tolerations[0].value=" + chCrNameNodeName,
+			"pod.tolerations[0].effect=NoSchedule",
+		},
+		nil,
+	)
 
-// 	exists, err := zkOperatorHelm.HelmList(zk.RestConfig)
+	exists, err := chHelm.HelmList(ch.RestConfig)
 
-// 	if !exists && err == nil {
-// 		err = zkOperatorHelm.HelmInstall(zk.RestConfig)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
+	if !exists && err == nil {
+		err = chHelm.HelmInstall(ch.RestConfig)
+		if err != nil {
+			return err
+		}
+	}
 
-// 	return nil
-// }
+	return nil
+}
 
 func makeChCrNameSelectorName(tenantConfigName string, appType v1.ApplicationType) string {
 	return tenantConfigName + "-" + string(appType) + "-" + "ch"
