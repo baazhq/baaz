@@ -87,5 +87,13 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 		}
 	}
 
+	if _, _, err := utils.PatchStatus(ctx, r.Client, env, func(obj client.Object) client.Object {
+		in := obj.(*v1.Environment)
+		// todo find the logic for success status
+		return in
+	}); err != nil {
+		return err
+	}
+
 	return nil
 }

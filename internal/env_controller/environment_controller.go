@@ -104,6 +104,16 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 }
 
 func (r *EnvironmentReconciler) reconcileDelete(ctx context.Context, env *datainfraiov1.Environment) (ctrl.Result, error) {
+	// update phase to terminating
+	_, _, err := utils.PatchStatus(ctx, r.Client, env, func(obj client.Object) client.Object {
+		in := obj.(*datainfraiov1.Environment)
+		in.Status.Phase = datainfraiov1.Terminating
+		return in
+	})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	ngList := r.NgStore.List(env.Spec.CloudInfra.Eks.Name)
 	eksEnv := eks.NewEksEnvironment(ctx, r.Client, env, *eks.NewConfig(env.Spec.CloudInfra.AwsRegion))
 
