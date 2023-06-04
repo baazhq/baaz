@@ -41,6 +41,7 @@ func (deploy *Deployer) ReconcileDeployer() error {
 				deploy.RestConfig,
 				tenant,
 				makeNamespace(tenant.Name, tenant.AppType),
+				v1.CloudType(deploy.Env.Spec.CloudInfra.Type),
 			)
 
 			if err := zk.ReconcileZookeeper(); err != nil {
@@ -51,6 +52,7 @@ func (deploy *Deployer) ReconcileDeployer() error {
 				deploy.RestConfig,
 				tenant,
 				makeNamespace(tenant.Name, tenant.AppType),
+				v1.CloudType(deploy.Env.Spec.CloudInfra.Type),
 			)
 
 			if err := ch.ReconcileClickhouse(); err != nil {

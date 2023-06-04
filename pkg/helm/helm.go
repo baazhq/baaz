@@ -101,7 +101,7 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 
 	settings := cli.New()
 
-	repoAdd(h.RepoName, h.RepoUrl)
+	//	repoAdd(h.RepoName, h.RepoUrl)
 
 	restGetter := NewRESTClientGetter(rest, h.Namespace)
 
@@ -118,14 +118,14 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 		return err
 	}
 
-	// err = h.RepoUpdate()
-	// if err != nil {
-	// 	return err
-	// }
+	err = h.RepoUpdate()
+	if err != nil {
+		return err
+	}
 
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
-		klog.Error(err)
+		return err
 	}
 
 	client.ReleaseName = h.ReleaseName
@@ -217,7 +217,7 @@ func repoAdd(name, url string) {
 	//Ensure the file directory exists as it is required for file locking
 	err := os.MkdirAll(filepath.Dir(repoFile), os.ModePerm)
 	if err != nil && !os.IsExist(err) {
-		klog.Fatal(err)
+		klog.Error(err)
 	}
 
 	// Acquire a file lock for process synchronization
@@ -229,17 +229,17 @@ func repoAdd(name, url string) {
 		defer fileLock.Unlock()
 	}
 	if err != nil {
-		klog.Fatal(err)
+		klog.Error(err)
 	}
 
 	b, err := ioutil.ReadFile(repoFile)
 	if err != nil && !os.IsNotExist(err) {
-		klog.Fatal(err)
+		klog.Error(err)
 	}
 
 	var f repo.File
 	if err := yaml.Unmarshal(b, &f); err != nil {
-		klog.Fatal(err)
+		klog.Error(err)
 	}
 
 	if f.Has(name) {
@@ -253,18 +253,18 @@ func repoAdd(name, url string) {
 
 	r, err := repo.NewChartRepository(&c, getter.All(settings))
 	if err != nil {
-		klog.Fatal(err)
+		klog.Error(err)
 	}
 
 	if _, err := r.DownloadIndexFile(); err != nil {
 		err := errors.Wrapf(err, "looks like %q is not a valid chart repository or cannot be reached", url)
-		klog.Fatal(err)
+		klog.Error(err)
 	}
 
 	f.Update(&c)
 
 	if err := f.WriteFile(repoFile, 0644); err != nil {
-		klog.Fatal(err)
+		klog.Error(err)
 	}
 	klog.Infof("%q has been added to your repositories\n", name)
 }

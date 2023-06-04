@@ -32,17 +32,20 @@ type Zk struct {
 	RestConfig   *rest.Config
 	TenantConfig v1.TenantConfig
 	Namespace    string
+	Cloud        v1.CloudType
 }
 
 func NewZookeeper(
 	restConfig *rest.Config,
 	tenantConfig v1.TenantConfig,
 	namespace string,
+	cloud v1.CloudType,
 ) Zookeeper {
 	return &Zk{
 		RestConfig:   restConfig,
 		TenantConfig: tenantConfig,
 		Namespace:    namespace,
+		Cloud:        cloud,
 	}
 
 }
@@ -99,7 +102,7 @@ func (zk *Zk) deployZk() error {
 		zkRepoUrl,
 		nil,
 		[]string{
-			"pod.nodeSelector.eks\\.amazonaws\\.com/nodegroup=" + zkCrNameNodeName,
+			"pod.nodeSelector." + getNodeSelector(zk.Cloud) + "=" + zkCrNameNodeName,
 			"pod.tolerations[0].key=application",
 			"pod.tolerations[0].operator=Equal",
 			"pod.tolerations[0].value=" + zkCrNameNodeName,
