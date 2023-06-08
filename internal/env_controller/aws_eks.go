@@ -85,15 +85,36 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 				return err
 			}
 		}
+
+		return r.calculatePhase(ctx, env)
+	}
+
+	return nil
+}
+
+func (r *EnvironmentReconciler) calculatePhase(ctx context.Context, env *v1.Environment) error {
+	klog.Info("Calculating Environment Status")
+
+	for status, node := range env.Status.NodegroupStatus {
+		if status != string(types.NodegroupStatusActive) {
+			klog.Infof("Node %s not active yet", node)
+			return nil
+		}
+	}
+
+	for status, addon := range env.Status.AddonStatus {
+		if status != string(types.AddonStatusActive) {
+			klog.Infof("Addon %s not active yet", addon)
+			return nil
+		}
 	}
 
 	if _, _, err := utils.PatchStatus(ctx, r.Client, env, func(obj client.Object) client.Object {
 		in := obj.(*v1.Environment)
-		// todo find the logic for success status
+		in.Status.Phase = v1.Success
 		return in
 	}); err != nil {
 		return err
 	}
-
 	return nil
 }
