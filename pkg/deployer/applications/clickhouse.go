@@ -42,6 +42,7 @@ func NewCh(
 
 func (ch *Ch) ReconcileClickhouse() error {
 	// deploy ch operator
+
 	err := ch.deployChOperator()
 	if err != nil {
 		return err

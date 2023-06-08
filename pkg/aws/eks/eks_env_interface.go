@@ -4,6 +4,7 @@ import (
 	"datainfra.io/ballastdata/pkg/store"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"k8s.io/client-go/rest"
 )
 
 type EksEnv interface {
@@ -19,4 +20,5 @@ type EksEnv interface {
 	ReconcileApplicationDeployer() error
 	DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOutput, error)
 	DescribeNodeGroup(nodeGroupName string) (output *awseks.DescribeNodegroupOutput, found bool, err error)
+	GetEksConfig() (*rest.Config, error)
 }

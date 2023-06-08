@@ -13,7 +13,7 @@ import (
 
 // Deployer is responsible for deploying apps
 func (eksEnv *EksEnvironment) ReconcileApplicationDeployer() error {
-	restConfig, err := eksEnv.getEksConfig()
+	restConfig, err := eksEnv.GetEksConfig()
 	if err != nil {
 		return err
 	}
@@ -27,7 +27,7 @@ func (eksEnv *EksEnvironment) ReconcileApplicationDeployer() error {
 	return nil
 }
 
-func (eksEnv *EksEnvironment) getEksConfig() (*rest.Config, error) {
+func (eksEnv *EksEnvironment) GetEksConfig() (*rest.Config, error) {
 	eksClient := awseks.NewFromConfig(eksEnv.Config)
 
 	resultDescribe, err := eksClient.DescribeCluster(eksEnv.Context, &awseks.DescribeClusterInput{
