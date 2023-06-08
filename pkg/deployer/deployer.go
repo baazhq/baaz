@@ -14,8 +14,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// versions
-
 const (
 	zkControlPlaneVersion string = "0.2.15"
 )
