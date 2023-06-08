@@ -7,6 +7,7 @@ import (
 
 	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/aws/eks"
+	"datainfra.io/ballastdata/pkg/deployer/applications"
 	"datainfra.io/ballastdata/pkg/utils"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	corev1 "k8s.io/api/core/v1"
@@ -70,9 +71,20 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 	}
 
 	if result != nil && result.Cluster != nil && result.Cluster.Status == eks.EKSStatusACTIVE {
+
+		calico := applications.NewCali(
+			env.Spec.CloudInfra.Eks.Name,
+			v1.CloudType(env.Spec.CloudInfra.Type),
+		)
+
+		if err := calico.ReconcileCalico(); err != nil {
+			return err
+		}
+
 		if err := eksEnv.ReconcileNodeGroup(r.NgStore); err != nil {
 			return err
 		}
+
 		if err := eksEnv.ReconcileOIDCProvider(result); err != nil {
 			return err
 		}

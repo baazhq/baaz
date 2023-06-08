@@ -16,7 +16,7 @@ spec:
       accessKeyName: accessKey
       secretKeyName: secretKey
     eks:
-      name: datainfra
+      name: chi
       subnetIds:
       - subnet-02a0cccde6c324558
       - subnet-037a30ccca71ee1db

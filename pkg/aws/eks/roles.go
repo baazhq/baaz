@@ -65,6 +65,23 @@ var ebsCSIRoleTrustJsonTemplate = `
 }
 `
 
+var calicoClusterPolicyELBPermissions = `
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "ec2:DescribeAccountAttributes",
+                "ec2:DescribeAddresses",
+                "ec2:DescribeInternetGateways"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        }
+    ]
+}
+`
+
 var nodeRolePolicyArns = []string{
 	"arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
 	"arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
@@ -74,6 +91,7 @@ var nodeRolePolicyArns = []string{
 var clusterRolePolicyArns = []string{
 	"arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
 	"arn:aws:iam::aws:policy/AmazonEKSVPCResourceController",
+	calicoClusterPolicyELBPermissions,
 }
 
 type eBSCSIRoleTemplateInput struct {
@@ -124,7 +142,9 @@ func (eksEnv *EksEnvironment) createClusterIamRole() (*awsiam.GetRoleOutput, err
 	result, err := iamClient.GetRole(eksEnv.Context, &awsiam.GetRoleInput{
 		RoleName: aws.String(makeEksClusterRoleName(eksEnv.Env.Spec.CloudInfra.Eks.Name)),
 	})
+
 	if err != nil {
+
 		// for role error it seems
 		// the error is not considered as ResourceNotFoundException
 		resultCreateRole, cerr := iamClient.CreateRole(eksEnv.Context, &awsiam.CreateRoleInput{
@@ -200,6 +220,7 @@ func (eksEnv *EksEnvironment) createEbsCSIRole(ctx context.Context) (*awsiam.Cre
 			PolicyArn: &ebsCSIPolicyARN,
 			RoleName:  roleOutput.Role.RoleName,
 		}
+
 		if _, err := iamClient.AttachRolePolicy(ctx, &attachPolicyInput); err != nil {
 			return nil, err
 		}

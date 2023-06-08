@@ -61,8 +61,8 @@ func (zk *Zk) ReconcileZookeeper() error {
 	if err != nil {
 		return err
 	}
-
 	return nil
+
 }
 
 func (zk *Zk) deployZkOperator() error {

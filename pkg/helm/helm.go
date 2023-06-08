@@ -101,8 +101,6 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 
 	settings := cli.New()
 
-	//	repoAdd(h.RepoName, h.RepoUrl)
-
 	restGetter := NewRESTClientGetter(rest, h.Namespace)
 
 	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
