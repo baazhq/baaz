@@ -222,7 +222,6 @@ func (eksEnv *EksEnvironment) syncEksControlPlane(clusterResult *awseks.Describe
 
 	if _, _, err := utils.PatchStatus(eksEnv.Context, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
 		in := obj.(*v1.Environment)
-		in.Status.Phase = v1.Success
 		in.Status.Version = in.Spec.CloudInfra.Eks.Version
 		in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
 			Type:               v1.ControlPlaneCreated,

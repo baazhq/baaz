@@ -163,6 +163,7 @@ push-to-kind: docker-build
 	kind load docker-image $(IMG)
 
 deploy-to-kind: push-to-kind
-	helm upgrade -i $(CHART_NAME) $(CHART_PATH)
+	helm uninstall $(CHART_NAME) || true
+	helm install $(CHART_NAME) $(CHART_PATH)
 
 

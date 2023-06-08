@@ -69,11 +69,12 @@ type CloudInfraConfig struct {
 type EnvironmentPhase string
 
 const (
-	Pending  EnvironmentPhase = "Pending"
-	Creating EnvironmentPhase = "Creating"
-	Success  EnvironmentPhase = "Success"
-	Failed   EnvironmentPhase = "Failed"
-	Updating EnvironmentPhase = "Updating"
+	Pending     EnvironmentPhase = "Pending"
+	Creating    EnvironmentPhase = "Creating"
+	Success     EnvironmentPhase = "Success"
+	Failed      EnvironmentPhase = "Failed"
+	Updating    EnvironmentPhase = "Updating"
+	Terminating EnvironmentPhase = "Terminating"
 )
 
 // EnvironmentStatus defines the observed state of Environment
