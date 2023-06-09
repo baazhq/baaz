@@ -3,6 +3,9 @@ kind: "ClickHouseInstallation"
 metadata:
   name: {{ .Release.Name }}-chi
 spec:
+  default:
+    templates:
+      serviceTemplate: svc-template
   configuration:
     zookeeper:
       nodes:
@@ -16,6 +19,19 @@ spec:
           shardsCount: 1
           replicasCount: 2
   templates:
+    serviceTemplates:
+      - name: svc-template
+        generateName: chendpoint-{chi}
+        metadata:
+          annotations:
+            service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+        spec:
+          ports:
+            - name: http
+              port: 8123
+            - name: tcp
+              port: 9000
+          type: LoadBalancer
     podTemplates:
       - name: chi
         spec:
