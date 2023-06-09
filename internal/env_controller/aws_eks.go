@@ -107,14 +107,14 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 func (r *EnvironmentReconciler) calculatePhase(ctx context.Context, env *v1.Environment) error {
 	klog.Info("Calculating Environment Status")
 
-	for status, node := range env.Status.NodegroupStatus {
+	for node, status := range env.Status.NodegroupStatus {
 		if status != string(types.NodegroupStatusActive) {
 			klog.Infof("Node %s not active yet", node)
 			return nil
 		}
 	}
 
-	for status, addon := range env.Status.AddonStatus {
+	for addon, status := range env.Status.AddonStatus {
 		if status != string(types.AddonStatusActive) {
 			klog.Infof("Addon %s not active yet", addon)
 			return nil
