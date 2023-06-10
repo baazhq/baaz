@@ -26,7 +26,7 @@ else
     echo "DaemonSet does not exist in kube-system namespace."
 fi
 else
-echo "Failed to execute 'kubectl get daemonset' command:"
+echo "Failed to execute 'kubectl get daemonset' command"
 echo "$output"
 fi
 else
