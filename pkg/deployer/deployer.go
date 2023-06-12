@@ -67,7 +67,27 @@ func (deploy *Deployer) ReconcileDeployer() error {
 			}
 
 		case v1.Druid:
+			zk := applications.NewZookeeper(
+				deploy.RestConfig,
+				tenant,
+				makeNamespace(tenant.Name, tenant.AppType),
+				v1.CloudType(deploy.Env.Spec.CloudInfra.Type),
+			)
 
+			if err := zk.ReconcileZookeeper(); err != nil {
+				return err
+			}
+
+			druid := applications.NewDruidz(
+				deploy.RestConfig,
+				tenant,
+				makeNamespace(tenant.Name, tenant.AppType),
+				v1.CloudType(deploy.Env.Spec.CloudInfra.Type),
+			)
+
+			if err := druid.ReconcileDruid(); err != nil {
+				return err
+			}
 		}
 
 		err := createNetworkPolicyPerTenant(*deploy.RestConfig, deploy.Env, makeNamespace(tenant.Name, tenant.AppType))
