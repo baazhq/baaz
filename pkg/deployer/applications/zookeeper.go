@@ -52,6 +52,7 @@ func NewZookeeper(
 
 func (zk *Zk) ReconcileZookeeper() error {
 	// deploy zk operator
+
 	err := zk.deployZkOperator()
 	if err != nil {
 		return err

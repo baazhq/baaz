@@ -32,4 +32,3 @@ fi
 else
     echo "kubectl command not found."
 fi
-
