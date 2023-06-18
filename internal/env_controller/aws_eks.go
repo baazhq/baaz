@@ -93,11 +93,11 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 			return err
 		}
 
-		if env.Status.AddonStatus[awsEbsCsiDriver] == string(types.AddonStatusDegraded) || env.Status.AddonStatus[awsEbsCsiDriver] == string(types.AddonStatusActive) {
-			if err := eksEnv.ReconcileApplicationDeployer(); err != nil {
-				return err
-			}
-		}
+		// if env.Status.AddonStatus[awsEbsCsiDriver] == string(types.AddonStatusDegraded) || env.Status.AddonStatus[awsEbsCsiDriver] == string(types.AddonStatusActive) {
+		// 	if err := eksEnv.ReconcileApplicationDeployer(); err != nil {
+		// 		return err
+		// 	}
+		// }
 
 		return r.calculatePhase(ctx, env)
 	}

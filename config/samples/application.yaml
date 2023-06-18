@@ -1,0 +1,27 @@
+apiVersion: datainfra.io/v1
+kind: Application
+metadata:
+  labels:
+    app: ballastdata
+    env: druid
+  name: environment-dev
+  namespace: demo
+spec:
+  envRef: environment-dev
+  applications:
+    zookeeper-operator:
+      scope: environment
+      spec:
+        chartName: "zookeeper-operator"
+        repoName: "pravega"
+        repoUrl: "https://charts.pravega.io"
+        version: "0.2.15"
+    zookeeper: 
+      scope: tenant
+      tenants:
+      - druid-datascience
+      spec:
+        chartName: "zookeeper-operator"
+        repoName: "pravega"
+        repoUrl: "https://charts.pravega.io"
+        version: "0.2.15"

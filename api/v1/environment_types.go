@@ -11,9 +11,10 @@ type EnvironmentSpec struct {
 	EnvType string `json:"envType"`
 	// Cloud can be any pubic name ie aws, gcp, azure.
 	CloudInfra CloudInfraConfig `json:"cloudInfra"`
-	// DataInfra describes the data config information
-	Tenant []TenantConfig    `json:"tenant"`
-	Size   []ApplicationSize `json:"size"`
+	// Tenant Config consists of AppType
+	Tenant []TenantConfig `json:"tenants"`
+	// Define Size consists of AppType
+	Size []ApplicationSize `json:"sizes"`
 }
 
 type ApplicationSize struct {
@@ -87,9 +88,15 @@ type EnvironmentStatus struct {
 	// NodegroupStatus will contain a map of node group name & status
 	// Example:
 	// nodegroupStatus:
+<<<<<<< HEAD
 	//    clickhouse-ng1: CREATING
 	//    druid-ng2:      ACTIVE
 	//    pinot-ng3:      DELETING
+=======
+	//    druid-ng1: CREATING
+	//    druid-ng2: ACTIVE
+	//    druid-ng3: DELETING
+>>>>>>> 6e35c03 (Merge pull request #3 from datainfrahq/app-bundle)
 	NodegroupStatus map[string]string `json:"nodegroupStatus,omitempty"`
 	// AddonStatus holds a map of addon name & their current status
 	// Example:

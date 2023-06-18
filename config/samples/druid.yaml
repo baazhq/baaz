@@ -23,11 +23,11 @@ spec:
       securityGroupIds:
       - sg-0525da1d4c2697b12
       version: "1.25"
-  tenant:
+  tenants:
     - name: druid-datascience
       appType: druid
       size: druid-small
-  size:
+  sizes:
     - name: druid-small
       spec:
         appType: druid
