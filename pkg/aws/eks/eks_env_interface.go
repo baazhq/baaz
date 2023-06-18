@@ -17,7 +17,6 @@ type EksEnv interface {
 	ReconcileNodeGroup(store store.Store) error
 	ReconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOutput) error
 	ReconcileDefaultAddons() error
-	ReconcileApplicationDeployer() error
 	DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOutput, error)
 	DescribeNodeGroup(nodeGroupName string) (output *awseks.DescribeNodegroupOutput, found bool, err error)
 	GetEksConfig() (*rest.Config, error)

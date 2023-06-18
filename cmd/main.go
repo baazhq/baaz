@@ -16,7 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	datainfraiov1 "datainfra.io/ballastdata/api/v1"
-	controller "datainfra.io/ballastdata/internal/env_controller"
+	app_controller "datainfra.io/ballastdata/internal/app_controller"
+	env_controller "datainfra.io/ballastdata/internal/env_controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -56,27 +57,22 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "72b9bc85.datainfra.io",
-		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
-		// when the Manager ends. This requires the binary to immediately end when the
-		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
-		// speeds up voluntary leader transitions as the new leader don't have to wait
-		// LeaseDuration time first.
-		//
-		// In the default scaffold provided, the program ends immediately after
-		// the manager stops, so would be fine to enable this option. However,
-		// if you are doing or is intended to do any operation such as perform cleanups
-		// after the manager stops then its usage might be unsafe.
-		// LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
 
-	if err = (controller.NewEnvironmentReconciler(mgr)).SetupWithManager(mgr); err != nil {
+	if err = (env_controller.NewEnvironmentReconciler(mgr)).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Environment")
 		os.Exit(1)
 	}
+
+	if err = (app_controller.NewApplicationReconciler(mgr)).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Application")
+		os.Exit(1)
+	}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

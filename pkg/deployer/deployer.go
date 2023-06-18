@@ -14,10 +14,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-const (
-	zkControlPlaneVersion string = "0.2.15"
-)
-
 type Deploy interface {
 	ReconcileDeployer() error
 }
@@ -25,9 +21,12 @@ type Deploy interface {
 type Deployer struct {
 	RestConfig *rest.Config
 	Env        *v1.Environment
+	App        *v1.Application
 }
 
-func NewDeployer(restConfig *rest.Config, env *v1.Environment) Deploy {
+func NewDeployer(
+	restConfig *rest.Config,
+	env *v1.Environment) Deploy {
 	return &Deployer{
 		RestConfig: restConfig,
 		Env:        env,
