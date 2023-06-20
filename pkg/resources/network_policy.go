@@ -24,7 +24,7 @@ func MakeNetworkPolicy(
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: map[string]string{
-					"clickhouse.altinity.com/app": "chop",
+					"": "",
 				},
 			},
 			Ingress: []networkingv1.NetworkPolicyIngressRule{
