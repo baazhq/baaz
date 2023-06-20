@@ -15,8 +15,8 @@ func makeSystemNodeGroupName(tenantConfigName string) string {
 	return tenantConfigName + systemNgPrefix
 }
 
-func makeTenantNodeGroupName(tenantConfigName string, appType v1.ApplicationType, ngName v1.NodeGroupName) string {
-	return tenantConfigName + "-" + string(appType) + "-" + string(ngName)
+func makeTenantNodeGroupName(tenantConfigName string, appType v1.ApplicationType, appSize string, ngName v1.NodeGroupName) string {
+	return tenantConfigName + "-" + string(appType) + "-" + appSize + "-" + string(ngName)
 }
 
 // NewTaints constructs taints for nodes specific to application type.
