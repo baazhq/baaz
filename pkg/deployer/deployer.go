@@ -2,7 +2,6 @@ package deployer
 
 import (
 	"context"
-	"fmt"
 
 	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/deployer/applications"
@@ -26,81 +25,40 @@ type Deployer struct {
 
 func NewDeployer(
 	restConfig *rest.Config,
-	env *v1.Environment) Deploy {
+	env *v1.Environment,
+	app *v1.Application,
+) Deploy {
 	return &Deployer{
 		RestConfig: restConfig,
 		Env:        env,
+		App:        app,
 	}
 }
 
 // Deployer is responsible for deploying apps
 func (deploy *Deployer) ReconcileDeployer() error {
 
-	for _, tenant := range deploy.Env.Spec.Tenant {
+	for appName, app := range deploy.App.Spec.Applications {
 
-		switch tenant.AppType {
+		application := applications.NewApplication(
+			deploy.RestConfig,
+			app,
+			appName,
+		)
 
-		case v1.ClickHouse:
-
-			zk := applications.NewZookeeper(
-				deploy.RestConfig,
-				tenant,
-				makeNamespace(tenant.Name, tenant.AppType),
-				v1.CloudType(deploy.Env.Spec.CloudInfra.Type),
-			)
-
-			if err := zk.ReconcileZookeeper(); err != nil {
-				fmt.Println(err)
-				return err
-			}
-
-			ch := applications.NewCh(
-				deploy.RestConfig,
-				tenant,
-				makeNamespace(tenant.Name, tenant.AppType),
-				v1.CloudType(deploy.Env.Spec.CloudInfra.Type),
-			)
-
-			if err := ch.ReconcileClickhouse(); err != nil {
-				return err
-			}
-
-		case v1.Druid:
-			zk := applications.NewZookeeper(
-				deploy.RestConfig,
-				tenant,
-				makeNamespace(tenant.Name, tenant.AppType),
-				v1.CloudType(deploy.Env.Spec.CloudInfra.Type),
-			)
-
-			if err := zk.ReconcileZookeeper(); err != nil {
-				return err
-			}
-
-			druid := applications.NewDruidz(
-				deploy.RestConfig,
-				tenant,
-				makeNamespace(tenant.Name, tenant.AppType),
-				v1.CloudType(deploy.Env.Spec.CloudInfra.Type),
-			)
-
-			if err := druid.ReconcileDruid(); err != nil {
-				return err
-			}
-		}
-
-		err := createNetworkPolicyPerTenant(*deploy.RestConfig, deploy.Env, makeNamespace(tenant.Name, tenant.AppType))
-		if err != nil {
+		if err := application.ReconcileApplication(); err != nil {
 			return err
 		}
+
+		// err := createNetworkPolicyPerTenant(*deploy.RestConfig, deploy.Env, makeNamespace(tenantConfig.Name, tenantConfig.AppType))
+		// if err != nil {
+		// 	return err
+
+		// }
 
 	}
 
 	return nil
-}
-
-func makeNamespace(tenantConfigName string, appType v1.ApplicationType) string {
-	return tenantConfigName + "-" + string(appType)
 }
 
 func createNetworkPolicyPerTenant(restConfig rest.Config, env *v1.Environment, namespace string) error {

@@ -12,7 +12,7 @@ type EnvironmentSpec struct {
 	// Cloud can be any pubic name ie aws, gcp, azure.
 	CloudInfra CloudInfraConfig `json:"cloudInfra"`
 	// Tenant Config consists of AppType
-	Tenant []TenantConfig `json:"tenants"`
+	Tenant map[string][]TenantConfig `json:"tenants"`
 	// Define Size consists of AppType
 	Size []ApplicationSize `json:"sizes"`
 }
@@ -23,8 +23,7 @@ type ApplicationSize struct {
 }
 
 type TenantConfig struct {
-	Name string `json:"name"`
-	// +kubebuilder:validation:Enum:=druid;clickhouse;pinot
+	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper
 	AppType ApplicationType `json:"appType"`
 	Size    string          `json:"size"`
 }
@@ -32,14 +31,14 @@ type TenantConfig struct {
 type NodeGroupName string
 
 const (
-	DataNodes   NodeGroupName = "data"
-	QueryNodes  NodeGroupName = "query"
-	MasterNodes NodeGroupName = "master"
-	ChiNode     NodeGroupName = "chi"
+	DataNodes   NodeGroupName = "datanodes"
+	QueryNodes  NodeGroupName = "querynodes"
+	MasterNodes NodeGroupName = "masternodes"
+	ZkNodes     NodeGroupName = "zookeepernodes"
 )
 
 type AppSizeSpec struct {
-	// +kubebuilder:validation:Enum:=druid;clickhouse;pinot
+	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper
 	AppType ApplicationType                  `json:"appType"`
 	Nodes   map[NodeGroupName]*NodeGroupSpec `json:"nodes,omitempty"`
 }
@@ -88,15 +87,9 @@ type EnvironmentStatus struct {
 	// NodegroupStatus will contain a map of node group name & status
 	// Example:
 	// nodegroupStatus:
-<<<<<<< HEAD
 	//    clickhouse-ng1: CREATING
 	//    druid-ng2:      ACTIVE
 	//    pinot-ng3:      DELETING
-=======
-	//    druid-ng1: CREATING
-	//    druid-ng2: ACTIVE
-	//    druid-ng3: DELETING
->>>>>>> 6e35c03 (Merge pull request #3 from datainfrahq/app-bundle)
 	NodegroupStatus map[string]string `json:"nodegroupStatus,omitempty"`
 	// AddonStatus holds a map of addon name & their current status
 	// Example:

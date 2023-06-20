@@ -19,10 +19,6 @@ func makeTenantNodeGroupName(tenantConfigName string, appType v1.ApplicationType
 	return tenantConfigName + "-" + string(appType) + "-" + string(ngName)
 }
 
-func makeZkTenantNodeGroupName(tenantConfigName string, appType v1.ApplicationType) string {
-	return tenantConfigName + "-" + string(appType) + "-" + "zk"
-}
-
 // NewTaints constructs taints for nodes specific to application type.
 func makeTaints(value string) *[]types.Taint {
 	return &[]types.Taint{

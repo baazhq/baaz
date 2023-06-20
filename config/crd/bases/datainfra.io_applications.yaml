@@ -38,6 +38,8 @@ spec:
               applications:
                 additionalProperties:
                   properties:
+                    appType:
+                      type: string
                     scope:
                       type: string
                     spec:
@@ -48,6 +50,10 @@ spec:
                           type: string
                         repoUrl:
                           type: string
+                        values:
+                          items:
+                            type: string
+                          type: array
                         version:
                           type: string
                       required:
@@ -56,10 +62,8 @@ spec:
                       - repoUrl
                       - version
                       type: object
-                    tenants:
-                      items:
-                        type: string
-                      type: array
+                    tenant:
+                      type: string
                   required:
                   - scope
                   - spec

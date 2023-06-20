@@ -18,16 +18,18 @@ type ApplicationSpec struct {
 }
 
 type AppSpec struct {
-	Scope   AppScope  `json:"scope"`
-	Tenants []string  `json:"tenants,omitempty"`
-	Spec    ChartSpec `json:"spec"`
+	Scope   AppScope        `json:"scope"`
+	Tenant  string          `json:"tenant,omitempty"`
+	AppType ApplicationType `json:"appType,omitempty"`
+	Spec    ChartSpec       `json:"spec"`
 }
 
 type ChartSpec struct {
-	ChartName string `json:"chartName"`
-	RepoName  string `json:"repoName"`
-	RepoUrl   string `json:"repoUrl"`
-	Version   string `json:"version"`
+	ChartName string   `json:"chartName"`
+	RepoName  string   `json:"repoName"`
+	RepoUrl   string   `json:"repoUrl"`
+	Version   string   `json:"version"`
+	Values    []string `json:"values,omitempty"`
 }
 
 type ApplicationStatus struct {

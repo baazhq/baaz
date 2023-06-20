@@ -48,7 +48,7 @@ func (app *Application) ReconcileApplicationDeployer() error {
 		return err
 	}
 
-	deploy := deployer.NewDeployer(restConfig, envObj)
+	deploy := deployer.NewDeployer(restConfig, envObj, app.App)
 
 	if err := deploy.ReconcileDeployer(); err != nil {
 		return err

@@ -4,10 +4,10 @@ metadata:
   labels:
     app: ballastdata
     env: druid
-  name: environment-dev
+  name: datainfra
   namespace: demo
 spec:
-  envRef: environment-dev
+  envRef: datainfra
   applications:
     zookeeper-operator:
       scope: environment
@@ -16,12 +16,19 @@ spec:
         repoName: "pravega"
         repoUrl: "https://charts.pravega.io"
         version: "0.2.15"
-    zookeeper: 
-      scope: tenant
-      tenants:
-      - druid-datascience
+    zookeeper-custom-resource: # name of application
+      scope: tenant 
+      tenant: workspace-analytics # name of tenant
+      appType: zookeeper # application type
       spec:
-        chartName: "zookeeper-operator"
+        chartName: "zookeeper"
         repoName: "pravega"
         repoUrl: "https://charts.pravega.io"
         version: "0.2.15"
+        values: 
+         - pod.nodeSelector.app=zk 
+         - pod.tolerations[0].key=application
+         - pod.tolerations[0].operator=Equal
+         - pod.tolerations[0].value=workspace-analytics-zookeeper-zookeepernodes # {{ tenantname }}-{{ apptype }}-{{ ngnodename }}
+         - pod.tolerations[0].effect=NoSchedule
+  
