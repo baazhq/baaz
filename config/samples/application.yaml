@@ -31,3 +31,4 @@ spec:
          - pod.tolerations[0].operator=Equal
          - pod.tolerations[0].value=workspace-analytics-zookeeper-zookeepernodes # {{ tenantname }}-{{ apptype }}-{{ ngnodename }}
          - pod.tolerations[0].effect=NoSchedule
+  

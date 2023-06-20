@@ -11,16 +11,10 @@ type EnvironmentSpec struct {
 	EnvType string `json:"envType"`
 	// Cloud can be any pubic name ie aws, gcp, azure.
 	CloudInfra CloudInfraConfig `json:"cloudInfra"`
-<<<<<<< HEAD
-	// DataInfra describes the data config information
-	Tenant []TenantConfig    `json:"tenant"`
-	Size   []ApplicationSize `json:"size"`
-=======
 	// Tenant Config consists of AppType
 	Tenant map[string][]TenantConfig `json:"tenants"`
 	// Define Size consists of AppType
 	Size []ApplicationSize `json:"sizes"`
->>>>>>> e3e18e0 (Merge pull request #4 from datainfrahq/implementation)
 }
 
 type ApplicationSize struct {
@@ -29,12 +23,7 @@ type ApplicationSize struct {
 }
 
 type TenantConfig struct {
-<<<<<<< HEAD
-	Name string `json:"name"`
-	// +kubebuilder:validation:Enum:=druid;clickhouse;pinot
-=======
 	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper
->>>>>>> e3e18e0 (Merge pull request #4 from datainfrahq/implementation)
 	AppType ApplicationType `json:"appType"`
 	Size    string          `json:"size"`
 }
@@ -42,16 +31,6 @@ type TenantConfig struct {
 type NodeGroupName string
 
 const (
-<<<<<<< HEAD
-	DataNodes   NodeGroupName = "data"
-	QueryNodes  NodeGroupName = "query"
-	MasterNodes NodeGroupName = "master"
-	ChiNode     NodeGroupName = "chi"
-)
-
-type AppSizeSpec struct {
-	// +kubebuilder:validation:Enum:=druid;clickhouse;pinot
-=======
 	DataNodes   NodeGroupName = "datanodes"
 	QueryNodes  NodeGroupName = "querynodes"
 	MasterNodes NodeGroupName = "masternodes"
@@ -60,7 +39,6 @@ type AppSizeSpec struct {
 
 type AppSizeSpec struct {
 	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper
->>>>>>> e3e18e0 (Merge pull request #4 from datainfrahq/implementation)
 	AppType ApplicationType                  `json:"appType"`
 	Nodes   map[NodeGroupName]*NodeGroupSpec `json:"nodes,omitempty"`
 }

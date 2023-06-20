@@ -3,29 +3,12 @@ package eks
 import (
 	"encoding/base64"
 
-	"datainfra.io/ballastdata/pkg/deployer"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
-	"github.com/aws/aws-sdk-go/aws"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 )
-
-// Deployer is responsible for deploying apps
-func (eksEnv *EksEnvironment) ReconcileApplicationDeployer() error {
-	restConfig, err := eksEnv.GetEksConfig()
-	if err != nil {
-		return err
-	}
-
-	deploy := deployer.NewDeployer(restConfig, eksEnv.Env)
-
-	if err := deploy.ReconcileDeployer(); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func (eksEnv *EksEnvironment) GetEksConfig() (*rest.Config, error) {
 	eksClient := awseks.NewFromConfig(eksEnv.Config)
@@ -54,7 +37,7 @@ func newRestConfig(cluster *types.Cluster) (*rest.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	ca, err := base64.StdEncoding.DecodeString(aws.StringValue(cluster.CertificateAuthority.Data))
+	ca, err := base64.StdEncoding.DecodeString(aws.ToString(cluster.CertificateAuthority.Data))
 	if err != nil {
 		return nil, err
 	}

@@ -81,30 +81,6 @@ func (ng *nodeGroup) createNodeGroupForTenant(store store.Store) (*awseks.Create
 
 	switch ng.TenantConfig.AppType {
 
-	case v1.ClickHouse:
-
-		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-		chiNgName := *aws.String(makeTenantNodeGroupName(ng.AppConfig.Name, ng.AppConfig.AppType, ng.NodeGroupName))
-		zkChiNgName := *aws.String(makeZkTenantNodeGroupName(ng.AppConfig.Name, ng.AppConfig.AppType))
-
-		// system nodepool
-		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
-		if err != nil {
-			return nil, err
-		}
-
-		// clickhouse nodepool
-		_, err = ng.createOrUpdateNodeGroup(chiNgName, app, store)
-		if err != nil {
-			return nil, err
-		}
-
-		// zookeeper nodepool
-		_, err = ng.createOrUpdateNodeGroup(zkChiNgName, app, store)
-		if err != nil {
-			return nil, err
-		}
-
 	case v1.Druid:
 
 		systemNgName := *aws.String(makeSystemNodeGroupName(ng.TenantName))
@@ -122,32 +98,9 @@ func (ng *nodeGroup) createNodeGroupForTenant(store store.Store) (*awseks.Create
 			return nil, err
 		}
 
-<<<<<<< HEAD
-	case v1.Pinot:
-
-		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-		pinotNodeNgName := *aws.String(makeTenantNodeGroupName(ng.AppConfig.Name, ng.AppConfig.AppType, ng.NodeGroupName))
-		pinotZkNodeNgName := *aws.String(makeZkTenantNodeGroupName(ng.AppConfig.Name, ng.AppConfig.AppType))
-
-		// create system nodepool
-		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
-		if err != nil {
-			return nil, err
-		}
-
-		// create broker nodepool
-		_, err = ng.createOrUpdateNodeGroup(pinotNodeNgName, app, store)
-		if err != nil {
-			return nil, err
-		}
-
-		// create zk nodepool
-		_, err = ng.createOrUpdateNodeGroup(pinotZkNodeNgName, app, store)
-=======
 	case v1.Zookeeper:
 		zkNodeNgName := *aws.String(makeTenantNodeGroupName(ng.TenantName, v1.Zookeeper, ng.NodeGroupName))
 		_, err := ng.createOrUpdateNodeGroup(zkNodeNgName, app, store)
->>>>>>> e3e18e0 (Merge pull request #4 from datainfrahq/implementation)
 		if err != nil {
 			return nil, err
 		}

@@ -95,7 +95,8 @@ spec:
               envType:
                 description: EnvType can be dev, stage, prod environments
                 type: string
-              size:
+              sizes:
+                description: Define Size consists of AppType
                 items:
                   properties:
                     name:
@@ -105,7 +106,6 @@ spec:
                         appType:
                           enum:
                           - druid
-                          - clickhouse
                           - pinot
                           - zookeeper
                           type: string
@@ -141,28 +141,6 @@ spec:
                   - spec
                   type: object
                 type: array
-<<<<<<< HEAD
-              tenant:
-                description: DataInfra describes the data config information
-                items:
-                  properties:
-                    appType:
-                      enum:
-                      - druid
-                      - clickhouse
-                      - pinot
-                      type: string
-                    name:
-                      type: string
-                    size:
-                      type: string
-                  required:
-                  - appType
-                  - name
-                  - size
-                  type: object
-                type: array
-=======
               tenants:
                 additionalProperties:
                   items:
@@ -182,12 +160,11 @@ spec:
                   type: array
                 description: Tenant Config consists of AppType
                 type: object
->>>>>>> e3e18e0 (Merge pull request #4 from datainfrahq/implementation)
             required:
             - cloudInfra
             - envType
-            - size
-            - tenant
+            - sizes
+            - tenants
             type: object
           status:
             description: EnvironmentStatus defines the observed state of Environment
