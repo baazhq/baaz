@@ -84,7 +84,7 @@ func (ng *nodeGroup) createNodeGroupForTenant(store store.Store) (*awseks.Create
 	case v1.Druid:
 
 		systemNgName := *aws.String(makeSystemNodeGroupName(ng.TenantName))
-		druidNodeNgName := *aws.String(makeTenantNodeGroupName(ng.TenantName, v1.Druid, ng.NodeGroupName))
+		druidNodeNgName := *aws.String(makeTenantNodeGroupName(ng.TenantName, v1.Druid, ng.TenantConfig.Size, ng.NodeGroupName))
 
 		// system nodepool
 		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
@@ -99,7 +99,8 @@ func (ng *nodeGroup) createNodeGroupForTenant(store store.Store) (*awseks.Create
 		}
 
 	case v1.Zookeeper:
-		zkNodeNgName := *aws.String(makeTenantNodeGroupName(ng.TenantName, v1.Zookeeper, ng.NodeGroupName))
+
+		zkNodeNgName := *aws.String(makeTenantNodeGroupName(ng.TenantName, v1.Zookeeper, ng.TenantConfig.Size, ng.NodeGroupName))
 		_, err := ng.createOrUpdateNodeGroup(zkNodeNgName, app, store)
 		if err != nil {
 			return nil, err
