@@ -46,7 +46,7 @@ func NewEnvironmentReconciler(mgr ctrl.Manager) *EnvironmentReconciler {
 		Log:           initLogger,
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
-		Recorder:      mgr.GetEventRecorderFor("ballastdata-control-plane"),
+		Recorder:      mgr.GetEventRecorderFor("environment-controller"),
 		NgStore:       store.NewInternalStore(),
 	}
 }
@@ -57,7 +57,7 @@ func NewEnvironmentReconciler(mgr ctrl.Manager) *EnvironmentReconciler {
 func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	desiredObj := &datainfraiov1.Environment{}
-	err := r.Get(context.TODO(), req.NamespacedName, desiredObj)
+	err := r.Get(ctx, req.NamespacedName, desiredObj)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}

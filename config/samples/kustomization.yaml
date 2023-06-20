@@ -1,4 +1,5 @@
 ## Append samples of your project ##
 resources:
 - datainfra.io_v1_environment.yaml
+- datainfra.io_v1_application.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

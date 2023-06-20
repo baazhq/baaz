@@ -1,0 +1,27 @@
+# permissions for end users to view applications.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: application-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: ballastdata
+    app.kubernetes.io/part-of: ballastdata
+    app.kubernetes.io/managed-by: kustomize
+  name: application-viewer-role
+rules:
+- apiGroups:
+  - datainfra.io
+  resources:
+  - applications
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - datainfra.io
+  resources:
+  - applications/status
+  verbs:
+  - get
