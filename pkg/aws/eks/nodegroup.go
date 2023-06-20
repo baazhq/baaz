@@ -24,22 +24,25 @@ const (
 
 type nodeGroup struct {
 	EksEnv        *EksEnvironment
-	AppConfig     *v1.TenantConfig
+	TenantConfig  *v1.TenantConfig
+	TenantName    string
 	NodeGroupName v1.NodeGroupName
 	NodeGroupSpec *v1.NodeGroupSpec
 }
 
 func newNodeGroup(
 	eksEnv *EksEnvironment,
-	appConfig *v1.TenantConfig,
+	tenantConfig *v1.TenantConfig,
 	nodeGroupSpec *v1.NodeGroupSpec,
 	nodeGroupName v1.NodeGroupName,
+	tenantName string,
 ) *nodeGroup {
 	ngs := &nodeGroup{
 		EksEnv:        eksEnv,
-		AppConfig:     appConfig,
+		TenantConfig:  tenantConfig,
 		NodeGroupSpec: nodeGroupSpec,
 		NodeGroupName: nodeGroupName,
+		TenantName:    tenantName,
 	}
 	return ngs
 }
@@ -47,22 +50,24 @@ func newNodeGroup(
 func (eksEnv *EksEnvironment) ReconcileNodeGroup(store store.Store) error {
 	klog.Info("Reconciling node groups")
 
-	for _, app := range eksEnv.Env.Spec.Tenant {
+	for tenantName, tenantConfigs := range eksEnv.Env.Spec.Tenant {
 
-		ngNameNgSpec, err := getNodegroupSpecForAppSize(eksEnv.Env, app)
-		if err != nil {
-			return err
-		}
+		for _, tenantConfig := range tenantConfigs {
+			ngNameNgSpec, err := getNodegroupSpecForTenantSize(eksEnv.Env, tenantName, tenantConfig)
+			if err != nil {
+				return err
+			}
 
-		for ngName, ngNodeSpec := range ngNameNgSpec {
+			for ngName, ngNodeSpec := range ngNameNgSpec {
 
-			if eksEnv.Env.Status.NodegroupStatus[string(ngName)] != "DELETING" {
+				if eksEnv.Env.Status.NodegroupStatus[string(ngName)] != "DELETING" {
 
-				ngs := newNodeGroup(eksEnv, &app, ngNodeSpec, ngName)
+					ngs := newNodeGroup(eksEnv, &tenantConfig, ngNodeSpec, ngName, tenantName)
 
-				_, err = ngs.createNodeGroupForApp(store)
-				if err != nil {
-					return err
+					_, err = ngs.createNodeGroupForTenant(store)
+					if err != nil {
+						return err
+					}
 				}
 			}
 		}
@@ -72,9 +77,9 @@ func (eksEnv *EksEnvironment) ReconcileNodeGroup(store store.Store) error {
 	return nil
 }
 
-func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNodegroupOutput, error) {
+func (ng *nodeGroup) createNodeGroupForTenant(store store.Store) (*awseks.CreateNodegroupOutput, error) {
 
-	switch ng.AppConfig.AppType {
+	switch ng.TenantConfig.AppType {
 
 	case v1.ClickHouse:
 
@@ -102,8 +107,8 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 
 	case v1.Druid:
 
-		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
-		druidNodeNgName := *aws.String(makeTenantNodeGroupName(ng.AppConfig.Name, ng.AppConfig.AppType, ng.NodeGroupName))
+		systemNgName := *aws.String(makeSystemNodeGroupName(ng.TenantName))
+		druidNodeNgName := *aws.String(makeTenantNodeGroupName(ng.TenantName, v1.Druid, ng.NodeGroupName))
 
 		// system nodepool
 		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
@@ -117,6 +122,7 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 			return nil, err
 		}
 
+<<<<<<< HEAD
 	case v1.Pinot:
 
 		systemNgName := *aws.String(makeSystemNodeGroupName(ng.AppConfig.Name))
@@ -137,11 +143,17 @@ func (ng *nodeGroup) createNodeGroupForApp(store store.Store) (*awseks.CreateNod
 
 		// create zk nodepool
 		_, err = ng.createOrUpdateNodeGroup(pinotZkNodeNgName, app, store)
+=======
+	case v1.Zookeeper:
+		zkNodeNgName := *aws.String(makeTenantNodeGroupName(ng.TenantName, v1.Zookeeper, ng.NodeGroupName))
+		_, err := ng.createOrUpdateNodeGroup(zkNodeNgName, app, store)
+>>>>>>> e3e18e0 (Merge pull request #4 from datainfrahq/implementation)
 		if err != nil {
 			return nil, err
 		}
 
 	}
+
 	return &awseks.CreateNodegroupOutput{}, nil
 }
 
@@ -279,11 +291,11 @@ func (eksEnv *EksEnvironment) NodeGroupExists(ngName string) bool {
 	return true
 }
 
-func getNodegroupSpecForAppSize(env *v1.Environment, app v1.TenantConfig) (map[v1.NodeGroupName]*v1.NodeGroupSpec, error) {
+func getNodegroupSpecForTenantSize(env *v1.Environment, tenantName string, tenantConfig v1.TenantConfig) (map[v1.NodeGroupName]*v1.NodeGroupSpec, error) {
 	for _, size := range env.Spec.Size {
-		if size.Name == app.Size && size.Spec.AppType == app.AppType {
+		if size.Name == tenantConfig.Size && size.Spec.AppType == tenantConfig.AppType {
 			return size.Spec.Nodes, nil
 		}
 	}
-	return nil, fmt.Errorf("no NodegroupSpec for app %s & size %s", app.Name, app.Size)
+	return nil, fmt.Errorf("no NodegroupSpec for app %s & size %s", tenantName, tenantConfig.Size)
 }

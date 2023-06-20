@@ -107,6 +107,7 @@ spec:
                           - druid
                           - clickhouse
                           - pinot
+                          - zookeeper
                           type: string
                         nodes:
                           additionalProperties:
@@ -140,6 +141,7 @@ spec:
                   - spec
                   type: object
                 type: array
+<<<<<<< HEAD
               tenant:
                 description: DataInfra describes the data config information
                 items:
@@ -160,6 +162,27 @@ spec:
                   - size
                   type: object
                 type: array
+=======
+              tenants:
+                additionalProperties:
+                  items:
+                    properties:
+                      appType:
+                        enum:
+                        - druid
+                        - pinot
+                        - zookeeper
+                        type: string
+                      size:
+                        type: string
+                    required:
+                    - appType
+                    - size
+                    type: object
+                  type: array
+                description: Tenant Config consists of AppType
+                type: object
+>>>>>>> e3e18e0 (Merge pull request #4 from datainfrahq/implementation)
             required:
             - cloudInfra
             - envType

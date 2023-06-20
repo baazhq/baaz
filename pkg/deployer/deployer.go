@@ -27,20 +27,34 @@ type Deployer struct {
 	Env        *v1.Environment
 }
 
+<<<<<<< HEAD
 func NewDeployer(restConfig *rest.Config, env *v1.Environment) Deploy {
+=======
+func NewDeployer(
+	restConfig *rest.Config,
+	env *v1.Environment,
+	app *v1.Application,
+) Deploy {
+>>>>>>> e3e18e0 (Merge pull request #4 from datainfrahq/implementation)
 	return &Deployer{
 		RestConfig: restConfig,
 		Env:        env,
+		App:        app,
 	}
 }
 
 // Deployer is responsible for deploying apps
 func (deploy *Deployer) ReconcileDeployer() error {
 
-	for _, tenant := range deploy.Env.Spec.Tenant {
+	for appName, app := range deploy.App.Spec.Applications {
 
-		switch tenant.AppType {
+		application := applications.NewApplication(
+			deploy.RestConfig,
+			app,
+			appName,
+		)
 
+<<<<<<< HEAD
 		case v1.ClickHouse:
 
 			zk := applications.NewZookeeper(
@@ -92,16 +106,21 @@ func (deploy *Deployer) ReconcileDeployer() error {
 
 		err := createNetworkPolicyPerTenant(*deploy.RestConfig, deploy.Env, makeNamespace(tenant.Name, tenant.AppType))
 		if err != nil {
+=======
+		if err := application.ReconcileApplication(); err != nil {
+>>>>>>> e3e18e0 (Merge pull request #4 from datainfrahq/implementation)
 			return err
 		}
+
+		// err := createNetworkPolicyPerTenant(*deploy.RestConfig, deploy.Env, makeNamespace(tenantConfig.Name, tenantConfig.AppType))
+		// if err != nil {
+		// 	return err
+
+		// }
 
 	}
 
 	return nil
-}
-
-func makeNamespace(tenantConfigName string, appType v1.ApplicationType) string {
-	return tenantConfigName + "-" + string(appType)
 }
 
 func createNetworkPolicyPerTenant(restConfig rest.Config, env *v1.Environment, namespace string) error {
@@ -124,4 +143,21 @@ func createNetworkPolicyPerTenant(restConfig rest.Config, env *v1.Environment, n
 	}
 
 	return nil
+}
+
+const (
+	eksNodeGroupSelector = "eks\\.amazonaws\\.com/nodegroup"
+)
+
+func getNodeSelector(cloudType v1.CloudType) string {
+	switch cloudType {
+	case v1.CloudType(v1.AWS):
+		return eksNodeGroupSelector
+	default:
+		return ""
+	}
+}
+
+func makeZkCrNameSelectorName(tenantConfigName string, appType v1.ApplicationType) string {
+	return tenantConfigName + "-" + string(appType) + "-" + "zk"
 }

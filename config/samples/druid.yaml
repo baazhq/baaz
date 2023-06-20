@@ -4,7 +4,7 @@ metadata:
   labels:
     app: ballastdata
     env: druid
-  name: environment-dev
+  name: datainfra
   namespace: demo
 spec:
   envType: dev
@@ -16,18 +16,39 @@ spec:
       accessKeyName: accessKey
       secretKeyName: secretKey
     eks:
-      name: datainfra
+      name: datainfra-eks
       subnetIds:
       - subnet-02a0cccde6c324558
       - subnet-037a30ccca71ee1db
       securityGroupIds:
       - sg-0525da1d4c2697b12
       version: "1.25"
+<<<<<<< HEAD
   tenant:
     - name: druid-datascience
       appType: druid
       size: druid-small
   size:
+=======
+  tenants:
+    workspace-analytics:
+    - appType: druid
+      size: druid-small
+    - appType: zookeeper
+      size: zk-small
+  sizes:
+    - name: zk-small
+      spec:
+        appType: zookeeper
+        nodes:
+          zookeepernodes:
+            nodeLabels:
+              app: zk
+              nodeType: query
+            nodeSize: t2.small
+            min: 1
+            max: 3
+>>>>>>> e3e18e0 (Merge pull request #4 from datainfrahq/implementation)
     - name: druid-small
       spec:
         appType: druid
