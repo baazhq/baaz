@@ -12,7 +12,7 @@
 
 
 </div>
-Organisations seeking to build a SAAS product require a centralised control plane to deploy software to data planes located either within the customer premises or at the SAAS provider. Ballast Data simplifies infrastructure provisioning, multi-tenancy, application deployment, and state management. 
+Organisations seeking to build a SAAS product require a centralised control plane to deploy software to data planes located either within the customer premises or at the SAAS provider. Ballast Data is control plane which simplfyes infrastructure provisioning for applications with built in multi-tenancy and state management. 
 
 
 ## :rocket: Features
