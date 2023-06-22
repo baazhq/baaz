@@ -8,6 +8,8 @@
 bin
 testbin/*
 Dockerfile.cross
+helm-cache
+helm-config
 
 # Test binary, build with `go test -c`
 *.test

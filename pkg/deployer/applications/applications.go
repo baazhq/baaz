@@ -70,7 +70,3 @@ func (app *Application) deployApplication() error {
 	return nil
 
 }
-
-func makeNamespace(tenantName string, appType v1.ApplicationType) string {
-	return tenantName + "-" + string(appType)
-}

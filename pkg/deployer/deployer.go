@@ -47,7 +47,15 @@ func (deploy *Deployer) ReconcileDeployer() error {
 			appName,
 		)
 
-		err := createTenantNamespace(*deploy.RestConfig, deploy.Env, appName)
+		var namespace string
+
+		namespace = appName
+
+		if app.Scope == v1.TenantScope {
+			namespace = app.Tenant
+		}
+
+		err := createTenantNamespace(*deploy.RestConfig, deploy.Env, namespace)
 		if err != nil {
 			return err
 		}

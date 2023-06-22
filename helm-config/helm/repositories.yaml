@@ -10,3 +10,12 @@ repositories:
   password: ""
   url: https://charts.pravega.io
   username: ""
+- caFile: ""
+  certFile: ""
+  insecure_skip_tls_verify: false
+  keyFile: ""
+  name: datainfra
+  pass_credentials_all: false
+  password: ""
+  url: https://charts.datainfra.io
+  username: ""
