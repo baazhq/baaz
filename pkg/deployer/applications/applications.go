@@ -42,7 +42,7 @@ func (app *Application) deployApplication() error {
 	if app.App.Scope == v1.EnvironmentScope {
 		appNamespace = app.AppName
 	} else if app.App.Scope == v1.TenantScope {
-		appNamespace = makeNamespace(app.App.Tenant, app.App.AppType)
+		appNamespace = app.App.Tenant
 	}
 
 	application := helm.NewHelm(
@@ -57,16 +57,16 @@ func (app *Application) deployApplication() error {
 
 	exists, err := application.HelmList(app.RestConfig)
 	if !exists && err == nil {
-		err = application.HelmInstall(app.RestConfig)
-		if err != nil {
-			return err
-		}
+		go func() error {
+			err = application.HelmInstall(app.RestConfig)
+			if err != nil {
+				return err
+			}
+			return nil
+		}()
+
 	}
 
 	return nil
 
-}
-
-func makeNamespace(tenantName string, appType v1.ApplicationType) string {
-	return tenantName + "-" + string(appType)
 }

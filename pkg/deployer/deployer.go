@@ -6,6 +6,7 @@ import (
 	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/deployer/applications"
 	"datainfra.io/ballastdata/pkg/resources"
+	"datainfra.io/ballastdata/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -46,6 +47,19 @@ func (deploy *Deployer) ReconcileDeployer() error {
 			appName,
 		)
 
+		var namespace string
+
+		namespace = appName
+
+		if app.Scope == v1.TenantScope {
+			namespace = app.Tenant
+		}
+
+		err := createTenantNamespace(*deploy.RestConfig, deploy.Env, namespace)
+		if err != nil {
+			return err
+		}
+
 		if err := application.ReconcileApplication(); err != nil {
 			return err
 		}
@@ -56,6 +70,27 @@ func (deploy *Deployer) ReconcileDeployer() error {
 
 		// }
 
+	}
+
+	return nil
+}
+
+func createTenantNamespace(restConfig rest.Config, env *v1.Environment, name string) error {
+
+	getOwnerRef := resources.MakeOwnerRef(env.APIVersion, env.Kind, env.Name, env.UID)
+
+	clientSet, err := utils.MakeKubeClientSet(restConfig)
+	if err != nil {
+		return err
+	}
+
+	_, err = clientSet.CoreV1().Namespaces().Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		_, err := clientSet.CoreV1().Namespaces().Create(context.TODO(), resources.MakeTenantNamespace(name, name, getOwnerRef), metav1.CreateOptions{})
+		if err != nil {
+			return err
+		}
+		klog.Infof("Create Tenant Namespace [%s]", name)
 	}
 
 	return nil

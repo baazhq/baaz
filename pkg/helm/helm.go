@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/pkg/action"
-	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
 	"helm.sh/helm/v3/pkg/cli/values"
@@ -110,6 +109,7 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 	client := action.NewInstall(h.Action)
 
 	settings.EnvVars()
+	repoAdd(h.RepoName, h.RepoUrl)
 
 	cp, err := client.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", h.RepoName, h.ChartName), settings)
 	if err != nil {
@@ -153,15 +153,6 @@ func (h *Helm) HelmInstall(rest *rest.Config) error {
 	klog.Infof("Release Name: [%s] Namespace [%s] Status [%s]", release.Name, release.Namespace, release.Info.Status)
 
 	return nil
-}
-
-// ref: https://github.com/PrasadG193/helm-clientgo-example/tree/master
-func isChartInstallable(ch *chart.Chart) (bool, error) {
-	switch ch.Metadata.Type {
-	case "", "application":
-		return true, nil
-	}
-	return false, errors.Errorf("%s charts are not installable", ch.Metadata.Type)
 }
 
 // ref: https://github.com/PrasadG193/helm-clientgo-example/tree/master
@@ -265,11 +256,6 @@ func repoAdd(name, url string) {
 		klog.Error(err)
 	}
 	klog.Infof("%q has been added to your repositories\n", name)
-}
-
-func debug(format string, v ...interface{}) {
-	format = fmt.Sprintf("[debug] %s\n", format)
-	klog.InfoDepth(2, fmt.Sprintf(format, v...))
 }
 
 type simpleRESTClientGetter struct {

@@ -1,0 +1,7 @@
+pravega-operator
+zookeeper
+zookeeper-operator
+bookkeeper
+bookkeeper-operator
+pravega
+pravega-bk

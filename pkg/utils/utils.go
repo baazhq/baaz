@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,4 +42,12 @@ func PatchStatus(ctx context.Context, c client.Client, obj client.Object, transf
 		return nil, VerbUnchanged, err
 	}
 	return obj, VerbPatched, nil
+}
+
+func MakeKubeClientSet(restConfig rest.Config) (*kubernetes.Clientset, error) {
+	clientset, err := kubernetes.NewForConfig(&restConfig)
+	if err != nil {
+		return nil, err
+	}
+	return clientset, nil
 }

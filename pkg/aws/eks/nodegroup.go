@@ -83,17 +83,10 @@ func (ng *nodeGroup) createNodeGroupForTenant(store store.Store) (*awseks.Create
 
 	case v1.Druid:
 
-		systemNgName := *aws.String(makeSystemNodeGroupName(ng.TenantName))
 		druidNodeNgName := *aws.String(makeTenantNodeGroupName(ng.TenantName, v1.Druid, ng.TenantConfig.Size, ng.NodeGroupName))
 
-		// system nodepool
-		_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
-		if err != nil {
-			return nil, err
-		}
-
 		// druid nodepool
-		_, err = ng.createOrUpdateNodeGroup(druidNodeNgName, app, store)
+		_, err := ng.createOrUpdateNodeGroup(druidNodeNgName, app, store)
 		if err != nil {
 			return nil, err
 		}
@@ -106,6 +99,14 @@ func (ng *nodeGroup) createNodeGroupForTenant(store store.Store) (*awseks.Create
 			return nil, err
 		}
 
+	}
+
+	systemNgName := *aws.String(makeSystemNodeGroupName(ng.TenantName))
+
+	// system nodepool
+	_, err := ng.createOrUpdateNodeGroup(systemNgName, system, store)
+	if err != nil {
+		return nil, err
 	}
 
 	return &awseks.CreateNodegroupOutput{}, nil

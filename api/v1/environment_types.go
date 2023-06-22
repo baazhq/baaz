@@ -28,15 +28,6 @@ type TenantConfig struct {
 	Size    string          `json:"size"`
 }
 
-type NodeGroupName string
-
-const (
-	DataNodes   NodeGroupName = "datanodes"
-	QueryNodes  NodeGroupName = "querynodes"
-	MasterNodes NodeGroupName = "masternodes"
-	ZkNodes     NodeGroupName = "zookeepernodes"
-)
-
 type AppSizeSpec struct {
 	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper
 	AppType ApplicationType                  `json:"appType"`
