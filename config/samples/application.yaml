@@ -10,13 +10,20 @@ spec:
   envRef: datainfra
   applications:
     zookeeper-operator:
-      scope: environment
+      scope: environment # single operator can reconcile multiple environments
       spec:
         chartName: "zookeeper-operator"
         repoName: "pravega"
         repoUrl: "https://charts.pravega.io"
         version: "0.2.15"
-    zookeeper-custom-resource: # name of application
+    druid-operator:
+      scope: environment
+      spec:
+        chartName: "druid-operator"
+        repoName: "datainfra"
+        repoUrl: "https://charts.datainfra.io"
+        version: "0.3.1"
+    zookeeper-ws-analytics: # name of application
       scope: tenant 
       tenant: workspace-analytics # name of tenant
       appType: zookeeper # application type
@@ -29,6 +36,6 @@ spec:
          - pod.nodeSelector.app=zk 
          - pod.tolerations[0].key=application
          - pod.tolerations[0].operator=Equal
-         - pod.tolerations[0].value=workspace-analytics-zookeeper-zookeepernodes # {{ tenantname }}-{{ apptype }}-{{ ngnodename }}
+         - pod.tolerations[0].value=workspace-analytics-zookeeper-zk-small-zookeepernodes
          - pod.tolerations[0].effect=NoSchedule
   
