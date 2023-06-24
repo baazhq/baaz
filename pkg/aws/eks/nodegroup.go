@@ -91,6 +91,15 @@ func (ng *nodeGroup) createNodeGroupForTenant(store store.Store) (*awseks.Create
 			return nil, err
 		}
 
+	case v1.Parseable:
+
+		parseableNodeNgName := *aws.String(makeTenantNodeGroupName(ng.TenantName, v1.Parseable, ng.TenantConfig.Size, ng.NodeGroupName))
+
+		_, err := ng.createOrUpdateNodeGroup(parseableNodeNgName, app, store)
+		if err != nil {
+			return nil, err
+		}
+
 	case v1.Zookeeper:
 
 		zkNodeNgName := *aws.String(makeTenantNodeGroupName(ng.TenantName, v1.Zookeeper, ng.TenantConfig.Size, ng.NodeGroupName))

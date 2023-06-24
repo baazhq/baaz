@@ -23,13 +23,13 @@ type ApplicationSize struct {
 }
 
 type TenantConfig struct {
-	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper
+	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper;parseable
 	AppType ApplicationType `json:"appType"`
 	Size    string          `json:"size"`
 }
 
 type AppSizeSpec struct {
-	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper
+	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper;parseable
 	AppType ApplicationType                  `json:"appType"`
 	Nodes   map[NodeGroupName]*NodeGroupSpec `json:"nodes,omitempty"`
 }
