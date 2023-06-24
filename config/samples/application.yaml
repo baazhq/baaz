@@ -7,7 +7,7 @@ metadata:
   name: datainfra
   namespace: demo
 spec:
-  envRef: datainfra
+  envRef: dataplaform
   applications:
     zookeeper-operator:
       scope: environment # single operator can reconcile multiple environments
@@ -23,6 +23,27 @@ spec:
         repoName: "datainfra"
         repoUrl: "https://charts.datainfra.io"
         version: "0.3.1"
+    parseable-operator:
+      scope: environment
+      spec:
+        chartName: "operator"
+        repoName: "parseable"
+        repoUrl: "https://charts.parseable.io"
+        version: "0.0.3"
+    vector-agent:
+      scope: environment
+      spec:
+        chartName: "vector"
+        repoName: "vector"
+        repoUrl: "https://helm.vector.dev"
+        version: "0.22.1"
+    nginx-ingress:
+      scope: environment
+      spec:
+        chartName: "ingress-nginx"
+        repoName: "ingress-nginx"
+        repoUrl: "https://kubernetes.github.io/ingress-nginx"
+        version: "1.8.0"
     zookeeper-ws-analytics: # name of application
       scope: tenant 
       tenant: workspace-analytics # name of tenant
@@ -36,6 +57,5 @@ spec:
          - pod.nodeSelector.app=zk 
          - pod.tolerations[0].key=application
          - pod.tolerations[0].operator=Equal
-         - pod.tolerations[0].value=workspace-analytics-zookeeper-zk-small-zookeepernodes
+         - pod.tolerations[0].value=workspace-analytics-zookeeper-zk-small-zookeeper
          - pod.tolerations[0].effect=NoSchedule
-  

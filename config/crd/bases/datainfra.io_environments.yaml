@@ -108,6 +108,7 @@ spec:
                           - druid
                           - pinot
                           - zookeeper
+                          - parseable
                           type: string
                         nodes:
                           additionalProperties:
@@ -150,6 +151,7 @@ spec:
                         - druid
                         - pinot
                         - zookeeper
+                        - parseable
                         type: string
                       size:
                         type: string

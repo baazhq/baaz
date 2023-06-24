@@ -3,8 +3,8 @@ kind: Environment
 metadata:
   labels:
     app: ballastdata
-    env: druid
-  name: datainfra
+    env: dataplatform
+  name: dataplaform
   namespace: demo
 spec:
   envType: dev
@@ -16,7 +16,7 @@ spec:
       accessKeyName: accessKey
       secretKeyName: secretKey
     eks:
-      name: datainfra-eks
+      name: dataplaform-eks
       subnetIds:
       - subnet-02a0cccde6c324558
       - subnet-037a30ccca71ee1db
@@ -24,17 +24,31 @@ spec:
       - sg-0525da1d4c2697b12
       version: "1.25"
   tenants:
+    logging:
+      - appType: parseable
+        size: parseable-small
     workspace-analytics:
-    - appType: druid
-      size: druid-small
-    - appType: zookeeper
-      size: zk-small
+      - appType: druid
+        size: druid-small
+      - appType: zookeeper
+        size: zk-small
   sizes:
+    - name: parseable-small
+      spec:
+        appType: parseable
+        nodes:
+          parseableserver:
+            nodeLabels:
+              app: parseable
+              infra: logging
+            nodeSize: t2.small
+            min: 1
+            max: 3
     - name: zk-small
       spec:
         appType: zookeeper
         nodes:
-          zookeepernodes:
+          zookeeper:
             nodeLabels:
               app: zk
               nodeType: query

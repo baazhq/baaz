@@ -56,16 +56,16 @@ func (app *Application) deployApplication() error {
 		nil)
 
 	exists, err := application.HelmList(app.RestConfig)
-	if !exists && err == nil {
-		go func() error {
-			err = application.HelmInstall(app.RestConfig)
-			if err != nil {
-				return err
-			}
-			return nil
-		}()
+	if !exists && err != nil {
 
+		err = application.HelmInstall(app.RestConfig)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
+
+	//}
 
 	return nil
 

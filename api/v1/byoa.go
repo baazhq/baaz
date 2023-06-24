@@ -15,5 +15,11 @@ const (
 // zookeeper
 const (
 	Zookeeper ApplicationType = "zookeeper"
-	ZkNodes   NodeGroupName   = "zookeepernodes"
+	ZkNodes   NodeGroupName   = "zookeeper"
+)
+
+// parseable
+const (
+	Parseable            ApplicationType = "parseable"
+	ParseableServerNodes NodeGroupName   = "parseableserver"
 )
