@@ -24,9 +24,8 @@ const (
 
 func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Context, env *v1.Environment) error {
 
-	eksEnv := eks.NewEksEnvironment(ctx, r.Client, env, *eks.NewConfig(env.Spec.CloudInfra.AwsRegion))
-
-	result, err := eksEnv.DescribeEks()
+	eksClient := eks.NewEks(ctx, env)
+	eksDescribeClusterOutput, err := eksClient.DescribeEks()
 
 	if err != nil {
 
@@ -36,7 +35,7 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 			klog.Infof("Creating EKS Control plane: %s for Environment: %s/%s", env.Spec.CloudInfra.Eks.Name, env.Namespace, env.Name)
 			klog.Info("Updating Environment status to creating")
 
-			createEksResult := eksEnv.CreateEks()
+			createEksResult := eksClient.CreateEks()
 			if createEksResult.Success {
 				if _, _, err := utils.PatchStatus(ctx, r.Client, env, func(obj client.Object) client.Object {
 					in := obj.(*v1.Environment)
@@ -46,8 +45,8 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 						Status:             corev1.ConditionTrue,
 						LastUpdateTime:     metav1.Time{Time: time.Now()},
 						LastTransitionTime: metav1.Time{Time: time.Now()},
-						Reason:             string(eks.EksControlPlaneInitatedReason),
-						Message:            string(eks.EksControlPlaneInitatedMsg),
+						Reason:             string(eks.EksControlPlaneCreationInitatedReason),
+						Message:            string(eks.EksControlPlaneCreationInitatedMsg),
 					})
 					return in
 				}); err != nil {
@@ -64,13 +63,65 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 		}
 	}
 
-	if result != nil {
-		if err := eksEnv.UpdateAwsEksEnvironment(result); err != nil {
-			return err
+	if eksDescribeClusterOutput != nil {
+		if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusActive {
+			// checking for version upgrade
+			statusVersion := env.Status.Version
+			specVersion := env.Spec.CloudInfra.Eks.Version
+			if statusVersion != "" && statusVersion != specVersion && *eksDescribeClusterOutput.Cluster.Version != specVersion {
+				klog.Info("Updating Kubernetes version to: ", env.Spec.CloudInfra.Eks.Version)
+				if _, _, err := utils.PatchStatus(ctx, r.Client, env, func(obj client.Object) client.Object {
+					in := obj.(*v1.Environment)
+					in.Status.Phase = v1.Updating
+					in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
+						Type:               v1.VersionUpgradeInitiated,
+						Status:             corev1.ConditionTrue,
+						LastUpdateTime:     metav1.Time{Time: time.Now()},
+						LastTransitionTime: metav1.Time{Time: time.Now()},
+						Reason:             string(eks.EksControlPlaneUpgradedReason),
+						Message:            string(eks.EksControlPlaneUpgradedIntiatedMsg),
+					})
+					return in
+				}); err != nil {
+					return err
+				}
+				result := eksClient.UpdateEks()
+				if !result.Success {
+					return errors.New(result.Result)
+				}
+				klog.Info("Successfully initiated version update")
+			}
+
+			klog.Info("Sync Cluster status and version")
+
+			if _, _, err := utils.PatchStatus(ctx, r.Client, env, func(obj client.Object) client.Object {
+				in := obj.(*v1.Environment)
+				in.Status.Phase = v1.Success
+				in.Status.Version = in.Spec.CloudInfra.Eks.Version
+				in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
+					Type:               v1.ControlPlaneCreated,
+					Status:             corev1.ConditionTrue,
+					LastUpdateTime:     metav1.Time{Time: time.Now()},
+					LastTransitionTime: metav1.Time{Time: time.Now()},
+					Reason:             string(eks.EksControlPlaneCreatedReason),
+					Message:            string(eks.EksControlPlaneCreatedMsg),
+				})
+				return in
+			}); err != nil {
+				return err
+			}
+
+		} else if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusCreating {
+			klog.Infof("EKS Cluster Control Plane [%s] in creating state", env.Spec.CloudInfra.Eks.Name)
+		} else if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusUpdating {
+			klog.Infof("EKS Cluster Control Plane [%s] in updated state", env.Spec.CloudInfra.Eks.Name)
+		} else if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusDeleting {
+			klog.Infof("EKS Cluster Control Plane [%s] in deleting state", env.Spec.CloudInfra.Eks.Name)
 		}
+
 	}
 
-	if result != nil && result.Cluster != nil && result.Cluster.Status == eks.EKSStatusACTIVE {
+	if eksDescribeClusterOutput != nil && eksDescribeClusterOutput.Cluster != nil && eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusActive {
 
 		calico := applications.NewCali(
 			env.Spec.CloudInfra.Eks.Name,
@@ -81,17 +132,22 @@ func (r *EnvironmentReconciler) createOrUpdateAwsEksEnvironment(ctx context.Cont
 			return err
 		}
 
-		if err := eksEnv.ReconcileNodeGroup(r.NgStore); err != nil {
+		oidcOutput, err := eksClient.ReconcileOIDCProvider(eksDescribeClusterOutput)
+		if err != nil {
 			return err
 		}
 
-		if err := eksEnv.ReconcileOIDCProvider(result); err != nil {
-			return err
+		if oidcOutput != nil && oidcOutput.OpenIDConnectProviderArn != nil {
+			_, _, err = utils.PatchStatus(ctx, r.Client, env, func(obj client.Object) client.Object {
+				in := obj.(*v1.Environment)
+				in.Status.CloudInfraStatus.EksStatus.OIDCProviderArn = *oidcOutput.OpenIDConnectProviderArn
+				return in
+			})
 		}
 
-		if err := eksEnv.ReconcileDefaultAddons(); err != nil {
-			return err
-		}
+		// if err := eksEnv.ReconcileDefaultAddons(); err != nil {
+		// 	return err
+		// }
 
 		return r.calculatePhase(ctx, env)
 	}

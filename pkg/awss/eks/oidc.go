@@ -8,7 +8,10 @@ import (
 	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	v1 "datainfra.io/ballastdata/api/v1"
+	"datainfra.io/ballastdata/pkg/utils"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 )
@@ -17,17 +20,17 @@ const (
 	defaultClientID = "sts.amazonaws.com"
 )
 
-func (ec *eks) ReconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOutput) (*awsiam.CreateOpenIDConnectProviderOutput, error) {
+func (eksEnv *EksEnvironment) ReconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOutput) error {
 	if clusterOutput == nil || clusterOutput.Cluster == nil ||
 		clusterOutput.Cluster.Identity == nil || clusterOutput.Cluster.Identity.Oidc == nil {
-		return nil, errors.New("oidc provider url not found in cluster output")
+		return errors.New("oidc provider url not found in cluster output")
 	}
 	oidcProviderUrl := *clusterOutput.Cluster.Identity.Oidc.Issuer
 
 	// Compute the SHA-1 thumbprint of the OIDC provider certificate
 	thumbprint, err := getIssuerCAThumbprint(oidcProviderUrl)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	input := &createOIDCProviderInput{
@@ -35,35 +38,35 @@ func (ec *eks) ReconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOutput
 		ThumbPrintList: []string{thumbprint},
 	}
 
-	oidcProviderArn := ec.environment.Status.CloudInfraStatus.EksStatus.OIDCProviderArn
+	oidcProviderArn := eksEnv.Env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn
 
 	if oidcProviderArn != "" {
 		// oidc provider is previously created
 		// looking for it
-		providers, err := ec.listOIDCProvider()
+		providers, err := eksEnv.listOIDCProvider()
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		for _, oidc := range providers.OpenIDConnectProviderList {
-			if *oidc.Arn == ec.environment.Status.CloudInfraStatus.EksStatus.OIDCProviderArn {
+			if *oidc.Arn == eksEnv.Env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn {
 				// oidc provider is already created and existed
-				return nil, nil
+				return nil
 			}
 		}
 	}
 
-	result, err := ec.createOIDCProvider(input)
+	result, err := eksEnv.createOIDCProvider(input)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	// _, _, err = utils.PatchStatus(ec.ctx, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
-	// 	in := obj.(*v1.Environment)
-	// 	in.Status.CloudInfraStatus.EksStatus.OIDCProviderArn = *result.OpenIDConnectProviderArn
+	_, _, err = utils.PatchStatus(eksEnv.Context, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
+		in := obj.(*v1.Environment)
+		in.Status.CloudInfraStatus.EksStatus.OIDCProviderArn = *result.OpenIDConnectProviderArn
 
-	// 	return in
-	// })
-	return result, nil
+		return in
+	})
+	return err
 }
 
 type createOIDCProviderInput struct {
@@ -71,9 +74,10 @@ type createOIDCProviderInput struct {
 	ThumbPrintList []string `json:"thumbPrintList"`
 }
 
-func (ec *eks) listOIDCProvider() (*awsiam.ListOpenIDConnectProvidersOutput, error) {
+func (eksEnv *EksEnvironment) listOIDCProvider() (*awsiam.ListOpenIDConnectProvidersOutput, error) {
+	iamClient := awsiam.NewFromConfig(eksEnv.Config)
 
-	result, err := ec.awsIamClient.ListOpenIDConnectProviders(ec.ctx, &awsiam.ListOpenIDConnectProvidersInput{})
+	result, err := iamClient.ListOpenIDConnectProviders(eksEnv.Context, &awsiam.ListOpenIDConnectProvidersInput{})
 	if err != nil {
 		return nil, err
 	}
@@ -81,9 +85,10 @@ func (ec *eks) listOIDCProvider() (*awsiam.ListOpenIDConnectProvidersOutput, err
 	return result, nil
 }
 
-func (ec *eks) createOIDCProvider(param *createOIDCProviderInput) (*awsiam.CreateOpenIDConnectProviderOutput, error) {
+func (eksEnv *EksEnvironment) createOIDCProvider(param *createOIDCProviderInput) (*awsiam.CreateOpenIDConnectProviderOutput, error) {
+	iamClient := awsiam.NewFromConfig(eksEnv.Config)
 
-	result, err := ec.awsIamClient.CreateOpenIDConnectProvider(ec.ctx, &awsiam.CreateOpenIDConnectProviderInput{
+	result, err := iamClient.CreateOpenIDConnectProvider(eksEnv.Context, &awsiam.CreateOpenIDConnectProviderInput{
 		ThumbprintList: param.ThumbPrintList,
 		Url:            aws.String(param.URL),
 		ClientIDList:   []string{defaultClientID},

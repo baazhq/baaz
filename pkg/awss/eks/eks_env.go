@@ -4,17 +4,13 @@ import (
 	"context"
 	"errors"
 	"log"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "datainfra.io/ballastdata/api/v1"
-	"datainfra.io/ballastdata/pkg/utils"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/eks"
@@ -55,19 +51,19 @@ type EksEnvironment struct {
 	Config  aws.Config
 }
 
-func NewEksEnvironment(
-	ctx context.Context,
-	client client.Client,
-	env *v1.Environment,
-	config aws.Config,
-) EksEnv {
-	return &EksEnvironment{
-		Context: ctx,
-		Client:  client,
-		Env:     env,
-		Config:  config,
-	}
-}
+// func NewEksEnvironment(
+// 	ctx context.Context,
+// 	client client.Client,
+// 	env *v1.Environment,
+// 	config aws.Config,
+// ) EksEnv {
+// 	return &EksEnvironment{
+// 		Context: ctx,
+// 		Client:  client,
+// 		Env:     env,
+// 		Config:  config,
+// 	}
+// }
 
 func NewConfig(awsRegion string) *aws.Config {
 	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(awsRegion))
@@ -184,57 +180,9 @@ func (eksEnv *EksEnvironment) UpdateAwsEksEnvironment(clusterResult *awseks.Desc
 		klog.Info("Waiting for eks control plane to be updated")
 		return nil
 	case EKSStatusACTIVE:
-		return eksEnv.syncEksControlPlane(clusterResult)
+		//return eksEnv.syncEksControlPlane(clusterResult)
 	}
 
-	return nil
-}
-
-func (eksEnv *EksEnvironment) syncEksControlPlane(clusterResult *awseks.DescribeClusterOutput) error {
-	// checking for version upgrade
-	statusVersion := eksEnv.Env.Status.Version
-	specVersion := eksEnv.Env.Spec.CloudInfra.Eks.Version
-	if statusVersion != "" && statusVersion != specVersion && *clusterResult.Cluster.Version != specVersion {
-		klog.Info("Updating Kubernetes version to: ", eksEnv.Env.Spec.CloudInfra.Eks.Version)
-		if _, _, err := utils.PatchStatus(eksEnv.Context, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
-			in := obj.(*v1.Environment)
-			in.Status.Phase = v1.Updating
-			in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
-				Type:               v1.VersionUpgradeInitiated,
-				Status:             corev1.ConditionTrue,
-				LastUpdateTime:     metav1.Time{Time: time.Now()},
-				LastTransitionTime: metav1.Time{Time: time.Now()},
-				Reason:             "Kubernetes control plane version upgrade initiated",
-				Message:            "Kubernetes control plane version upgrade initiated",
-			})
-			return in
-		}); err != nil {
-			return err
-		}
-		result := eksEnv.UpdateEks()
-		if !result.Success {
-			return errors.New(result.Result)
-		}
-		klog.Info("Successfully initiated version update")
-	}
-
-	klog.Info("Sync Cluster status and version")
-
-	if _, _, err := utils.PatchStatus(eksEnv.Context, eksEnv.Client, eksEnv.Env, func(obj client.Object) client.Object {
-		in := obj.(*v1.Environment)
-		in.Status.Version = in.Spec.CloudInfra.Eks.Version
-		in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
-			Type:               v1.ControlPlaneCreated,
-			Status:             corev1.ConditionTrue,
-			LastUpdateTime:     metav1.Time{Time: time.Now()},
-			LastTransitionTime: metav1.Time{Time: time.Now()},
-			Reason:             string(EksControlPlaneCreatedReason),
-			Message:            string(EksControlPlaneCreatedMsg),
-		})
-		return in
-	}); err != nil {
-		return err
-	}
 	return nil
 }
 

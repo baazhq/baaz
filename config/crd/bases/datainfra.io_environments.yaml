@@ -95,78 +95,9 @@ spec:
               envType:
                 description: EnvType can be dev, stage, prod environments
                 type: string
-              sizes:
-                description: Define Size consists of AppType
-                items:
-                  properties:
-                    name:
-                      type: string
-                    spec:
-                      properties:
-                        appType:
-                          enum:
-                          - druid
-                          - pinot
-                          - zookeeper
-                          - parseable
-                          type: string
-                        nodes:
-                          additionalProperties:
-                            properties:
-                              max:
-                                format: int32
-                                minimum: 1
-                                type: integer
-                              min:
-                                format: int32
-                                minimum: 1
-                                type: integer
-                              nodeLabels:
-                                additionalProperties:
-                                  type: string
-                                type: object
-                              nodeSize:
-                                type: string
-                            required:
-                            - max
-                            - min
-                            - nodeLabels
-                            - nodeSize
-                            type: object
-                          type: object
-                      required:
-                      - appType
-                      type: object
-                  required:
-                  - name
-                  - spec
-                  type: object
-                type: array
-              tenants:
-                additionalProperties:
-                  items:
-                    properties:
-                      appType:
-                        enum:
-                        - druid
-                        - pinot
-                        - zookeeper
-                        - parseable
-                        type: string
-                      size:
-                        type: string
-                    required:
-                    - appType
-                    - size
-                    type: object
-                  type: array
-                description: Tenant Config consists of AppType
-                type: object
             required:
             - cloudInfra
             - envType
-            - sizes
-            - tenants
             type: object
           status:
             description: EnvironmentStatus defines the observed state of Environment
