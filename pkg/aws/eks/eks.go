@@ -55,7 +55,7 @@ func (ec *eks) CreateEks() *EksInternalOutput {
 
 func (ec *eks) createEks() error {
 
-	roleName, err := ec.createClusterIamRole()
+	roleName, err := ec.CreateClusterIamRole()
 	if err != nil {
 		return err
 	}
@@ -112,4 +112,11 @@ func (ec *eks) UpdateAwsEksEnvironment(clusterResult *awseks.DescribeClusterOutp
 		return types.ClusterStatusActive
 	}
 	return clusterResult.Cluster.Status
+}
+
+func (ec *eks) DeleteEKS() (*awseks.DeleteClusterOutput, error) {
+	klog.Infof("Deleting EKS Control Plane [%s]", ec.environment.Spec.CloudInfra.Eks.Name)
+	return ec.awsClient.DeleteCluster(ec.ctx, &awseks.DeleteClusterInput{
+		Name: &ec.environment.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
+	})
 }

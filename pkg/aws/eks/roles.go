@@ -1,6 +1,10 @@
 package eks
 
 import (
+	"bytes"
+	"context"
+	"errors"
+	"html/template"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -10,6 +14,12 @@ import (
 var clusterRolePolicyArns = []string{
 	"arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
 	"arn:aws:iam::aws:policy/AmazonEKSVPCResourceController",
+}
+
+var nodeRolePolicyArns = []string{
+	"arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+	"arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+	"arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
 }
 
 var assumeClusterRolePolicy string = `
@@ -26,8 +36,50 @@ var assumeClusterRolePolicy string = `
     ]
 }
 `
+var assumeNodeRolePolicy string = `
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "ec2.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+`
+var ebsCSIRoleTrustJsonTemplate = `
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::{{.AccountID}}:oidc-provider/{{.OIDCProvider}}"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity",
+            "Condition": {
+                "StringEquals": {
+                    "{{.OIDCProvider}}:sub": "system:serviceaccount:kube-system:ebs-csi-controller-sa", 
+                    "{{.OIDCProvider}}:aud": "sts.amazonaws.com"
+                }
+            }
+        }
+    ]
+}
+`
+var (
+	ebsCSIPolicyARN = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+)
 
-func (ec *eks) createClusterIamRole() (*awsiam.GetRoleOutput, error) {
+type eBSCSIRoleTemplateInput struct {
+	AccountID    string
+	OIDCProvider string
+}
+
+func (ec *eks) CreateClusterIamRole() (*awsiam.GetRoleOutput, error) {
 
 	awsIamGetRoleOutput, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
 		RoleName: aws.String(makeEksClusterRoleName(ec.environment.Spec.CloudInfra.Eks.Name)),
@@ -58,4 +110,92 @@ func (ec *eks) createClusterIamRole() (*awsiam.GetRoleOutput, error) {
 	}
 
 	return awsIamGetRoleOutput, nil
+}
+
+func (ec *eks) CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error) {
+
+	result, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
+		RoleName: aws.String(makeEksNodeRoleName(name)),
+	})
+	if err != nil {
+		resultCreateRole, cerr := ec.awsIamClient.CreateRole(ec.ctx, &awsiam.CreateRoleInput{
+			RoleName:                 aws.String(makeEksNodeRoleName(name)),
+			AssumeRolePolicyDocument: aws.String(strings.TrimSpace(assumeNodeRolePolicy)),
+		})
+		if cerr != nil {
+			return nil, cerr
+		}
+
+		for _, nodeRolePolicyArn := range nodeRolePolicyArns {
+			_, cerr := ec.awsIamClient.AttachRolePolicy(ec.ctx, &awsiam.AttachRolePolicyInput{
+				RoleName:  resultCreateRole.Role.RoleName,
+				PolicyArn: &nodeRolePolicyArn,
+			})
+			if cerr != nil {
+				return nil, cerr
+			}
+		}
+
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (ec *eks) createEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, error) {
+	oidcProvider := ec.environment.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
+
+	roleName := makeEBSCSIRoleName(ec.environment.Spec.CloudInfra.AwsRegion, ec.environment.Spec.CloudInfra.Eks.Name)
+
+	_, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
+		RoleName: aws.String(roleName),
+	})
+
+	if err != nil {
+		_, oidcProviderURL, found := strings.Cut(oidcProvider, "oidc-provider/")
+		if !found {
+			return nil, errors.New("invalid oidc provider arn")
+		}
+		accountID, err := ec.getAccountID()
+		if err != nil {
+			return nil, err
+		}
+
+		tmpl, err := template.New("ebs-template").Parse(ebsCSIRoleTrustJsonTemplate)
+		if err != nil {
+			return nil, err
+		}
+		var tmplOutput bytes.Buffer
+
+		if err := tmpl.Execute(&tmplOutput, eBSCSIRoleTemplateInput{
+			AccountID:    accountID,
+			OIDCProvider: oidcProviderURL,
+		}); err != nil {
+			return nil, err
+		}
+
+		trustPolicy := tmplOutput.String()
+
+		roleInput := awsiam.CreateRoleInput{
+			AssumeRolePolicyDocument: aws.String(strings.TrimSpace(trustPolicy)),
+			RoleName:                 &roleName,
+		}
+
+		roleOutput, err := ec.awsIamClient.CreateRole(ctx, &roleInput)
+		if err != nil {
+			return nil, err
+		}
+
+		attachPolicyInput := awsiam.AttachRolePolicyInput{
+			PolicyArn: &ebsCSIPolicyARN,
+			RoleName:  roleOutput.Role.RoleName,
+		}
+
+		if _, err := ec.awsIamClient.AttachRolePolicy(ctx, &attachPolicyInput); err != nil {
+			return nil, err
+		}
+		return roleOutput, nil
+	}
+
+	return &awsiam.CreateRoleOutput{}, nil
 }
