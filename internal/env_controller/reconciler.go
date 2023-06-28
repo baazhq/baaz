@@ -41,7 +41,7 @@ func (r *EnvironmentReconciler) do(ctx context.Context, env *v1.Environment) err
 			return err
 		}
 
-		if err := r.createOrUpdateAwsEksEnvironment(ctx, env); err != nil {
+		if err := r.reconcileAwsEnvironment(ctx, env); err != nil {
 			return err
 		}
 

@@ -1,17 +1,13 @@
 package eks
 
-import (
-	"context"
+import "github.com/aws/aws-sdk-go-v2/service/sts"
 
-	"github.com/aws/aws-sdk-go-v2/service/sts"
-)
+func (ec *eks) getAccountID() (string, error) {
 
-func (eksEnv *EksEnvironment) getAccountID(ctx context.Context) (string, error) {
-	stsClient := sts.NewFromConfig(eksEnv.Config)
-
-	result, err := stsClient.GetCallerIdentity(ctx, &sts.GetCallerIdentityInput{})
+	result, err := ec.awsStsClient.GetCallerIdentity(ec.ctx, &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return "", err
 	}
 	return *result.Account, nil
+
 }

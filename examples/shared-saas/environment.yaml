@@ -1,0 +1,25 @@
+apiVersion: datainfra.io/v1
+kind: Environment
+metadata:
+  labels:
+    saas: shared
+    env: dataplatform
+  name: shared-saas
+  namespace: demo
+spec:
+  envType: dev
+  cloudInfra:
+    type: aws
+    awsRegion: us-east-1
+    authSecretRef:
+      secretName: aws-secret
+      accessKeyName: accessKey
+      secretKeyName: secretKey
+    eks:
+      name: dataplatform-eks
+      subnetIds:
+      - subnet-02a0cccde6c324558
+      - subnet-037a30ccca71ee1db
+      securityGroupIds:
+      - sg-0525da1d4c2697b12
+      version: "1.25"
