@@ -1,0 +1,111 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: tenants.datainfra.io
+spec:
+  group: datainfra.io
+  names:
+    kind: Tenants
+    listKind: TenantsList
+    plural: tenants
+    singular: tenants
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: Tenants is the Schema for the tenants API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TenantsSpec defines the desired state of Tenants
+            properties:
+              config:
+                description: Tenant Config consists of AppType
+                items:
+                  properties:
+                    appType:
+                      type: string
+                    size:
+                      type: string
+                  required:
+                  - appType
+                  - size
+                  type: object
+                type: array
+              envRef:
+                description: environment ref
+                type: string
+              sizes:
+                description: Define Size consists of AppType
+                items:
+                  properties:
+                    name:
+                      type: string
+                    nodes:
+                      items:
+                        properties:
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          max:
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          min:
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          name:
+                            type: string
+                          size:
+                            type: string
+                        required:
+                        - labels
+                        - max
+                        - min
+                        - name
+                        - size
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  - nodes
+                  type: object
+                type: array
+            required:
+            - config
+            - envRef
+            - sizes
+            type: object
+          status:
+            description: TenantsStatus defines the observed state of Tenants
+            properties:
+              nodegroupStatus:
+                additionalProperties:
+                  type: string
+                type: object
+              phase:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

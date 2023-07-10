@@ -22,8 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var envFinalizer = "environment.datainfra.io/finalizer"
-
 const (
 	awsEbsCsiDriver string = "aws-ebs-csi-driver"
 )
@@ -65,6 +63,13 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 			klog.Infof("Creating EKS Control plane: %s for Environment: %s/%s", ae.env.Spec.CloudInfra.Eks.Name, ae.env.Namespace, ae.env.Name)
 			klog.Info("Updating Environment status to creating")
+
+			clusterRoleOutput, err := ae.eksIC.CreateClusterIamRole()
+			if err != nil {
+				return err
+			}
+
+			klog.Infof("Cluster Role [%s] Created", *clusterRoleOutput.Role.RoleName)
 
 			createEksResult := ae.eksIC.CreateEks()
 			if createEksResult.Success {
@@ -176,10 +181,6 @@ func (ae *awsEnv) reconcileAwsEks() error {
 			})
 		}
 
-		if err := ae.reconcilePhase(); err != nil {
-			return err
-		}
-
 		if err := ae.reconcileSystemNodeGroup(); err != nil {
 			return err
 		}
@@ -188,6 +189,9 @@ func (ae *awsEnv) reconcileAwsEks() error {
 			return err
 		}
 
+		if err := ae.reconcilePhase(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -306,12 +310,13 @@ func (ae *awsEnv) reconcileSystemNodeGroup() error {
 	}
 
 	describeNodeGroupOutput, found, err := ae.eksIC.DescribeNodegroup(systemNodeGroupName)
-	if found && err != nil {
+	if !found && err == nil {
 		if ae.env.DeletionTimestamp == nil {
 			createSystemNodeGroupResult, err := ae.eksIC.CreateSystemNodeGroup(*systemNodeGroupInput)
 			if err != nil {
 				return err
 			}
+			fmt.Println("hello")
 			if createSystemNodeGroupResult != nil && createSystemNodeGroupResult.Nodegroup != nil {
 				klog.Infof("Initated NodeGroup Launch [%s]", *createSystemNodeGroupResult.Nodegroup.ClusterName)
 				if err := ae.wrapNgPatchStatus(*createSystemNodeGroupResult.Nodegroup.NodegroupName, string(createSystemNodeGroupResult.Nodegroup.Status)); err != nil {

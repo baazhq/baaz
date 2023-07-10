@@ -82,14 +82,14 @@ type eBSCSIRoleTemplateInput struct {
 func (ec *eks) CreateClusterIamRole() (*awsiam.GetRoleOutput, error) {
 
 	awsIamGetRoleOutput, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
-		RoleName: aws.String(makeEksClusterRoleName(ec.environment.Spec.CloudInfra.Eks.Name)),
+		RoleName: aws.String(MakeEksClusterRoleName(ec.environment.Spec.CloudInfra.Eks.Name)),
 	})
 
 	if err != nil {
 		// for role error it seems
 		// the error is not considered as ResourceNotFoundException
 		resultCreateRole, cerr := ec.awsIamClient.CreateRole(ec.ctx, &awsiam.CreateRoleInput{
-			RoleName:                 aws.String(makeEksClusterRoleName(ec.environment.Spec.CloudInfra.Eks.Name)),
+			RoleName:                 aws.String(MakeEksClusterRoleName(ec.environment.Spec.CloudInfra.Eks.Name)),
 			AssumeRolePolicyDocument: aws.String(strings.TrimSpace(assumeClusterRolePolicy)),
 		})
 		if cerr != nil {
@@ -115,11 +115,11 @@ func (ec *eks) CreateClusterIamRole() (*awsiam.GetRoleOutput, error) {
 func (ec *eks) CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error) {
 
 	result, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
-		RoleName: aws.String(makeEksNodeRoleName(name)),
+		RoleName: aws.String(MakeEksNodeRoleName(name)),
 	})
 	if err != nil {
 		resultCreateRole, cerr := ec.awsIamClient.CreateRole(ec.ctx, &awsiam.CreateRoleInput{
-			RoleName:                 aws.String(makeEksNodeRoleName(name)),
+			RoleName:                 aws.String(MakeEksNodeRoleName(name)),
 			AssumeRolePolicyDocument: aws.String(strings.TrimSpace(assumeNodeRolePolicy)),
 		})
 		if cerr != nil {
@@ -145,7 +145,7 @@ func (ec *eks) CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error) {
 func (ec *eks) createEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, error) {
 	oidcProvider := ec.environment.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
 
-	roleName := makeEBSCSIRoleName(ec.environment.Spec.CloudInfra.AwsRegion, ec.environment.Spec.CloudInfra.Eks.Name)
+	roleName := MakeEBSCSIRoleName(ec.environment.Spec.CloudInfra.AwsRegion, ec.environment.Spec.CloudInfra.Eks.Name)
 
 	_, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
 		RoleName: aws.String(roleName),

@@ -2,4 +2,5 @@
 resources:
 - datainfra.io_v1_environment.yaml
 - datainfra.io_v1_application.yaml
+- datainfra.io_v1_tenants.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

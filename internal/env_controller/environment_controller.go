@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	BallasdataFinalizer = "environment.datainfra.io/finalizer"
+	envFinalizer = "environment.datainfra.io/finalizer"
 )
 
 // EnvironmentReconciler reconciles a Environment object
@@ -65,12 +65,10 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// check for deletion time stamp
 	if desiredObj.DeletionTimestamp != nil {
 		// object is going to be deleted
-		eksClient := eks.NewEks(ctx, desiredObj)
-
 		awsEnv := awsEnv{
 			ctx:    ctx,
 			env:    desiredObj,
-			eksIC:  eksClient,
+			eksIC:  eks.NewEks(ctx, desiredObj),
 			client: r.Client,
 			store:  r.NgStore,
 		}
@@ -79,8 +77,8 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// if it is normal reconcile, then add finalizer if not already
-	if !controllerutil.ContainsFinalizer(desiredObj, BallasdataFinalizer) {
-		controllerutil.AddFinalizer(desiredObj, BallasdataFinalizer)
+	if !controllerutil.ContainsFinalizer(desiredObj, envFinalizer) {
+		controllerutil.AddFinalizer(desiredObj, envFinalizer)
 		if err := r.Update(ctx, desiredObj); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -122,48 +120,34 @@ func (r *EnvironmentReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	systemNodeGroupName := ae.env.Spec.CloudInfra.Eks.Name + "-system"
 
-	ngList := ae.store.List(ae.env.Spec.CloudInfra.Eks.Name)
-	//eksEnv := eks.NewEksEnvironment(ctx, r.Client, env, *eks.NewConfig(env.Spec.CloudInfra.AwsRegion))
-
-	// when the controller restarts and the finalizer is still in place
-	// in memory store can be empty
-	// this way we re-populate the store with nodegroups.
-	if ngList == nil {
-		_ = ae.reconcileSystemNodeGroup()
-	}
-
-	for _, ng := range ngList {
-
-		if ae.env.Status.NodegroupStatus[ng] != "DELETING" {
-			_, err := ae.eksIC.DeleteNodeGroup(ng)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-			// update status with current nodegroup status
-			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-				in := obj.(*v1.Environment)
-				if in.Status.NodegroupStatus == nil {
-					in.Status.NodegroupStatus = make(map[string]string)
-				}
-				in.Status.NodegroupStatus[ng] = "DELETING"
-				return in
-			})
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-	}
-
-	for _, ng := range ngList {
-		_, found, err := ae.eksIC.DescribeNodegroup(ng)
+	if ae.env.Status.NodegroupStatus[systemNodeGroupName] != "DELETING" {
+		_, err := ae.eksIC.DeleteNodeGroup(systemNodeGroupName)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		if found {
-			klog.Infof("waiting for nodegroup %s to be deleted", ng)
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		// update status with current nodegroup status
+		_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
+			in := obj.(*v1.Environment)
+			if in.Status.NodegroupStatus == nil {
+				in.Status.NodegroupStatus = make(map[string]string)
+			}
+			in.Status.NodegroupStatus[systemNodeGroupName] = "DELETING"
+			return in
+		})
+		if err != nil {
+			return ctrl.Result{}, err
 		}
+	}
+
+	_, found, err := ae.eksIC.DescribeNodegroup(systemNodeGroupName)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if found {
+		klog.Infof("waiting for nodegroup %s to be deleted", systemNodeGroupName)
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
 	// delete oidc provider associated with the cluster(if any)

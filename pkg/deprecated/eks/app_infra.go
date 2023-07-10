@@ -15,7 +15,7 @@ func makeSystemNodeGroupName(tenantConfigName string) string {
 	return tenantConfigName + systemNgPrefix
 }
 
-func makeTenantNodeGroupName(tenantConfigName string, appType v1.ApplicationType, appSize string, ngName v1.NodeGroupName) string {
+func makeTenantNodeGroupName(tenantConfigName string, appType v1.ApplicationType, appSize string, ngName string) string {
 	return tenantConfigName + "-" + string(appType) + "-" + appSize + "-" + string(ngName)
 }
 
