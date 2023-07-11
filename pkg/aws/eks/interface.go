@@ -20,9 +20,10 @@ type Eks interface {
 	CreateOIDCProvider(param *CreateOIDCProviderInput) (*awsiam.CreateOpenIDConnectProviderOutput, error)
 	DeleteOIDCProvider(providerArn string) (*awsiam.DeleteOpenIDConnectProviderOutput, error)
 	// nodegroups
-	DescribeNodegroup(nodeGroupName string) (output *awseks.DescribeNodegroupOutput, found bool, err error)
 	CreateSystemNodeGroup(nodeGroupInput awseks.CreateNodegroupInput) (*awseks.CreateNodegroupOutput, error)
 	DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOutput, error)
+	DescribeNodegroup(nodeGroupName string) (output *awseks.DescribeNodegroupOutput, found bool, err error)
+	CreateNodegroup(createNodegroupInput *awseks.CreateNodegroupInput) (output *awseks.CreateNodegroupOutput, err error)
 	// iam role
 	CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error)
 	CreateClusterIamRole() (*awsiam.GetRoleOutput, error)

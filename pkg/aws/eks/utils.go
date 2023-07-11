@@ -10,9 +10,9 @@ import (
 	awssts "github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
-func makeEksClusterRoleName(clusterName string) string { return clusterName + "-" + "cluster-role" }
-func makeEksNodeRoleName(nodeGroupName string) string  { return nodeGroupName + "-" + "node-role" }
-func makeEBSCSIRoleName(region, clusterName string) string {
+func MakeEksClusterRoleName(clusterName string) string { return clusterName + "-" + "cluster-role" }
+func MakeEksNodeRoleName(nodeGroupName string) string  { return nodeGroupName + "-" + "node-role" }
+func MakeEBSCSIRoleName(region, clusterName string) string {
 	return region + "-" + clusterName + "-" + "ebs-role"
 }
 

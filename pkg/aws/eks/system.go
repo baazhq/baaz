@@ -37,6 +37,15 @@ func (ec *eks) DescribeNodegroup(nodeGroupName string) (output *awseks.DescribeN
 	return describeNodeGroupOutput, true, nil
 }
 
+func (ec *eks) CreateNodegroup(createNodegroupInput *awseks.CreateNodegroupInput) (output *awseks.CreateNodegroupOutput, err error) {
+
+	createNodeGroupOutput, err := ec.awsClient.CreateNodegroup(ec.ctx, createNodegroupInput)
+	if err != nil {
+		return nil, err
+	}
+	return createNodeGroupOutput, nil
+}
+
 func (ec *eks) DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOutput, error) {
 
 	result, err := ec.awsClient.DeleteNodegroup(ec.ctx, &awseks.DeleteNodegroupInput{

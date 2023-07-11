@@ -1,0 +1,27 @@
+# permissions for end users to view tenants.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: tenants-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: ballastdata
+    app.kubernetes.io/part-of: ballastdata
+    app.kubernetes.io/managed-by: kustomize
+  name: tenants-viewer-role
+rules:
+- apiGroups:
+  - datainfra.io.datainfra.io
+  resources:
+  - tenants
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - datainfra.io.datainfra.io
+  resources:
+  - tenants/status
+  verbs:
+  - get

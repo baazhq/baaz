@@ -1,0 +1,47 @@
+apiVersion: datainfra.io/v1
+kind: Tenants
+metadata:
+  labels:
+    saas: shared
+    env: dataplatform
+  name: ws-analytics
+  namespace: demo
+spec:
+  envRef: shared-saas
+  config:
+  - appType: druid
+    size: druid-small
+  - appType: zookeeper
+    size: zookeeper-small
+  sizes:
+    - name: zookeeper-small
+      nodes:
+      - name: zookeeper
+        size: t2.small
+        min: 1
+        max: 3
+        labels:
+          app: zookeeper
+    - name: druid-small
+      nodes: 
+      - name: query-nodes
+        size: t2.small
+        min: 1
+        max: 3
+        labels:
+          app: druid
+          nodeType: query
+      - name: data-nodes
+        size: t2.small
+        min: 1
+        max: 3
+        labels:
+          app: data
+          nodeType: data
+      - name: master-nodes
+        size: t2.small   
+        min: 1
+        max: 3
+        labels:
+          app: master
+          nodeType: master

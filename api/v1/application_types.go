@@ -11,6 +11,8 @@ const (
 	TenantScope      AppScope = "tenant"
 )
 
+type ApplicationType string
+
 // ApplicationSpec defines the desired state of Application
 type ApplicationSpec struct {
 	EnvRef       string             `json:"envRef"`

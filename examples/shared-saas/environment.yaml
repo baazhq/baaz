@@ -7,7 +7,7 @@ metadata:
   name: shared-saas
   namespace: demo
 spec:
-  envType: dev
+  envType: shared
   cloudInfra:
     type: aws
     awsRegion: us-east-1
@@ -18,8 +18,8 @@ spec:
     eks:
       name: dataplatform-eks
       subnetIds:
-      - subnet-02a0cccde6c324558
-      - subnet-037a30ccca71ee1db
+      - subnet-01cbca574f0d8b8d8
+      - subnet-0a4d9c31739a9ac87
       securityGroupIds:
-      - sg-0525da1d4c2697b12
+      - sg-0da08285aacbdea70
       version: "1.25"
