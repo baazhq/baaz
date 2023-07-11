@@ -164,7 +164,7 @@ func (r *EnvironmentReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error)
 
 	// remove our finalizer from the list and update it.
 	controllerutil.RemoveFinalizer(ae.env, envFinalizer)
-	klog.Info("Deleted Environment [%s]", ae.env.GetName())
+	klog.Infof("Deleted Environment [%s]", ae.env.GetName())
 	if err := ae.client.Update(ae.ctx, ae.env.DeepCopyObject().(*v1.Environment)); err != nil {
 		return ctrl.Result{}, err
 	}

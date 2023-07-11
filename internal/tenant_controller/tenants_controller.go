@@ -77,7 +77,13 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 		return r.reconcileDelete(&awsEnv)
 	}
-
+	// if it is normal reconcile, then add finalizer if not already
+	if !controllerutil.ContainsFinalizer(tenantObj, tenantsFinalizer) {
+		controllerutil.AddFinalizer(tenantObj, tenantsFinalizer)
+		if err := r.Update(ctx, tenantObj); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 	// If first time reconciling set status to pending
 	if tenantObj.Status.Phase == "" {
 		if _, _, err := utils.PatchStatus(ctx, r.Client, tenantObj, func(obj client.Object) client.Object {
@@ -85,14 +91,6 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			in.Status.Phase = v1.Pending
 			return in
 		}); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	// if it is normal reconcile, then add finalizer if not already
-	if !controllerutil.ContainsFinalizer(tenantObj, tenantsFinalizer) {
-		controllerutil.AddFinalizer(tenantObj, tenantsFinalizer)
-		if err := r.Update(ctx, tenantObj); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -137,8 +135,8 @@ func lookupReconcileTime(log logr.Logger) time.Duration {
 
 func (r *TenantsReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	// update phase to terminating
-	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-		in := obj.(*v1.Environment)
+	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.tenant, func(obj client.Object) client.Object {
+		in := obj.(*v1.Tenants)
 		in.Status.Phase = v1.Terminating
 		return in
 	})
@@ -154,8 +152,8 @@ func (r *TenantsReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 				return ctrl.Result{}, err
 			}
 			// update status with current nodegroup status
-			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-				in := obj.(*v1.Environment)
+			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.tenant, func(obj client.Object) client.Object {
+				in := obj.(*v1.Tenants)
 				if in.Status.NodegroupStatus == nil {
 					in.Status.NodegroupStatus = make(map[string]string)
 				}
@@ -166,6 +164,7 @@ func (r *TenantsReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 				return ctrl.Result{}, err
 			}
 		}
+
 		_, found, err := ae.eksIC.DescribeNodegroup(ng)
 		if err != nil {
 			return ctrl.Result{}, err
