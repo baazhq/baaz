@@ -7,6 +7,7 @@ import (
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	awssts "github.com/aws/aws-sdk-go-v2/service/sts"
+	"k8s.io/client-go/kubernetes"
 )
 
 type Eks interface {
@@ -30,6 +31,8 @@ type Eks interface {
 	// addons
 	CreateAddon(ctx context.Context, params *CreateAddonInput) (*awseks.CreateAddonOutput, error)
 	DescribeAddon(addonName string) (*awseks.DescribeAddonOutput, error)
+	// auth
+	GetEksClientSet() (*kubernetes.Clientset, error)
 }
 
 type eks struct {

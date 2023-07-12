@@ -28,6 +28,7 @@ type TenantConfig struct {
 type TenantsStatus struct {
 	Phase           EnvironmentPhase  `json:"phase,omitempty"`
 	NodegroupStatus map[string]string `json:"nodegroupStatus,omitempty"`
+	Namespace       map[string]string `json:"namespace,omitempty"`
 }
 
 type NodeSpec struct {

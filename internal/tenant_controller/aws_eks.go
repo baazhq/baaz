@@ -5,6 +5,11 @@ import (
 	"errors"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+
 	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/aws/eks"
 	"datainfra.io/ballastdata/pkg/store"
@@ -74,12 +79,19 @@ func (ae *awsEnv) ReconcileTenants() error {
 					if err := ae.patchStatus(*describeNodegroupOutput.Nodegroup.NodegroupName, string(describeNodegroupOutput.Nodegroup.Status)); err != nil {
 						return err
 					}
-				}
 
+					if describeNodegroupOutput.Nodegroup.Status == types.NodegroupStatusActive {
+						clientset, err := ae.eksIC.GetEksClientSet()
+						if err != nil {
+							return err
+						}
+
+						if err := ae.createOrUpdateNamespace(clientset); err != nil {
+							return err
+						}
+					}
+				}
 			}
-		}
-		if ae.env != nil {
-			ae.store.Add(ae.env.Spec.CloudInfra.Eks.Name, nodeName)
 		}
 	}
 
@@ -152,4 +164,23 @@ func (ae *awsEnv) patchStatus(name, status string) error {
 		return in
 	})
 	return err
+}
+
+func (ae *awsEnv) createOrUpdateNamespace(clientset *kubernetes.Clientset) error {
+
+	_, err := clientset.CoreV1().Namespaces().Get(ae.ctx, ae.tenant.Name, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		ns, err := clientset.CoreV1().Namespaces().Create(ae.ctx, &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: ae.tenant.Name,
+			},
+		}, metav1.CreateOptions{})
+		if err != nil {
+			return err
+		}
+		klog.Infof("Namespace [%s] created for environment [%s]", ns.Name, ae.env.Name)
+
+	}
+	return nil
+
 }
