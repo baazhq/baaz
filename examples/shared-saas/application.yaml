@@ -1,0 +1,36 @@
+apiVersion: datainfra.io/v1
+kind: Application
+metadata:
+  name: shared-saas
+  namespace: demo
+spec:
+  envRef: shared-saas
+  applications:
+  - name: zookeeper-operator
+    scope: environment # single operator can reconcile multiple environments
+    spec:
+      chartName: "zookeeper-operator"
+      repoName: "pravega"
+      repoUrl: "https://charts.pravega.io"
+      version: "0.2.15"
+  - name: druid-operator
+    scope: environment
+    spec:
+      chartName: "druid-operator"
+      repoName: "datainfra"
+      repoUrl: "https://charts.datainfra.io"
+      version: "0.3.1"
+  # - name: zookeeper-ws-analytics
+  #   scope: tenant 
+  #   tenant: workspace-analytics # name of tenant
+  #   spec:
+  #     chartName: "zookeeper"
+  #     repoName: "pravega"
+  #     repoUrl: "https://charts.pravega.io"
+  #     version: "0.2.15"
+  #     values: |-
+  #       pod.nodeSelector.app=zk 
+  #       pod.tolerations[0].key=application
+  #       pod.tolerations[0].operator=Equal
+  #       pod.tolerations[0].value=workspace-analytics-zookeeper-zk-small-zookeeper
+  #       pod.tolerations[0].effect=NoSchedule

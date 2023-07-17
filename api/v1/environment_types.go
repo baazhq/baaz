@@ -11,37 +11,7 @@ type EnvironmentSpec struct {
 	EnvType string `json:"envType"`
 	// Cloud can be any pubic name ie aws, gcp, azure.
 	CloudInfra CloudInfraConfig `json:"cloudInfra"`
-	// Tenant Config consists of AppType
-	//Tenant map[string][]TenantConfig `json:"tenants"`
-	// Define Size consists of AppType
-	//Size []ApplicationSize `json:"sizes"`
 }
-
-// type ApplicationSize struct {
-// 	Name string      `json:"name"`
-// 	Spec AppSizeSpec `json:"spec"`
-// }
-
-// type TenantConfig struct {
-// 	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper;parseable
-// 	AppType ApplicationType `json:"appType"`
-// 	Size    string          `json:"size"`
-// }
-
-// type AppSizeSpec struct {
-// 	// +kubebuilder:validation:Enum:=druid;pinot;zookeeper;parseable
-// 	AppType ApplicationType                  `json:"appType"`
-// 	Nodes   map[NodeGroupName]*NodeGroupSpec `json:"nodes,omitempty"`
-// }
-
-// type NodeGroupSpec struct {
-// 	NodeLabels map[string]string `json:"nodeLabels"`
-// 	NodeSize   string            `json:"nodeSize"`
-// 	// +kubebuilder:validation:Minimum:=1
-// 	Min int32 `json:"min"`
-// 	// +kubebuilder:validation:Minimum:=1
-// 	Max int32 `json:"max"`
-// }
 
 type CloudType string
 

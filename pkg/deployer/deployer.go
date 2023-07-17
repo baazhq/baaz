@@ -39,17 +39,17 @@ func NewDeployer(
 // Deployer is responsible for deploying apps
 func (deploy *Deployer) ReconcileDeployer() error {
 
-	for appName, app := range deploy.App.Spec.Applications {
+	for _, app := range deploy.App.Spec.Applications {
 
 		application := applications.NewApplication(
 			deploy.RestConfig,
 			app,
-			appName,
+			"",
 		)
 
 		var namespace string
 
-		namespace = appName
+		namespace = "appName"
 
 		if app.Scope == v1.TenantScope {
 			namespace = app.Tenant

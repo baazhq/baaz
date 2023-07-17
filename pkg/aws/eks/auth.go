@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
-	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
@@ -13,14 +12,7 @@ import (
 
 func (ec *eks) GetEksClientSet() (*kubernetes.Clientset, error) {
 
-	resultDescribe, err := ec.awsClient.DescribeCluster(ec.ctx, &awseks.DescribeClusterInput{
-		Name: &ec.environment.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	restConfig, err := newRestConfig(resultDescribe.Cluster)
+	restConfig, err := ec.GetRestConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -33,26 +25,33 @@ func (ec *eks) GetEksClientSet() (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-func newRestConfig(cluster *types.Cluster) (*rest.Config, error) {
+func (ec *eks) GetRestConfig() (*rest.Config, error) {
+
+	resultDescribe, err := ec.awsClient.DescribeCluster(ec.ctx, &awseks.DescribeClusterInput{
+		Name: &ec.environment.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	gen, err := token.NewGenerator(true, false)
 	if err != nil {
 		return nil, err
 	}
 	opts := &token.GetTokenOptions{
-		ClusterID: *cluster.Name,
+		ClusterID: *resultDescribe.Cluster.Name,
 	}
 	tok, err := gen.GetWithOptions(opts)
 	if err != nil {
 		return nil, err
 	}
-	ca, err := base64.StdEncoding.DecodeString(aws.ToString(cluster.CertificateAuthority.Data))
+	ca, err := base64.StdEncoding.DecodeString(aws.ToString(resultDescribe.Cluster.CertificateAuthority.Data))
 	if err != nil {
 		return nil, err
 	}
 
 	restConfig := &rest.Config{
-		Host:        *cluster.Endpoint,
+		Host:        *resultDescribe.Cluster.Endpoint,
 		BearerToken: tok.Token,
 		TLSClientConfig: rest.TLSClientConfig{
 			CAData: ca,

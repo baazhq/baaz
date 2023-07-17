@@ -15,15 +15,15 @@ type ApplicationType string
 
 // ApplicationSpec defines the desired state of Application
 type ApplicationSpec struct {
-	EnvRef       string             `json:"envRef"`
-	Applications map[string]AppSpec `json:"applications"`
+	EnvRef       string    `json:"envRef"`
+	Applications []AppSpec `json:"applications"`
 }
 
 type AppSpec struct {
-	Scope   AppScope        `json:"scope"`
-	Tenant  string          `json:"tenant,omitempty"`
-	AppType ApplicationType `json:"appType,omitempty"`
-	Spec    ChartSpec       `json:"spec"`
+	Name   string    `json:"name"`
+	Scope  AppScope  `json:"scope"`
+	Tenant string    `json:"tenant,omitempty"`
+	Spec   ChartSpec `json:"spec"`
 }
 
 type ChartSpec struct {

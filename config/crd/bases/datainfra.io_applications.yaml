@@ -36,9 +36,9 @@ spec:
             description: ApplicationSpec defines the desired state of Application
             properties:
               applications:
-                additionalProperties:
+                items:
                   properties:
-                    appType:
+                    name:
                       type: string
                     scope:
                       type: string
@@ -65,10 +65,11 @@ spec:
                     tenant:
                       type: string
                   required:
+                  - name
                   - scope
                   - spec
                   type: object
-                type: object
+                type: array
               envRef:
                 type: string
             required:
