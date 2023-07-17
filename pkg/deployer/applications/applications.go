@@ -55,10 +55,10 @@ func (app *Application) deployApplication() error {
 		app.App.Spec.Values,
 		nil)
 
-	exists, err := application.HelmList(app.RestConfig)
+	exists, err := application.List(app.RestConfig)
 	if !exists && err != nil {
 
-		err = application.HelmInstall(app.RestConfig)
+		err = application.Apply(app.RestConfig)
 		if err != nil {
 			return err
 		}

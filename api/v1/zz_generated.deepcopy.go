@@ -104,9 +104,9 @@ func (in *ApplicationSpec) DeepCopyInto(out *ApplicationSpec) {
 	*out = *in
 	if in.Applications != nil {
 		in, out := &in.Applications, &out.Applications
-		*out = make(map[string]AppSpec, len(*in))
-		for key, val := range *in {
-			(*out)[key] = *val.DeepCopy()
+		*out = make([]AppSpec, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }

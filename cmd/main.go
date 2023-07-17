@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	datainfraiov1 "datainfra.io/ballastdata/api/v1"
-	app_controller "datainfra.io/ballastdata/internal/app_controller"
+	"datainfra.io/ballastdata/internal/app_controller"
 	env_controller "datainfra.io/ballastdata/internal/env_controller"
 	tenant_controller "datainfra.io/ballastdata/internal/tenant_controller"
 	//+kubebuilder:scaffold:imports

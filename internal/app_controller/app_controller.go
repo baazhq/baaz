@@ -7,12 +7,14 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	datainfraiov1 "datainfra.io/ballastdata/api/v1"
+	v1 "datainfra.io/ballastdata/api/v1"
 )
 
 // ApplicationReconciler reconciles a Application object
@@ -40,12 +42,24 @@ func NewApplicationReconciler(mgr ctrl.Manager) *ApplicationReconciler {
 // +kubebuilder:rbac:groups=datainfra.io,resources=applications/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=datainfra.io,resources=applications/finalizers,verbs=update
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	desiredObj := &datainfraiov1.Application{}
-	err := r.Get(ctx, req.NamespacedName, desiredObj)
+
+	applicationObj := &v1.Application{}
+	err := r.Get(ctx, req.NamespacedName, applicationObj)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	if err := r.do(ctx, desiredObj); err != nil {
+
+	envObj := &v1.Environment{}
+	err = r.Get(ctx, types.NamespacedName{Name: applicationObj.Spec.EnvRef, Namespace: applicationObj.Namespace}, envObj)
+	if err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	err = r.Get(ctx, req.NamespacedName, applicationObj)
+	if err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	if err := r.do(ctx, applicationObj, envObj); err != nil {
 		klog.Errorf("failed to reconcile application: reason: %s", err.Error())
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else {
