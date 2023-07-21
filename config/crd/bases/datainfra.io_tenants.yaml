@@ -49,8 +49,34 @@ spec:
                   type: object
                 type: array
               envRef:
-                description: environment ref
+                description: Environment ref
                 type: string
+              isolation:
+                description: Isolation
+                properties:
+                  machine:
+                    properties:
+                      enabled:
+                        type: boolean
+                    required:
+                    - enabled
+                    type: object
+                  network:
+                    properties:
+                      allowNamespaces:
+                        items:
+                          type: string
+                        type: array
+                      enabled:
+                        type: boolean
+                    required:
+                    - allowNamespaces
+                    - enabled
+                    type: object
+                required:
+                - machine
+                - network
+                type: object
               sizes:
                 description: Define Size consists of AppType
                 items:
@@ -92,6 +118,7 @@ spec:
             required:
             - config
             - envRef
+            - isolation
             - sizes
             type: object
           status:

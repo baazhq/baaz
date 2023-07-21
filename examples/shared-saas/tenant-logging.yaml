@@ -8,6 +8,14 @@ metadata:
   namespace: demo
 spec:
   envRef: shared-saas
+  isolation: 
+    machine: 
+      enabled: true
+    network: 
+      enabled: true
+      allowNamespaces:
+      - druid-operator
+      - kube-system
   config:
   - appType: parseable
     size: parseable-small

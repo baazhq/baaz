@@ -8,10 +8,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/client-go/kubernetes"
 
 	v1 "datainfra.io/ballastdata/api/v1"
 	"datainfra.io/ballastdata/pkg/aws/eks"
+	"datainfra.io/ballastdata/pkg/resources"
 	"datainfra.io/ballastdata/pkg/store"
 	"datainfra.io/ballastdata/pkg/utils"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
@@ -86,7 +88,11 @@ func (ae *awsEnv) ReconcileTenants() error {
 							return err
 						}
 
-						if err := ae.createOrUpdateNamespace(clientset); err != nil {
+						if err := ae.createNamespace(clientset); err != nil {
+							return err
+						}
+
+						if err := ae.createOrUpdateNetworkPolicy(clientset); err != nil {
 							return err
 						}
 					}
@@ -113,6 +119,12 @@ func (ae *awsEnv) getNodeSpecForTenantSize(tenantConfig v1.TenantConfig) (*[]v1.
 
 func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, nodeSpec *v1.NodeSpec) (input *awseks.CreateNodegroupInput) {
 
+	var taints *[]types.Taint
+
+	if ae.tenant.Spec.Isolation.Machine.Enabled {
+		taints = makeTaints(nodeName)
+	}
+
 	return &awseks.CreateNodegroupInput{
 		ClusterName:        aws.String(ae.env.Spec.CloudInfra.Eks.Name),
 		NodeRole:           aws.String(roleArn),
@@ -135,7 +147,7 @@ func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, nodeSpec *v1.NodeS
 		Tags: map[string]string{
 			fmt.Sprintf("kubernetes.io/cluster/%s", ae.env.Spec.CloudInfra.Eks.Name): "owned",
 		},
-		Taints:       []types.Taint{},
+		Taints:       *taints,
 		UpdateConfig: nil,
 		Version:      nil,
 	}
@@ -166,7 +178,7 @@ func (ae *awsEnv) patchStatus(name, status string) error {
 	return err
 }
 
-func (ae *awsEnv) createOrUpdateNamespace(clientset *kubernetes.Clientset) error {
+func (ae *awsEnv) createNamespace(clientset *kubernetes.Clientset) error {
 
 	_, err := clientset.CoreV1().Namespaces().Get(ae.ctx, ae.tenant.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
@@ -183,4 +195,29 @@ func (ae *awsEnv) createOrUpdateNamespace(clientset *kubernetes.Clientset) error
 	}
 	return nil
 
+}
+
+func (ae *awsEnv) createOrUpdateNetworkPolicy(clientset *kubernetes.Clientset) error {
+
+	networkPolicyName := ae.tenant.Name + "-network-policy"
+
+	_, err := clientset.NetworkingV1().NetworkPolicies(ae.tenant.Name).Get(ae.ctx, networkPolicyName, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		ns, err := clientset.NetworkingV1().NetworkPolicies(ae.tenant.Name).Create(ae.ctx,
+			resources.MakeNetworkPolicy(
+				networkPolicyName,
+				ae.tenant.Name,
+				ae.tenant.Spec.Isolation.Network.AllowNamespaces,
+				resources.MakeOwnerRef(ae.tenant.APIVersion, ae.tenant.Kind, ae.tenant.Name, ae.tenant.UID),
+			), metav1.CreateOptions{},
+		)
+		if err != nil {
+			return err
+		}
+		klog.Infof("Network Policy [%s] created for tenant [%s]", ns.Name, ae.tenant.Name)
+	}
+
+	// TODO
+	// update logic
+	return nil
 }
