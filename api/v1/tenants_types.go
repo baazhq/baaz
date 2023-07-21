@@ -6,12 +6,28 @@ import (
 
 // TenantsSpec defines the desired state of Tenants
 type TenantsSpec struct {
-	// environment ref
+	// Environment ref
 	EnvRef string `json:"envRef"`
-	//Tenant Config consists of AppType
+	// Tenant Config consists of AppType
 	TenantConfig []TenantConfig `json:"config"`
-	//Define Size consists of AppType
+	// Define Size consists of AppType
 	TenantSizes []TenantSizes `json:"sizes"`
+	// Isolation
+	Isolation IsolationConfig `json:"isolation"`
+}
+
+type IsolationConfig struct {
+	Machine MachineConfig `json:"machine"`
+	Network NetworkConfig `json:"network"`
+}
+
+type MachineConfig struct {
+	Enabled bool `json:"enabled"`
+}
+
+type NetworkConfig struct {
+	Enabled         bool     `json:"enabled"`
+	AllowNamespaces []string `json:"allowNamespaces"`
 }
 
 type TenantSizes struct {
@@ -39,7 +55,6 @@ type NodeSpec struct {
 	Min int32 `json:"min"`
 	// +kubebuilder:validation:Minimum:=1
 	Max int32 `json:"max"`
-	//Taints []types.Taint `json:"taints,omitempty"`
 }
 
 //+kubebuilder:object:root=true

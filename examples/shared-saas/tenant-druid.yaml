@@ -9,9 +9,9 @@ metadata:
 spec:
   envRef: shared-saas
   config:
-  - appType: druid
+  - appType: backsgtage
     size: druid-small
-  - appType: zookeeper
+  - appType: grafana
     size: zookeeper-small
   sizes:
     - name: zookeeper-small
