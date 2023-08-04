@@ -2,7 +2,7 @@ apiVersion: datainfra.io/v1
 kind: Application
 metadata:
   name: shared-saas
-  namespace: demo
+  namespace: demos
 spec:
   envRef: shared-saas
   applications:

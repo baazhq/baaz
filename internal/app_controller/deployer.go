@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	application "datainfra.io/ballastdata/pkg/application"
+	"datainfra.io/ballastdata/pkg/application/helm"
 	"datainfra.io/ballastdata/pkg/aws/eks"
 
 	v1 "datainfra.io/ballastdata/api/v1"
@@ -47,7 +47,7 @@ func (a *Application) ReconcileApplicationDeployer() error {
 
 		fmt.Println(app)
 
-		helm := application.NewHelm(app.Name, namespace, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
+		helm := helm.NewHelm(app.Name, namespace, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
 
 		restConfig, err := a.EksIC.GetRestConfig()
 		if err != nil {
