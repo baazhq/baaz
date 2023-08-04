@@ -5,7 +5,7 @@ metadata:
     saas: shared
     env: dataplatform
   name: shared-saas
-  namespace: demo
+  namespace: demos
 spec:
   envType: shared
   cloudInfra:

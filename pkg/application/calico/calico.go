@@ -1,4 +1,4 @@
-package applications
+package calico
 
 import (
 	"bytes"

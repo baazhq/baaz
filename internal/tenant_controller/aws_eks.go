@@ -19,7 +19,9 @@ import (
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go/aws"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -95,6 +97,10 @@ func (ae *awsEnv) ReconcileTenants() error {
 						if err := ae.createOrUpdateNetworkPolicy(clientset); err != nil {
 							return err
 						}
+
+						if err := ae.tenantExpansion(nodeSpec.Size); err != nil {
+							return err
+						}
 					}
 				}
 			}
@@ -106,6 +112,40 @@ func (ae *awsEnv) ReconcileTenants() error {
 
 func makeNodeName(nodeName, appType, size string) string {
 	return nodeName + "-" + appType + "-" + size
+}
+
+func (ae *awsEnv) tenantExpansion(desiredSize string) error {
+	currentTenantObj := &v1.Tenants{}
+	err := ae.client.Get(ae.ctx, k8stypes.NamespacedName{
+		Namespace: ae.tenant.Namespace,
+		Name:      ae.tenant.Name,
+	}, currentTenantObj)
+	if err != nil {
+		return err
+	}
+
+	for _, tenantConfig := range currentTenantObj.Spec.TenantConfig {
+		nodeSpecs, err := ae.getNodeSpecForTenantSize(tenantConfig)
+		if err != nil {
+			return err
+		}
+
+		for _, nodeSpec := range *nodeSpecs {
+			fmt.Println(nodeSpec.Size)
+			fmt.Println(desiredSize)
+			if nodeSpec.Size != desiredSize {
+				klog.Infof(
+					"Tenant Expansion: Tenant [%s], Node Name [%s], Current Size [%s], Desired Size [%s]",
+					currentTenantObj.Name,
+					currentTenantObj.Name,
+					nodeSpec.Size,
+					desiredSize,
+				)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (ae *awsEnv) getNodeSpecForTenantSize(tenantConfig v1.TenantConfig) (*[]v1.NodeSpec, error) {

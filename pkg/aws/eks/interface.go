@@ -26,6 +26,7 @@ type Eks interface {
 	DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOutput, error)
 	DescribeNodegroup(nodeGroupName string) (output *awseks.DescribeNodegroupOutput, found bool, err error)
 	CreateNodegroup(createNodegroupInput *awseks.CreateNodegroupInput) (output *awseks.CreateNodegroupOutput, err error)
+	UpdateNodegroup(updateNodeGroupConfig *awseks.UpdateNodegroupConfigInput) (output *awseks.UpdateNodegroupConfigOutput, err error)
 	// iam role
 	CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error)
 	CreateClusterIamRole() (*awsiam.GetRoleOutput, error)

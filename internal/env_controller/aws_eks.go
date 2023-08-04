@@ -8,8 +8,8 @@ import (
 	"time"
 
 	v1 "datainfra.io/ballastdata/api/v1"
+	"datainfra.io/ballastdata/pkg/application/calico"
 	"datainfra.io/ballastdata/pkg/aws/eks"
-	"datainfra.io/ballastdata/pkg/deployer/applications"
 	"datainfra.io/ballastdata/pkg/store"
 	"datainfra.io/ballastdata/pkg/utils"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
@@ -159,7 +159,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 	if eksDescribeClusterOutput != nil && eksDescribeClusterOutput.Cluster != nil && eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusActive {
 
-		calico := applications.NewCali(
+		calico := calico.NewCali(
 			ae.env.Spec.CloudInfra.Eks.Name,
 			v1.CloudType(ae.env.Spec.CloudInfra.Type),
 		)
