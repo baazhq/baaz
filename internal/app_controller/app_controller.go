@@ -13,8 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	datainfraiov1 "datainfra.io/ballastdata/api/v1"
-	v1 "datainfra.io/ballastdata/api/v1"
+	v1 "datainfra.io/ballastdata/api/v1/types"
 )
 
 // ApplicationReconciler reconciles a Application object
@@ -71,7 +70,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 // SetupWithManager sets up the controller with the Manager.
 func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&datainfraiov1.Application{}).
+		For(&v1.Application{}).
 		Complete(r)
 }
 

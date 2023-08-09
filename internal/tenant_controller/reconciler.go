@@ -3,7 +3,7 @@ package tenant_controller
 import (
 	"context"
 
-	v1 "datainfra.io/ballastdata/api/v1"
+	v1 "datainfra.io/ballastdata/api/v1/types"
 	"datainfra.io/ballastdata/pkg/aws/eks"
 )
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"net/http"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -15,9 +16,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	datainfraiov1 "datainfra.io/ballastdata/api/v1"
+	datainfraiov1 "datainfra.io/ballastdata/api/v1/types"
 	"datainfra.io/ballastdata/internal/app_controller"
 	env_controller "datainfra.io/ballastdata/internal/env_controller"
+	http_handlers "datainfra.io/ballastdata/internal/http_handlers"
 	tenant_controller "datainfra.io/ballastdata/internal/tenant_controller"
 	//+kubebuilder:scaffold:imports
 )
@@ -32,6 +34,17 @@ func init() {
 
 	utilruntime.Must(datainfraiov1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+}
+
+func init() {
+	go func() {
+		router := http_handlers.NewRouter()
+		setupLog.Info("Started Ballast HTTP server on :8000")
+		if err := http.ListenAndServe(":8000", (router)); err != nil {
+			setupLog.Error(err, "unable to start HTTP server")
+			os.Exit(1)
+		}
+	}()
 }
 
 func main() {

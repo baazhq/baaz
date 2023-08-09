@@ -18,8 +18,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	datainfraiov1 "datainfra.io/ballastdata/api/v1"
-	v1 "datainfra.io/ballastdata/api/v1"
+	v1 "datainfra.io/ballastdata/api/v1/types"
 	"datainfra.io/ballastdata/pkg/utils"
 )
 
@@ -55,7 +54,7 @@ func NewEnvironmentReconciler(mgr ctrl.Manager) *EnvironmentReconciler {
 // +kubebuilder:rbac:groups=datainfra.io,resources=environments/finalizers,verbs=update
 func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
-	desiredObj := &datainfraiov1.Environment{}
+	desiredObj := &v1.Environment{}
 	err := r.Get(ctx, req.NamespacedName, desiredObj)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -87,8 +86,8 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// If first time reconciling set status to pending
 	if desiredObj.Status.Phase == "" {
 		if _, _, err := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
-			in := obj.(*datainfraiov1.Environment)
-			in.Status.Phase = datainfraiov1.Pending
+			in := obj.(*v1.Environment)
+			in.Status.Phase = v1.Pending
 			return in
 		}); err != nil {
 			return ctrl.Result{}, err
@@ -97,8 +96,8 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	if err := r.do(ctx, desiredObj); err != nil {
 		if _, _, upErr := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
-			in := obj.(*datainfraiov1.Environment)
-			in.Status.Phase = datainfraiov1.Failed
+			in := obj.(*v1.Environment)
+			in.Status.Phase = v1.Failed
 			return in
 		}); upErr != nil {
 			return ctrl.Result{}, upErr
@@ -113,8 +112,8 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *EnvironmentReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	// update phase to terminating
 	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-		in := obj.(*datainfraiov1.Environment)
-		in.Status.Phase = datainfraiov1.Terminating
+		in := obj.(*v1.Environment)
+		in.Status.Phase = v1.Terminating
 		return in
 	})
 	if err != nil {
@@ -174,7 +173,7 @@ func (r *EnvironmentReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error)
 // SetupWithManager sets up the controller with the Manager.
 func (r *EnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&datainfraiov1.Environment{}).
+		For(&v1.Environment{}).
 		Complete(r)
 }
 
