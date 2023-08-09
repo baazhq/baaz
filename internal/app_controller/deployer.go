@@ -7,7 +7,7 @@ import (
 	"datainfra.io/ballastdata/pkg/application/helm"
 	"datainfra.io/ballastdata/pkg/aws/eks"
 
-	v1 "datainfra.io/ballastdata/api/v1"
+	v1 "datainfra.io/ballastdata/api/v1/types"
 	"k8s.io/client-go/kubernetes"
 )
 

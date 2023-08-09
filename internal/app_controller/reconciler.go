@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	v1 "datainfra.io/ballastdata/api/v1"
+	v1 "datainfra.io/ballastdata/api/v1/types"
 	"datainfra.io/ballastdata/pkg/aws/eks"
 	"k8s.io/klog/v2"
 )

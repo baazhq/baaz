@@ -11,7 +11,7 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	v1 "datainfra.io/ballastdata/api/v1"
+	v1 "datainfra.io/ballastdata/api/v1/types"
 	"datainfra.io/ballastdata/pkg/aws/eks"
 	"datainfra.io/ballastdata/pkg/resources"
 	"datainfra.io/ballastdata/pkg/store"
