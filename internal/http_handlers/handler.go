@@ -3,7 +3,6 @@ package http_handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,17 +13,24 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	v1 "datainfra.io/ballastdata/api/v1/types"
 	"github.com/gorilla/mux"
 )
 
 const (
-	req_error      string = "REQUEST_ERROR"
-	internal_error string = "INTERNAL_ERROR"
-	success        string = "SUCCESS"
+	req_error                   string = "REQUEST_ERROR"
+	internal_error              string = "INTERNAL_ERROR"
+	success                     string = "SUCCESS"
+	shared_namespace            string = "shared"
+	dataplane_creation_initated string = "Dataplane Creation Initiated"
 )
+
+var dpRes = schema.GroupVersionResource{
+	Group:    "datainfra.io",
+	Version:  "v1",
+	Resource: "dataplanes",
+}
 
 func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 
@@ -141,43 +147,9 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 
 	_, dc := getKubeClientset()
 
-	var dpRes = schema.GroupVersionResource{
-		Group:    "datainfra.io",
-		Version:  "v1",
-		Resource: "dataplanes",
-	}
+	dpDeploy := getAwsEksConfig(dataPlaneName, dataplane)
 
-	fmt.Println(dataplane)
-
-	dpDeploy := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "datainfra.io/v1",
-			"kind":       "DataPlanes",
-			"metadata": map[string]interface{}{
-				"name": dataPlaneName,
-			},
-			"spec": map[string]interface{}{
-				"saasType": dataplane.SaaSType,
-				"cloudInfra": map[string]interface{}{
-					"cloudType": dataplane.CloudType,
-					"region":    dataplane.CloudRegion,
-					"authSecretRef": map[string]interface{}{
-						"secretName":    dataplane.CloudAuth.SecretRef.SecretName,
-						"accessKeyName": dataplane.CloudAuth.SecretRef.AccessKeyName,
-						"secretKeyName": dataplane.CloudAuth.SecretRef.SecretKeyName,
-					},
-					"eks": map[string]interface{}{
-						"name":             dataPlaneName,
-						"subnetIds":        dataplane.KubeConfig.EKS.SubnetIds,
-						"securityGroupIds": dataplane.KubeConfig.EKS.SecurityGroupIds,
-						"version":          dataplane.KubeConfig.EKS.Version,
-					},
-				},
-			},
-		},
-	}
-
-	_, err = dc.Resource(dpRes).Namespace("shared").Create(context.TODO(), dpDeploy, metav1.CreateOptions{})
+	_, err = dc.Resource(dpRes).Namespace(shared_namespace).Create(context.TODO(), dpDeploy, metav1.CreateOptions{})
 	if err != nil {
 		msg := "create data plane config failed"
 		res := NewResponse(msg, internal_error, err, http.StatusInternalServerError)
@@ -186,7 +158,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res := NewResponse("create dp ", success, nil, 200)
+	res := NewResponse(dataplane_creation_initated, success, nil, 200)
 	res.SetResponse(&w)
 
 }
