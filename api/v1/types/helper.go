@@ -1,6 +1,6 @@
 package v1
 
-func (e *Environment) AddCondition(newCon EnvironmentCondition) []EnvironmentCondition {
+func (e *DataPlanes) AddCondition(newCon DataPlaneCondition) []DataPlaneCondition {
 	for i, c := range e.Status.Conditions {
 		if c.Type == newCon.Type {
 			if c.Status == newCon.Status {

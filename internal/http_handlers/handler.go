@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,10 +19,18 @@ import (
 )
 
 const (
-	req_error      string = "REQUEST_ERROR"
-	internal_error string = "INTERNAL_ERROR"
-	success        string = "SUCCESS"
+	req_error                   string = "REQUEST_ERROR"
+	internal_error              string = "INTERNAL_ERROR"
+	success                     string = "SUCCESS"
+	shared_namespace            string = "shared"
+	dataplane_creation_initated string = "Dataplane Creation Initiated"
 )
+
+var dpRes = schema.GroupVersionResource{
+	Group:    "datainfra.io",
+	Version:  "v1",
+	Resource: "dataplanes",
+}
 
 func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 
@@ -56,9 +65,9 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	client := getKubeClientset()
+	client, _ := getKubeClientset()
 
-	_, err = client.Clientset.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
+	_, err = client.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
 
 	if apierrors.IsNotFound(err) {
 		labels := map[string]string{
@@ -66,7 +75,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			"saas_type":   string(customer.SaaSType),
 		}
 
-		_, err := client.Clientset.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
+		_, err := client.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   customerName,
 				Labels: mergeMaps(labels, customer.Labels),
@@ -105,13 +114,51 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		res.LogResponse()
 		return
 	}
-	var dataplane v1.DataPlane
 
-	if err := json.Unmarshal(body, &dataplane); err != nil {
+	var dp v1.DataPlane
+
+	if err := json.Unmarshal(body, &dp); err != nil {
 		msg := "Unmarshall error"
 		res := NewResponse(msg, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
+
+	dataplane := v1.DataPlane{
+		CloudType:   dp.CloudType,
+		CloudRegion: dp.CloudRegion,
+		CloudAuth: v1.CloudAuth{
+			SecretRef: v1.SecretRef{
+				SecretName:    dp.CloudAuth.SecretRef.SecretName,
+				AccessKeyName: dp.CloudAuth.SecretRef.AccessKeyName,
+				SecretKeyName: dp.CloudAuth.SecretRef.SecretKeyName,
+			},
+		},
+		KubeConfig: v1.KubernetesConfig{
+			EKS: v1.EKSConfig{
+				Name:             dataPlaneName,
+				SubnetIds:        dp.KubeConfig.EKS.SubnetIds,
+				SecurityGroupIds: dp.KubeConfig.EKS.SecurityGroupIds,
+				Version:          dp.KubeConfig.EKS.Version,
+			},
+		},
+	}
+
+	_, dc := getKubeClientset()
+
+	dpDeploy := getAwsEksConfig(dataPlaneName, dataplane)
+
+	_, err = dc.Resource(dpRes).Namespace(shared_namespace).Create(context.TODO(), dpDeploy, metav1.CreateOptions{})
+	if err != nil {
+		msg := "create data plane config failed"
+		res := NewResponse(msg, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	res := NewResponse(dataplane_creation_initated, success, nil, 200)
+	res.SetResponse(&w)
+
 }

@@ -1,16 +1,16 @@
 apiVersion: datainfra.io/v1
-kind: Environment
+kind: DataPlanes
 metadata:
   labels:
     saas: shared
     env: dataplatform
   name: shared-saas
-  namespace: demos
+  namespace: shared
 spec:
-  envType: shared
+  saasType: shared
   cloudInfra:
-    type: aws
-    awsRegion: us-east-1
+    cloudType: aws
+    region: us-east-1
     authSecretRef:
       secretName: aws-secret
       accessKeyName: accessKey

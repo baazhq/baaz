@@ -14,7 +14,7 @@ resources:
   controller: true
   domain: datainfra
   group: datainfra.io
-  kind: Environment
+  kind: Dataplane
   path: datainfra.io/ballastdata/api/v1
   version: v1
 - api:

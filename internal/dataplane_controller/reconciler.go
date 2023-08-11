@@ -10,20 +10,20 @@ import (
 	v1 "datainfra.io/ballastdata/api/v1/types"
 )
 
-func (r *EnvironmentReconciler) do(ctx context.Context, env *v1.Environment) error {
-	switch env.Spec.CloudInfra.Type {
+func (r *DataPlaneReconciler) do(ctx context.Context, dp *v1.DataPlanes) error {
+	switch dp.Spec.CloudInfra.CloudType {
 
 	case v1.CloudType(v1.AWS):
 
 		awsSecret, err := getSecret(ctx, r.Client, client.ObjectKey{
-			Name:      env.Spec.CloudInfra.AuthSecretRef.SecretName,
-			Namespace: env.Namespace,
+			Name:      dp.Spec.CloudInfra.AuthSecretRef.SecretName,
+			Namespace: dp.Namespace,
 		})
 		if err != nil {
 			return err
 		}
 
-		accessKey, found := awsSecret.Data[env.Spec.CloudInfra.AuthSecretRef.AccessKeyName]
+		accessKey, found := awsSecret.Data[dp.Spec.CloudInfra.AuthSecretRef.AccessKeyName]
 		if !found {
 			return errors.New("access key not found in the secret")
 		}
@@ -32,7 +32,7 @@ func (r *EnvironmentReconciler) do(ctx context.Context, env *v1.Environment) err
 			return err
 		}
 
-		secretKey, found := awsSecret.Data[env.Spec.CloudInfra.AuthSecretRef.SecretKeyName]
+		secretKey, found := awsSecret.Data[dp.Spec.CloudInfra.AuthSecretRef.SecretKeyName]
 		if !found {
 			return errors.New("secret key not found in the secret")
 		}
@@ -41,7 +41,7 @@ func (r *EnvironmentReconciler) do(ctx context.Context, env *v1.Environment) err
 			return err
 		}
 
-		if err := r.reconcileAwsEnvironment(ctx, env); err != nil {
+		if err := r.reconcileAwsEnvironment(ctx, dp); err != nil {
 			return err
 		}
 

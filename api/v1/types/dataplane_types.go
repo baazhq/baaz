@@ -5,10 +5,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EnvironmentSpec defines the desired state of Environment
-type EnvironmentSpec struct {
-	// EnvType can be dev, stage, prod environments
-	EnvType string `json:"envType"`
+// DataPlaneSpec defines the desired state of DataPlane
+type DataPlaneSpec struct {
+	// SaaSType can be dev, stage, prod DataPlanes
+	SaasStype string `json:"saasType"`
 	// Cloud can be any pubic name ie aws, gcp, azure.
 	CloudInfra CloudInfraConfig `json:"cloudInfra"`
 }
@@ -23,28 +23,29 @@ const (
 
 type CloudInfraConfig struct {
 	// CloudType
-	Type                CloudType `json:"type"`
+	CloudType           CloudType `json:"cloudType"`
+	Region              string    `json:"region"`
 	AwsCloudInfraConfig `json:",inline,omitempty"`
 }
 
-type EnvironmentPhase string
+type DataPlanePhase string
 
 const (
-	Pending     EnvironmentPhase = "Pending"
-	Creating    EnvironmentPhase = "Creating"
-	Success     EnvironmentPhase = "Success"
-	Failed      EnvironmentPhase = "Failed"
-	Updating    EnvironmentPhase = "Updating"
-	Terminating EnvironmentPhase = "Terminating"
+	Pending     DataPlanePhase = "Pending"
+	Creating    DataPlanePhase = "Creating"
+	Success     DataPlanePhase = "Success"
+	Failed      DataPlanePhase = "Failed"
+	Updating    DataPlanePhase = "Updating"
+	Terminating DataPlanePhase = "Terminating"
 )
 
-// EnvironmentStatus defines the observed state of Environment
-type EnvironmentStatus struct {
-	Phase              EnvironmentPhase       `json:"phase,omitempty"`
-	CloudInfraStatus   CloudInfraStatus       `json:"cloudInfraStatus,omitempty"`
-	ObservedGeneration int64                  `json:"observedGeneration,omitempty"`
-	Conditions         []EnvironmentCondition `json:"conditions,omitempty"`
-	Version            string                 `json:"version,omitempty"`
+// DataPlaneStatus defines the observed state of DataPlane
+type DataPlaneStatus struct {
+	Phase              DataPlanePhase       `json:"phase,omitempty"`
+	CloudInfraStatus   CloudInfraStatus     `json:"cloudInfraStatus,omitempty"`
+	ObservedGeneration int64                `json:"observedGeneration,omitempty"`
+	Conditions         []DataPlaneCondition `json:"conditions,omitempty"`
+	Version            string               `json:"version,omitempty"`
 	// NodegroupStatus will contain a map of node group name & status
 	// Example:
 	// nodegroupStatus:
@@ -60,21 +61,21 @@ type EnvironmentStatus struct {
 	AddonStatus map[string]string `json:"addonStatus,omitempty"`
 }
 
-type EnvironmentConditionType string
+type DataPlaneConditionType string
 
 const (
-	ControlPlaneCreateInitiated EnvironmentConditionType = "ControlPlaneCreateInitiated"
-	ControlPlaneCreated         EnvironmentConditionType = "ControlPlaneCreated"
-	NodeGroupCreateInitiated    EnvironmentConditionType = "NodeGroupCreateInitiated"
-	NodeGroupCreated            EnvironmentConditionType = "NodeGroupCreated"
-	VersionUpgradeInitiated     EnvironmentConditionType = "VersionUpgradeInitiated"
-	VersionUpgradeSuccessful    EnvironmentConditionType = "VersionUpgradeSuccessful"
+	ControlPlaneCreateInitiated DataPlaneConditionType = "ControlPlaneCreateInitiated"
+	ControlPlaneCreated         DataPlaneConditionType = "ControlPlaneCreated"
+	NodeGroupCreateInitiated    DataPlaneConditionType = "NodeGroupCreateInitiated"
+	NodeGroupCreated            DataPlaneConditionType = "NodeGroupCreated"
+	VersionUpgradeInitiated     DataPlaneConditionType = "VersionUpgradeInitiated"
+	VersionUpgradeSuccessful    DataPlaneConditionType = "VersionUpgradeSuccessful"
 )
 
-// EnvironmentCondition describes the state of a deployment at a certain point.
-type EnvironmentCondition struct {
+// DataPlaneCondition describes the state of a deployment at a certain point.
+type DataPlaneCondition struct {
 	// Type of deployment condition.
-	Type EnvironmentConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=DeploymentConditionType"`
+	Type DataPlaneConditionType `json:"type" protobuf:"bytes,1,opt,name=type,casttype=DeploymentConditionType"`
 	// Status of the condition, one of True, False, Unknown.
 	Status v1.ConditionStatus `json:"status" protobuf:"bytes,2,opt,name=status,casttype=k8s.io/api/core/v1.ConditionStatus"`
 	// The last time this condition was updated.
@@ -96,23 +97,23 @@ type CloudInfraStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.phase"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
-// Environment is the Schema for the environments API
-type Environment struct {
+// DataPlane is the Schema for the DataPlanes API
+type DataPlanes struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   EnvironmentSpec   `json:"spec,omitempty"`
-	Status EnvironmentStatus `json:"status,omitempty"`
+	Spec   DataPlaneSpec   `json:"spec,omitempty"`
+	Status DataPlaneStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
-// EnvironmentList contains a list of Environment
-type EnvironmentList struct {
+// DataPlaneList contains a list of DataPlane
+type DataPlanesList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Environment `json:"items"`
+	Items           []DataPlanes `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Environment{}, &EnvironmentList{})
+	SchemeBuilder.Register(&DataPlanes{}, &DataPlanesList{})
 }

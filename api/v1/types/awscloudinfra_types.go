@@ -4,7 +4,6 @@ type AwsCloudInfraConfig struct {
 	// AuthSecretRef holds the secret info which contains aws secret key & access key info
 	// Secret must be in the same namespace as environment
 	AuthSecretRef AWSAuthSecretRef `json:"authSecretRef"`
-	AwsRegion     string           `json:"awsRegion"`
 	Eks           EksConfig        `json:"eks"`
 }
 

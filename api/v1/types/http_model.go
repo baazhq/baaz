@@ -8,14 +8,6 @@ const (
 	PrivateSaaS   SaaSTypes = "Private-SaaS"
 )
 
-type CloudTypes string
-
-const (
-	Aws   CloudType = "AWS"
-	Azure CloudType = "AZURE"
-	Gcp   CloudType = "GCP"
-)
-
 type Customer struct {
 	SaaSType    SaaSTypes         `json:"saas_type"`
 	Description string            `json:"description"`
@@ -23,7 +15,8 @@ type Customer struct {
 }
 
 type DataPlane struct {
-	CloudType   CloudTypes       `json:"cloud_type"`
+	CloudType   CloudType        `json:"cloud_type"`
+	SaaSType    SaaSTypes        `json:"saas_type"`
 	CloudRegion string           `json:"cloud_region"`
 	CloudAuth   CloudAuth        `json:"cloud_auth"`
 	KubeConfig  KubernetesConfig `json:"kubernetes_config"`

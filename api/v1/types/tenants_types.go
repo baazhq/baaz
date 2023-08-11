@@ -42,7 +42,7 @@ type TenantConfig struct {
 
 // TenantsStatus defines the observed state of Tenants
 type TenantsStatus struct {
-	Phase           EnvironmentPhase  `json:"phase,omitempty"`
+	Phase           DataPlanePhase    `json:"phase,omitempty"`
 	NodegroupStatus map[string]string `json:"nodegroupStatus,omitempty"`
 	Namespace       map[string]string `json:"namespace,omitempty"`
 }

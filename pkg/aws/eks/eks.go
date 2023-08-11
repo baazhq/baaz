@@ -7,22 +7,22 @@ import (
 	"k8s.io/klog/v2"
 )
 
-type EnvironmentControllerReason string
+type DataPlaneControllerReason string
 
 const (
-	EksControlPlaneCreationInitatedReason EnvironmentControllerReason = "EksControlPlaneCreationInitated"
-	EksControlPlaneCreatedReason          EnvironmentControllerReason = "EksControlPlaneCreated	"
-	EksControlPlaneCreationUpgradedReason EnvironmentControllerReason = "EksControlUpgradeInitatedReason"
-	EksControlPlaneUpgradedReason         EnvironmentControllerReason = "EksControlPlaneUpgradeReason"
+	EksControlPlaneCreationInitatedReason DataPlaneControllerReason = "EksControlPlaneCreationInitated"
+	EksControlPlaneCreatedReason          DataPlaneControllerReason = "EksControlPlaneCreated	"
+	EksControlPlaneCreationUpgradedReason DataPlaneControllerReason = "EksControlUpgradeInitatedReason"
+	EksControlPlaneUpgradedReason         DataPlaneControllerReason = "EksControlPlaneUpgradeReason"
 )
 
-type EnvironmentControllerMsg string
+type DataPlaneControllerMsg string
 
 const (
-	EksControlPlaneCreationInitatedMsg EnvironmentControllerMsg = "Initiated creation eks kubernetes control plane"
-	EksControlPlaneCreatedMsg          EnvironmentControllerMsg = "Created eks kubernetes control plane"
-	EksControlPlaneUpgradedIntiatedMsg EnvironmentControllerMsg = "Initaled upgrade eks kubernetes control plane"
-	EksControlPlaneUpgradedMsg         EnvironmentControllerMsg = "Upgraded eks kubernetes control plane"
+	EksControlPlaneCreationInitatedMsg DataPlaneControllerMsg = "Initiated creation eks kubernetes control plane"
+	EksControlPlaneCreatedMsg          DataPlaneControllerMsg = "Created eks kubernetes control plane"
+	EksControlPlaneUpgradedIntiatedMsg DataPlaneControllerMsg = "Initaled upgrade eks kubernetes control plane"
+	EksControlPlaneUpgradedMsg         DataPlaneControllerMsg = "Upgraded eks kubernetes control plane"
 )
 
 type EksInternalOutput struct {
@@ -36,7 +36,7 @@ func (ec *eks) DescribeEks() (*awseks.DescribeClusterOutput, error) {
 	result, err := ec.awsClient.DescribeCluster(
 		ec.ctx,
 		&awseks.DescribeClusterInput{
-			Name: aws.String(ec.environment.Spec.CloudInfra.Eks.Name),
+			Name: aws.String(ec.dp.Spec.CloudInfra.Eks.Name),
 		},
 	)
 	if err != nil {
@@ -60,12 +60,12 @@ func (ec *eks) createEks() error {
 		return err
 	}
 	_, err = ec.awsClient.CreateCluster(ec.ctx, &awseks.CreateClusterInput{
-		Name: &ec.environment.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
+		Name: &ec.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
 		ResourcesVpcConfig: &types.VpcConfigRequest{
-			SubnetIds: ec.environment.Spec.CloudInfra.Eks.SubnetIds,
+			SubnetIds: ec.dp.Spec.CloudInfra.Eks.SubnetIds,
 		},
 		RoleArn: roleName.Role.Arn,
-		Version: aws.String(ec.environment.Spec.CloudInfra.Eks.Version),
+		Version: aws.String(ec.dp.Spec.CloudInfra.Eks.Version),
 	})
 
 	return err
@@ -87,8 +87,8 @@ func (ec *eks) UpdateEks() *EksInternalOutput {
 func (ec *eks) updateEks() error {
 
 	_, err := ec.awsClient.UpdateClusterVersion(ec.ctx, &awseks.UpdateClusterVersionInput{
-		Name:    &ec.environment.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
-		Version: aws.String(ec.environment.Spec.CloudInfra.Eks.Version),
+		Name:    &ec.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
+		Version: aws.String(ec.dp.Spec.CloudInfra.Eks.Version),
 	})
 
 	if err != nil {
@@ -98,9 +98,9 @@ func (ec *eks) updateEks() error {
 	return nil
 }
 
-func (ec *eks) UpdateAwsEksEnvironment(clusterResult *awseks.DescribeClusterOutput) types.ClusterStatus {
+func (ec *eks) UpdateAwsEksDataPlane(clusterResult *awseks.DescribeClusterOutput) types.ClusterStatus {
 
-	klog.Infof("Syncing Environment: %s/%s", ec.environment.Namespace, ec.environment.Name)
+	klog.Infof("Syncing dp: %s/%s", ec.dp.Namespace, ec.dp.Name)
 
 	switch clusterResult.Cluster.Status {
 
@@ -115,8 +115,8 @@ func (ec *eks) UpdateAwsEksEnvironment(clusterResult *awseks.DescribeClusterOutp
 }
 
 func (ec *eks) DeleteEKS() (*awseks.DeleteClusterOutput, error) {
-	klog.Infof("Deleting EKS Control Plane [%s]", ec.environment.Spec.CloudInfra.Eks.Name)
+	klog.Infof("Deleting EKS Control Plane [%s]", ec.dp.Spec.CloudInfra.Eks.Name)
 	return ec.awsClient.DeleteCluster(ec.ctx, &awseks.DeleteClusterInput{
-		Name: &ec.environment.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
+		Name: &ec.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
 	})
 }

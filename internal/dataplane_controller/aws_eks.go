@@ -26,13 +26,13 @@ const (
 	awsEbsCsiDriver string = "aws-ebs-csi-driver"
 )
 
-func (r *EnvironmentReconciler) reconcileAwsEnvironment(ctx context.Context, env *v1.Environment) error {
+func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v1.DataPlanes) error {
 
-	eksClient := eks.NewEks(ctx, env)
+	eksClient := eks.NewEks(ctx, dp)
 
 	awsEnv := awsEnv{
 		ctx:    ctx,
-		env:    env,
+		dp:     dp,
 		eksIC:  eksClient,
 		client: r.Client,
 		store:  r.NgStore,
@@ -47,7 +47,7 @@ func (r *EnvironmentReconciler) reconcileAwsEnvironment(ctx context.Context, env
 
 type awsEnv struct {
 	ctx    context.Context
-	env    *v1.Environment
+	dp     *v1.DataPlanes
 	eksIC  eks.Eks
 	client client.Client
 	store  store.Store
@@ -61,7 +61,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 		var ngNotFound *types.ResourceNotFoundException
 		if errors.As(err, &ngNotFound) {
 
-			klog.Infof("Creating EKS Control plane: %s for Environment: %s/%s", ae.env.Spec.CloudInfra.Eks.Name, ae.env.Namespace, ae.env.Name)
+			klog.Infof("Creating EKS Control plane: %s for Environment: %s/%s", ae.dp.Spec.CloudInfra.Eks.Name, ae.dp.Namespace, ae.dp.Name)
 			klog.Info("Updating Environment status to creating")
 
 			clusterRoleOutput, err := ae.eksIC.CreateClusterIamRole()
@@ -73,10 +73,10 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 			createEksResult := ae.eksIC.CreateEks()
 			if createEksResult.Success {
-				if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-					in := obj.(*v1.Environment)
+				if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+					in := obj.(*v1.DataPlanes)
 					in.Status.Phase = v1.Creating
-					in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
+					in.Status.Conditions = in.AddCondition(v1.DataPlaneCondition{
 						Type:               v1.ControlPlaneCreateInitiated,
 						Status:             corev1.ConditionTrue,
 						LastUpdateTime:     metav1.Time{Time: time.Now()},
@@ -102,14 +102,14 @@ func (ae *awsEnv) reconcileAwsEks() error {
 	if eksDescribeClusterOutput != nil {
 		if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusActive {
 			// checking for version upgrade
-			statusVersion := ae.env.Status.Version
-			specVersion := ae.env.Spec.CloudInfra.Eks.Version
+			statusVersion := ae.dp.Status.Version
+			specVersion := ae.dp.Spec.CloudInfra.Eks.Version
 			if statusVersion != "" && statusVersion != specVersion && *eksDescribeClusterOutput.Cluster.Version != specVersion {
-				klog.Info("Updating Kubernetes version to: ", ae.env.Spec.CloudInfra.Eks.Version)
-				if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-					in := obj.(*v1.Environment)
+				klog.Info("Updating Kubernetes version to: ", ae.dp.Spec.CloudInfra.Eks.Version)
+				if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+					in := obj.(*v1.DataPlanes)
 					in.Status.Phase = v1.Updating
-					in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
+					in.Status.Conditions = in.AddCondition(v1.DataPlaneCondition{
 						Type:               v1.VersionUpgradeInitiated,
 						Status:             corev1.ConditionTrue,
 						LastUpdateTime:     metav1.Time{Time: time.Now()},
@@ -130,11 +130,11 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 			klog.Info("Sync Cluster status and version")
 
-			if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-				in := obj.(*v1.Environment)
+			if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
 				in.Status.Phase = v1.Success
 				in.Status.Version = in.Spec.CloudInfra.Eks.Version
-				in.Status.Conditions = in.AddCondition(v1.EnvironmentCondition{
+				in.Status.Conditions = in.AddCondition(v1.DataPlaneCondition{
 					Type:               v1.ControlPlaneCreated,
 					Status:             corev1.ConditionTrue,
 					LastUpdateTime:     metav1.Time{Time: time.Now()},
@@ -148,11 +148,11 @@ func (ae *awsEnv) reconcileAwsEks() error {
 			}
 
 		} else if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusCreating {
-			klog.Infof("EKS Cluster Control Plane [%s] in creating state", ae.env.Spec.CloudInfra.Eks.Name)
+			klog.Infof("EKS Cluster Control Plane [%s] in creating state", ae.dp.Spec.CloudInfra.Eks.Name)
 		} else if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusUpdating {
-			klog.Infof("EKS Cluster Control Plane [%s] in updated state", ae.env.Spec.CloudInfra.Eks.Name)
+			klog.Infof("EKS Cluster Control Plane [%s] in updated state", ae.dp.Spec.CloudInfra.Eks.Name)
 		} else if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusDeleting {
-			klog.Infof("EKS Cluster Control Plane [%s] in deleting state", ae.env.Spec.CloudInfra.Eks.Name)
+			klog.Infof("EKS Cluster Control Plane [%s] in deleting state", ae.dp.Spec.CloudInfra.Eks.Name)
 		}
 
 	}
@@ -160,8 +160,8 @@ func (ae *awsEnv) reconcileAwsEks() error {
 	if eksDescribeClusterOutput != nil && eksDescribeClusterOutput.Cluster != nil && eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusActive {
 
 		calico := calico.NewCali(
-			ae.env.Spec.CloudInfra.Eks.Name,
-			v1.CloudType(ae.env.Spec.CloudInfra.Type),
+			ae.dp.Spec.CloudInfra.Eks.Name,
+			v1.CloudType(ae.dp.Spec.CloudInfra.CloudType),
 		)
 
 		if err := calico.ReconcileCalico(); err != nil {
@@ -174,8 +174,8 @@ func (ae *awsEnv) reconcileAwsEks() error {
 		}
 
 		if oidcOutput != nil && oidcOutput.OpenIDConnectProviderArn != nil {
-			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-				in := obj.(*v1.Environment)
+			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
 				in.Status.CloudInfraStatus.EksStatus.OIDCProviderArn = *oidcOutput.OpenIDConnectProviderArn
 				return in
 			})
@@ -215,7 +215,7 @@ func (ae *awsEnv) reconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOut
 		ThumbPrintList: []string{thumbprint},
 	}
 
-	oidcProviderArn := ae.env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn
+	oidcProviderArn := ae.dp.Status.CloudInfraStatus.EksStatus.OIDCProviderArn
 
 	if oidcProviderArn != "" {
 		// oidc provider is previously created
@@ -226,7 +226,7 @@ func (ae *awsEnv) reconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOut
 		}
 
 		for _, oidc := range providers.OpenIDConnectProviderList {
-			if *oidc.Arn == ae.env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn {
+			if *oidc.Arn == ae.dp.Status.CloudInfraStatus.EksStatus.OIDCProviderArn {
 				// oidc provider is already created and existed
 				return nil, nil
 			}
@@ -244,22 +244,22 @@ func (ae *awsEnv) reconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOut
 func (ae *awsEnv) reconcilePhase() error {
 	klog.Info("Calculating Environment Status")
 
-	for node, status := range ae.env.Status.NodegroupStatus {
+	for node, status := range ae.dp.Status.NodegroupStatus {
 		if status != string(types.NodegroupStatusActive) {
 			klog.Infof("Node %s not active yet", node)
 			return nil
 		}
 	}
 
-	for addon, status := range ae.env.Status.AddonStatus {
+	for addon, status := range ae.dp.Status.AddonStatus {
 		if status != string(types.AddonStatusActive) {
 			klog.Infof("Addon %s not active yet", addon)
 			return nil
 		}
 	}
 
-	if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-		in := obj.(*v1.Environment)
+	if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+		in := obj.(*v1.DataPlanes)
 		in.Status.Phase = v1.Success
 		return in
 	}); err != nil {
@@ -269,7 +269,7 @@ func (ae *awsEnv) reconcilePhase() error {
 }
 
 func (ae *awsEnv) reconcileSystemNodeGroup() error {
-	systemNodeGroupName := ae.env.Spec.CloudInfra.Eks.Name + "-system"
+	systemNodeGroupName := ae.dp.Spec.CloudInfra.Eks.Name + "-system"
 
 	nodeRole, err := ae.eksIC.CreateNodeIamRole(systemNodeGroupName)
 	if err != nil {
@@ -280,10 +280,10 @@ func (ae *awsEnv) reconcileSystemNodeGroup() error {
 	}
 
 	systemNodeGroupInput := &awseks.CreateNodegroupInput{
-		ClusterName:        aws.String(ae.env.Spec.CloudInfra.Eks.Name),
+		ClusterName:        aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
 		NodeRole:           aws.String(*nodeRole.Role.Arn),
 		NodegroupName:      aws.String(systemNodeGroupName),
-		Subnets:            ae.env.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
+		Subnets:            ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
 		AmiType:            "",
 		CapacityType:       "",
 		ClientRequestToken: nil,
@@ -303,7 +303,7 @@ func (ae *awsEnv) reconcileSystemNodeGroup() error {
 			MinSize:     aws.Int32(1),
 		},
 		Tags: map[string]string{
-			fmt.Sprintf("kubernetes.io/cluster/%s", ae.env.Spec.CloudInfra.Eks.Name): "owned",
+			fmt.Sprintf("kubernetes.io/cluster/%s", ae.dp.Spec.CloudInfra.Eks.Name): "owned",
 		},
 		UpdateConfig: nil,
 		Version:      nil,
@@ -311,12 +311,12 @@ func (ae *awsEnv) reconcileSystemNodeGroup() error {
 
 	describeNodeGroupOutput, found, err := ae.eksIC.DescribeNodegroup(systemNodeGroupName)
 	if !found && err == nil {
-		if ae.env.DeletionTimestamp == nil {
+		if ae.dp.DeletionTimestamp == nil {
 			createSystemNodeGroupResult, err := ae.eksIC.CreateSystemNodeGroup(*systemNodeGroupInput)
 			if err != nil {
 				return err
 			}
-			fmt.Println("hello")
+
 			if createSystemNodeGroupResult != nil && createSystemNodeGroupResult.Nodegroup != nil {
 				klog.Infof("Initated NodeGroup Launch [%s]", *createSystemNodeGroupResult.Nodegroup.ClusterName)
 				if err := ae.wrapNgPatchStatus(*createSystemNodeGroupResult.Nodegroup.NodegroupName, string(createSystemNodeGroupResult.Nodegroup.Status)); err != nil {
@@ -332,14 +332,14 @@ func (ae *awsEnv) reconcileSystemNodeGroup() error {
 		}
 	}
 
-	ae.store.Add(ae.env.Spec.CloudInfra.Eks.Name, systemNodeGroupName)
+	ae.store.Add(ae.dp.Spec.CloudInfra.Eks.Name, systemNodeGroupName)
 	return nil
 }
 
 func (ae *awsEnv) wrapNgPatchStatus(name, status string) error {
 	// update status with current nodegroup status
-	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-		in := obj.(*v1.Environment)
+	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+		in := obj.(*v1.DataPlanes)
 		if in.Status.NodegroupStatus == nil {
 			in.Status.NodegroupStatus = make(map[string]string)
 		}
@@ -351,8 +351,8 @@ func (ae *awsEnv) wrapNgPatchStatus(name, status string) error {
 
 func (ae *awsEnv) wrapAddonPatchStatus(addonName, status string) error {
 	// update status with current addon status
-	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-		in := obj.(*v1.Environment)
+	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+		in := obj.(*v1.DataPlanes)
 		if in.Status.AddonStatus == nil {
 			in.Status.AddonStatus = make(map[string]string)
 		}
@@ -363,12 +363,12 @@ func (ae *awsEnv) wrapAddonPatchStatus(addonName, status string) error {
 }
 
 func (ae *awsEnv) ReconcileDefaultAddons() error {
-	oidcProvider := ae.env.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
+	oidcProvider := ae.dp.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
 	if oidcProvider == "" {
 		klog.Info("ebs-csi-driver creation: waiting for oidcProvider to be created")
 		return nil
 	}
-	clusterName := ae.env.Spec.CloudInfra.Eks.Name
+	clusterName := ae.dp.Spec.CloudInfra.Eks.Name
 	ebsAddon, err := ae.eksIC.DescribeAddon(awsEbsCsiDriver)
 	if err != nil {
 		var notFoundErr *types.ResourceNotFoundException

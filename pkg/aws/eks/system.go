@@ -22,7 +22,7 @@ func (ec *eks) CreateSystemNodeGroup(nodeGroupInput awseks.CreateNodegroupInput)
 func (ec *eks) DescribeNodegroup(nodeGroupName string) (output *awseks.DescribeNodegroupOutput, found bool, err error) {
 
 	input := &awseks.DescribeNodegroupInput{
-		ClusterName:   aws.String(ec.environment.Spec.CloudInfra.Eks.Name),
+		ClusterName:   aws.String(ec.dp.Spec.CloudInfra.Eks.Name),
 		NodegroupName: aws.String(nodeGroupName),
 	}
 
@@ -58,7 +58,7 @@ func (ec *eks) UpdateNodegroup(updateNodeGroupConfig *awseks.UpdateNodegroupConf
 func (ec *eks) DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOutput, error) {
 
 	result, err := ec.awsClient.DeleteNodegroup(ec.ctx, &awseks.DeleteNodegroupInput{
-		ClusterName:   &ec.environment.Spec.CloudInfra.Eks.Name,
+		ClusterName:   &ec.dp.Spec.CloudInfra.Eks.Name,
 		NodegroupName: &nodeGroupName,
 	})
 	if err != nil {

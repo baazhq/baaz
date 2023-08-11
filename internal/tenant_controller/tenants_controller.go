@@ -56,8 +56,8 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	envObj := &v1.Environment{}
-	err = r.Get(ctx, types.NamespacedName{Name: tenantObj.Spec.EnvRef, Namespace: tenantObj.Namespace}, envObj)
+	dpObj := &v1.DataPlanes{}
+	err = r.Get(ctx, types.NamespacedName{Name: tenantObj.Spec.EnvRef, Namespace: tenantObj.Namespace}, dpObj)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -68,9 +68,9 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// object is going to be deleted
 		awsEnv := awsEnv{
 			ctx:    ctx,
-			env:    envObj,
+			dp:     dpObj,
 			tenant: tenantObj,
-			eksIC:  eks.NewEks(ctx, envObj),
+			eksIC:  eks.NewEks(ctx, dpObj),
 			client: r.Client,
 			store:  r.NgStore,
 		}
@@ -95,7 +95,7 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	if err := r.do(ctx, tenantObj, envObj); err != nil {
+	if err := r.do(ctx, tenantObj, dpObj); err != nil {
 		if _, _, patchErr := utils.PatchStatus(ctx, r.Client, tenantObj, func(obj client.Object) client.Object {
 			in := obj.(*v1.Tenants)
 			in.Status.Phase = v1.Failed

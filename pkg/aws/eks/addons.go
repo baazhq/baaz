@@ -12,7 +12,7 @@ func (ec *eks) DescribeAddon(addonName string) (*awseks.DescribeAddonOutput, err
 
 	input := &awseks.DescribeAddonInput{
 		AddonName:   aws.String(addonName),
-		ClusterName: aws.String(ec.environment.Spec.CloudInfra.Eks.Name),
+		ClusterName: aws.String(ec.dp.Spec.CloudInfra.Eks.Name),
 	}
 	result, err := ec.awsClient.DescribeAddon(ec.ctx, input)
 	if err != nil {

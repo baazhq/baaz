@@ -9,22 +9,22 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (r *ApplicationReconciler) do(ctx context.Context, app *v1.Application, env *v1.Environment) error {
+func (r *ApplicationReconciler) do(ctx context.Context, app *v1.Application, dp *v1.DataPlanes) error {
 
 	if app == nil {
 		return nil
 	}
 
 	fmt.Println("app", app)
-	fmt.Println("env", env)
+	fmt.Println("env", dp)
 
 	klog.Info("Reconciling Application")
-	eksIc := eks.NewEks(ctx, env)
+	eksIc := eks.NewEks(ctx, dp)
 	clientset, err := eksIc.GetEksClientSet()
 	if err != nil {
 		return err
 	}
-	applications := NewApplication(ctx, app, env, clientset)
+	applications := NewApplication(ctx, app, dp, clientset)
 
 	if err := applications.ReconcileApplicationDeployer(); err != nil {
 		return err

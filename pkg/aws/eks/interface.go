@@ -43,18 +43,18 @@ type eks struct {
 	awsClient    *awseks.Client
 	awsIamClient *awsiam.Client
 	awsStsClient *awssts.Client
-	environment  *v1.Environment
+	dp           *v1.DataPlanes
 }
 
 func NewEks(
 	ctx context.Context,
-	environment *v1.Environment,
+	dp *v1.DataPlanes,
 ) Eks {
 	return &eks{
-		awsClient:    newAwsClient(ctx, environment.Spec.CloudInfra.AwsRegion),
-		awsIamClient: newAwsIamClient(ctx, environment.Spec.CloudInfra.AwsRegion),
-		awsStsClient: newAwsStsClient(ctx, environment.Spec.CloudInfra.AwsRegion),
+		awsClient:    newAwsClient(ctx, dp.Spec.CloudInfra.Region),
+		awsIamClient: newAwsIamClient(ctx, dp.Spec.CloudInfra.Region),
+		awsStsClient: newAwsStsClient(ctx, dp.Spec.CloudInfra.Region),
 		ctx:          ctx,
-		environment:  environment,
+		dp:           dp,
 	}
 }

@@ -18,9 +18,9 @@ import (
 
 	datainfraiov1 "datainfra.io/ballastdata/api/v1/types"
 	"datainfra.io/ballastdata/internal/app_controller"
-	env_controller "datainfra.io/ballastdata/internal/env_controller"
+	dataplane_controller "datainfra.io/ballastdata/internal/dataplane_controller"
 	http_handlers "datainfra.io/ballastdata/internal/http_handlers"
-	tenant_controller "datainfra.io/ballastdata/internal/tenant_controller"
+	"datainfra.io/ballastdata/internal/tenant_controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -77,7 +77,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (env_controller.NewEnvironmentReconciler(mgr)).SetupWithManager(mgr); err != nil {
+	if err = (dataplane_controller.NewDataplaneReconciler(mgr)).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Environment")
 		os.Exit(1)
 	}

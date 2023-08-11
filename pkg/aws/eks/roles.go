@@ -82,14 +82,14 @@ type eBSCSIRoleTemplateInput struct {
 func (ec *eks) CreateClusterIamRole() (*awsiam.GetRoleOutput, error) {
 
 	awsIamGetRoleOutput, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
-		RoleName: aws.String(MakeEksClusterRoleName(ec.environment.Spec.CloudInfra.Eks.Name)),
+		RoleName: aws.String(MakeEksClusterRoleName(ec.dp.Spec.CloudInfra.Eks.Name)),
 	})
 
 	if err != nil {
 		// for role error it seems
 		// the error is not considered as ResourceNotFoundException
 		resultCreateRole, cerr := ec.awsIamClient.CreateRole(ec.ctx, &awsiam.CreateRoleInput{
-			RoleName:                 aws.String(MakeEksClusterRoleName(ec.environment.Spec.CloudInfra.Eks.Name)),
+			RoleName:                 aws.String(MakeEksClusterRoleName(ec.dp.Spec.CloudInfra.Eks.Name)),
 			AssumeRolePolicyDocument: aws.String(strings.TrimSpace(assumeClusterRolePolicy)),
 		})
 		if cerr != nil {
@@ -143,9 +143,9 @@ func (ec *eks) CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error) {
 }
 
 func (ec *eks) createEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, error) {
-	oidcProvider := ec.environment.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
+	oidcProvider := ec.dp.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
 
-	roleName := MakeEBSCSIRoleName(ec.environment.Spec.CloudInfra.AwsRegion, ec.environment.Spec.CloudInfra.Eks.Name)
+	roleName := MakeEBSCSIRoleName(ec.dp.Spec.CloudInfra.Region, ec.dp.Spec.CloudInfra.Eks.Name)
 
 	_, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
 		RoleName: aws.String(roleName),
