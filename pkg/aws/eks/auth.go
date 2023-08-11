@@ -28,7 +28,7 @@ func (ec *eks) GetEksClientSet() (*kubernetes.Clientset, error) {
 func (ec *eks) GetRestConfig() (*rest.Config, error) {
 
 	resultDescribe, err := ec.awsClient.DescribeCluster(ec.ctx, &awseks.DescribeClusterInput{
-		Name: &ec.environment.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
+		Name: &ec.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
 	})
 	if err != nil {
 		return nil, err

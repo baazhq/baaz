@@ -34,7 +34,7 @@ const (
 
 type awsEnv struct {
 	ctx    context.Context
-	env    *v1.Environment
+	dp     *v1.DataPlanes
 	tenant *v1.Tenants
 	eksIC  eks.Eks
 	client client.Client
@@ -55,7 +55,7 @@ func (ae *awsEnv) ReconcileTenants() error {
 		for _, nodeSpec := range *ngNameNgSpec {
 			nodeName = makeNodeName(nodeSpec.Name, string(tenantConfig.AppType), tenantConfig.Size)
 
-			if ae.env.Status.NodegroupStatus[string(nodeSpec.Name)] != "DELETING" {
+			if ae.dp.Status.NodegroupStatus[string(nodeSpec.Name)] != "DELETING" {
 
 				describeNodegroupOutput, found, _ := ae.eksIC.DescribeNodegroup(nodeName)
 				if !found {
@@ -166,10 +166,10 @@ func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, nodeSpec *v1.NodeS
 	}
 
 	return &awseks.CreateNodegroupInput{
-		ClusterName:        aws.String(ae.env.Spec.CloudInfra.Eks.Name),
+		ClusterName:        aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
 		NodeRole:           aws.String(roleArn),
 		NodegroupName:      aws.String(nodeName),
-		Subnets:            ae.env.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
+		Subnets:            ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
 		AmiType:            "",
 		CapacityType:       "",
 		ClientRequestToken: nil,
@@ -185,7 +185,7 @@ func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, nodeSpec *v1.NodeS
 			MinSize:     aws.Int32(nodeSpec.Min),
 		},
 		Tags: map[string]string{
-			fmt.Sprintf("kubernetes.io/cluster/%s", ae.env.Spec.CloudInfra.Eks.Name): "owned",
+			fmt.Sprintf("kubernetes.io/cluster/%s", ae.dp.Spec.CloudInfra.Eks.Name): "owned",
 		},
 		Taints:       *taints,
 		UpdateConfig: nil,
@@ -212,7 +212,7 @@ func (ae *awsEnv) patchStatus(name, status string) error {
 			in.Status.NodegroupStatus = make(map[string]string)
 		}
 		in.Status.NodegroupStatus[name] = status
-		in.Status.Phase = v1.EnvironmentPhase(status)
+		in.Status.Phase = v1.DataPlanePhase(status)
 		return in
 	})
 	return err
@@ -230,7 +230,7 @@ func (ae *awsEnv) createNamespace(clientset *kubernetes.Clientset) error {
 		if err != nil {
 			return err
 		}
-		klog.Infof("Namespace [%s] created for environment [%s]", ns.Name, ae.env.Name)
+		klog.Infof("Namespace [%s] created for environment [%s]", ns.Name, ae.dp.Name)
 
 	}
 	return nil

@@ -4,17 +4,17 @@ import (
 	"os"
 	"path/filepath"
 
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	klog "k8s.io/klog/v2"
 )
 
 type client struct {
 	*kubernetes.Clientset
 }
 
-func getKubeClientset() *client {
+func getKubeClientset() (*kubernetes.Clientset, dynamic.Interface) {
 
 	var conf *rest.Config
 	var err error
@@ -35,10 +35,15 @@ func getKubeClientset() *client {
 	}
 	cs, err := kubernetes.NewForConfig(conf)
 	if err != nil {
-		klog.Infof("error in getting clientset from Kubeconfig: %v", err)
+		panic(err.Error())
 	}
 
-	return &client{cs}
+	dynClient, err := dynamic.NewForConfig(conf)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return cs, dynClient
 }
 
 func mergeMaps(m1 map[string]string, m2 map[string]string) map[string]string {

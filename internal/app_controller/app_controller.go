@@ -48,8 +48,8 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	envObj := &v1.Environment{}
-	err = r.Get(ctx, types.NamespacedName{Name: applicationObj.Spec.EnvRef, Namespace: applicationObj.Namespace}, envObj)
+	dpObj := &v1.DataPlanes{}
+	err = r.Get(ctx, types.NamespacedName{Name: applicationObj.Spec.EnvRef, Namespace: applicationObj.Namespace}, dpObj)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -58,7 +58,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	if err := r.do(ctx, applicationObj, envObj); err != nil {
+	if err := r.do(ctx, applicationObj, dpObj); err != nil {
 		klog.Errorf("failed to reconcile application: reason: %s", err.Error())
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else {

@@ -7,13 +7,13 @@ import (
 	"datainfra.io/ballastdata/pkg/aws/eks"
 )
 
-func (r *TenantsReconciler) do(ctx context.Context, tenant *v1.Tenants, env *v1.Environment) error {
+func (r *TenantsReconciler) do(ctx context.Context, tenant *v1.Tenants, dp *v1.DataPlanes) error {
 
-	eksClient := eks.NewEks(ctx, env)
+	eksClient := eks.NewEks(ctx, dp)
 
 	awsEnv := awsEnv{
 		ctx:    ctx,
-		env:    env,
+		dp:     dp,
 		eksIC:  eksClient,
 		tenant: tenant,
 		client: r.Client,

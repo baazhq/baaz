@@ -14,7 +14,7 @@ import (
 type Application struct {
 	Context      context.Context
 	App          *v1.Application
-	Env          *v1.Environment
+	DataPlanes   *v1.DataPlanes
 	K8sClientSet *kubernetes.Clientset
 	EksIC        eks.Eks
 }
@@ -22,14 +22,14 @@ type Application struct {
 func NewApplication(
 	ctx context.Context,
 	app *v1.Application,
-	env *v1.Environment,
+	dp *v1.DataPlanes,
 	k8sClientSet *kubernetes.Clientset,
 ) *Application {
 	return &Application{
 		Context:      ctx,
 		App:          app,
-		Env:          env,
-		EksIC:        eks.NewEks(ctx, env),
+		DataPlanes:   dp,
+		EksIC:        eks.NewEks(ctx, dp),
 		K8sClientSet: k8sClientSet,
 	}
 }

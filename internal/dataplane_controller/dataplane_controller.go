@@ -23,11 +23,11 @@ import (
 )
 
 const (
-	envFinalizer = "environment.datainfra.io/finalizer"
+	dataplaneFinalizer = "dataplane.datainfra.io/finalizer"
 )
 
-// EnvironmentReconciler reconciles a Environment object
-type EnvironmentReconciler struct {
+// DataPlaneReconciler reconciles a Environment object
+type DataPlaneReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
@@ -37,24 +37,24 @@ type EnvironmentReconciler struct {
 	NgStore       store.Store
 }
 
-func NewEnvironmentReconciler(mgr ctrl.Manager) *EnvironmentReconciler {
-	initLogger := ctrl.Log.WithName("controllers").WithName("environment")
-	return &EnvironmentReconciler{
+func NewDataplaneReconciler(mgr ctrl.Manager) *DataPlaneReconciler {
+	initLogger := ctrl.Log.WithName("controllers").WithName("dataplane")
+	return &DataPlaneReconciler{
 		Client:        mgr.GetClient(),
 		Log:           initLogger,
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
-		Recorder:      mgr.GetEventRecorderFor("environment-controller"),
+		Recorder:      mgr.GetEventRecorderFor("dataplane-controller"),
 		NgStore:       store.NewInternalStore(),
 	}
 }
 
-// +kubebuilder:rbac:groups=datainfra.io,resources=environments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=datainfra.io,resources=environments/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=datainfra.io,resources=environments/finalizers,verbs=update
-func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// +kubebuilder:rbac:groups=datainfra.io,resources=dataplanes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=datainfra.io,resources=dataplanes/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=datainfra.io,resources=dataplanes/finalizers,verbs=update
+func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
-	desiredObj := &v1.Environment{}
+	desiredObj := &v1.DataPlanes{}
 	err := r.Get(ctx, req.NamespacedName, desiredObj)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -66,7 +66,7 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		// object is going to be deleted
 		awsEnv := awsEnv{
 			ctx:    ctx,
-			env:    desiredObj,
+			dp:     desiredObj,
 			eksIC:  eks.NewEks(ctx, desiredObj),
 			client: r.Client,
 			store:  r.NgStore,
@@ -76,8 +76,8 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	// if it is normal reconcile, then add finalizer if not already
-	if !controllerutil.ContainsFinalizer(desiredObj, envFinalizer) {
-		controllerutil.AddFinalizer(desiredObj, envFinalizer)
+	if !controllerutil.ContainsFinalizer(desiredObj, dataplaneFinalizer) {
+		controllerutil.AddFinalizer(desiredObj, dataplaneFinalizer)
 		if err := r.Update(ctx, desiredObj); err != nil {
 			return ctrl.Result{}, err
 		}
@@ -86,7 +86,7 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	// If first time reconciling set status to pending
 	if desiredObj.Status.Phase == "" {
 		if _, _, err := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
-			in := obj.(*v1.Environment)
+			in := obj.(*v1.DataPlanes)
 			in.Status.Phase = v1.Pending
 			return in
 		}); err != nil {
@@ -96,7 +96,7 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 	if err := r.do(ctx, desiredObj); err != nil {
 		if _, _, upErr := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
-			in := obj.(*v1.Environment)
+			in := obj.(*v1.DataPlanes)
 			in.Status.Phase = v1.Failed
 			return in
 		}); upErr != nil {
@@ -109,26 +109,26 @@ func (r *EnvironmentReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 }
 
-func (r *EnvironmentReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
+func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	// update phase to terminating
-	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-		in := obj.(*v1.Environment)
+	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+		in := obj.(*v1.DataPlanes)
 		in.Status.Phase = v1.Terminating
 		return in
 	})
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	systemNodeGroupName := ae.env.Spec.CloudInfra.Eks.Name + "-system"
+	systemNodeGroupName := ae.dp.Spec.CloudInfra.Eks.Name + "-system"
 
-	if ae.env.Status.NodegroupStatus[systemNodeGroupName] != "DELETING" {
+	if ae.dp.Status.NodegroupStatus[systemNodeGroupName] != "DELETING" {
 		_, err := ae.eksIC.DeleteNodeGroup(systemNodeGroupName)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		// update status with current nodegroup status
-		_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.env, func(obj client.Object) client.Object {
-			in := obj.(*v1.Environment)
+		_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
 			if in.Status.NodegroupStatus == nil {
 				in.Status.NodegroupStatus = make(map[string]string)
 			}
@@ -150,8 +150,8 @@ func (r *EnvironmentReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error)
 	}
 
 	// delete oidc provider associated with the cluster(if any)
-	if ae.env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn != "" {
-		_, err := ae.eksIC.DeleteOIDCProvider(ae.env.Status.CloudInfraStatus.EksStatus.OIDCProviderArn)
+	if ae.dp.Status.CloudInfraStatus.EksStatus.OIDCProviderArn != "" {
+		_, err := ae.eksIC.DeleteOIDCProvider(ae.dp.Status.CloudInfraStatus.EksStatus.OIDCProviderArn)
 		if err != nil {
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
@@ -162,18 +162,18 @@ func (r *EnvironmentReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error)
 	}
 
 	// remove our finalizer from the list and update it.
-	controllerutil.RemoveFinalizer(ae.env, envFinalizer)
-	klog.Infof("Deleted Environment [%s]", ae.env.GetName())
-	if err := ae.client.Update(ae.ctx, ae.env.DeepCopyObject().(*v1.Environment)); err != nil {
+	controllerutil.RemoveFinalizer(ae.dp, dataplaneFinalizer)
+	klog.Infof("Deleted Environment [%s]", ae.dp.GetName())
+	if err := ae.client.Update(ae.ctx, ae.dp.DeepCopyObject().(*v1.DataPlanes)); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *EnvironmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *DataPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.Environment{}).
+		For(&v1.DataPlanes{}).
 		Complete(r)
 }
 

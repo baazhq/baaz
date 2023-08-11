@@ -5,14 +5,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: environments.datainfra.io
+  name: dataplanes.datainfra.io
 spec:
   group: datainfra.io
   names:
-    kind: Environment
-    listKind: EnvironmentList
-    plural: environments
-    singular: environment
+    kind: DataPlanes
+    listKind: DataPlanesList
+    plural: dataplanes
+    singular: dataplanes
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -25,7 +25,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: Environment is the Schema for the environments API
+        description: DataPlane is the Schema for the DataPlanes API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -40,7 +40,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: EnvironmentSpec defines the desired state of Environment
+            description: DataPlaneSpec defines the desired state of DataPlane
             properties:
               cloudInfra:
                 description: Cloud can be any pubic name ie aws, gcp, azure.
@@ -61,7 +61,8 @@ spec:
                     - secretKeyName
                     - secretName
                     type: object
-                  awsRegion:
+                  cloudType:
+                    description: CloudType
                     type: string
                   eks:
                     properties:
@@ -83,24 +84,23 @@ spec:
                     - subnetIds
                     - version
                     type: object
-                  type:
-                    description: CloudType
+                  region:
                     type: string
                 required:
                 - authSecretRef
-                - awsRegion
+                - cloudType
                 - eks
-                - type
+                - region
                 type: object
-              envType:
-                description: EnvType can be dev, stage, prod environments
+              saasType:
+                description: SaaSType can be dev, stage, prod DataPlanes
                 type: string
             required:
             - cloudInfra
-            - envType
+            - saasType
             type: object
           status:
-            description: EnvironmentStatus defines the observed state of Environment
+            description: DataPlaneStatus defines the observed state of DataPlane
             properties:
               addonStatus:
                 additionalProperties:
@@ -122,7 +122,7 @@ spec:
                 type: object
               conditions:
                 items:
-                  description: EnvironmentCondition describes the state of a deployment
+                  description: DataPlaneCondition describes the state of a deployment
                     at a certain point.
                   properties:
                     lastTransitionTime:
