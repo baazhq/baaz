@@ -19,9 +19,9 @@ func NewResponse(msg, status string, err error, statusCode int) *Response {
 }
 func (res *Response) LogResponse() {
 	if res.Err != nil {
-		klog.Errorf("ErrMsg: [%s], Status: [%s], Error: [%s], statusCode [%d]", res.Msg, res.Status, res.Err, res.StatusCode)
+		klog.Errorf("ErrMsg: [%s], Status: [%s], Error: [%s], statusCode [%d]", res.Msg, res.Status, res.Err.Error(), res.StatusCode)
 	} else {
-		klog.Infof("Msg: [%s], Status: [%s], Error: [%s], statusCode [%d]", res.Msg, res.Status, res.Err, res.StatusCode)
+		klog.Infof("Msg: [%s], Status: [%s], Error: [%s], statusCode [%d]", res.Msg, res.Status, res.Err.Error(), res.StatusCode)
 	}
 
 }
