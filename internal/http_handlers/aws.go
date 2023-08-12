@@ -5,6 +5,37 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+const (
+	access_key string = "accessKey"
+	secret_key string = "secretKey"
+)
+
+// apiVersion: v1
+// kind: Secret
+// metadata:
+//
+//	name: aws-secret
+//	namespace: shared
+//
+// stringData:
+//
+//	accessKey: AKIAWLZK4B6ACNA3H43S
+//	secretKey: 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
+func getAwsEksSecret(dataPlaneName string, dataplane v1.DataPlane) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "v1",
+			"kind":       "Secret",
+			"metadata": map[string]interface{}{
+				"name": dataPlaneName + "-aws-secret",
+			},
+			"stringData": map[string]interface{}{
+				access_key: dataplane.CloudAuth.AwsAccessKey,
+				secret_key: dataplane.CloudAuth.AwsSecretKey,
+			},
+		}}
+}
+
 func getAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -19,9 +50,9 @@ func getAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane) *unstructured
 					"cloudType": dataplane.CloudType,
 					"region":    dataplane.CloudRegion,
 					"authSecretRef": map[string]interface{}{
-						"secretName":    dataplane.CloudAuth.SecretRef.SecretName,
-						"accessKeyName": dataplane.CloudAuth.SecretRef.AccessKeyName,
-						"secretKeyName": dataplane.CloudAuth.SecretRef.SecretKeyName,
+						"secretName":    dataPlaneName + "-aws-secret",
+						"accessKeyName": access_key,
+						"secretKeyName": secret_key,
 					},
 					"eks": map[string]interface{}{
 						"name":             dataPlaneName,

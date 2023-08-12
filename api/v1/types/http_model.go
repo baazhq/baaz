@@ -22,14 +22,9 @@ type DataPlane struct {
 	KubeConfig  KubernetesConfig `json:"kubernetes_config"`
 }
 
-type SecretRef struct {
-	SecretName    string `json:"secret_name"`
-	AccessKeyName string `json:"access_key_name"`
-	SecretKeyName string `json:"secret_key_name"`
-}
-
 type CloudAuth struct {
-	SecretRef SecretRef `json:"secret_ref"`
+	AwsAccessKey string `json:"awsAccessKey"`
+	AwsSecretKey string `json:"awsSecretKey"`
 }
 
 type KubernetesConfig struct {

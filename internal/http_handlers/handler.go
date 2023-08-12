@@ -19,17 +19,23 @@ import (
 )
 
 const (
-	req_error                   string = "REQUEST_ERROR"
-	internal_error              string = "INTERNAL_ERROR"
-	success                     string = "SUCCESS"
-	shared_namespace            string = "shared"
+	req_error        string = "REQUEST_ERROR"
+	internal_error   string = "INTERNAL_ERROR"
+	success          string = "SUCCESS"
+	shared_namespace string = "shared"
+
 	dataplane_creation_initated string = "Dataplane Creation Initiated"
 )
 
-var dpRes = schema.GroupVersionResource{
+var dpGVK = schema.GroupVersionResource{
 	Group:    "datainfra.io",
 	Version:  "v1",
 	Resource: "dataplanes",
+}
+
+var secretGVK = schema.GroupVersionResource{
+	Version:  "v1",
+	Resource: "secrets",
 }
 
 func CreateCustomer(w http.ResponseWriter, req *http.Request) {
@@ -67,8 +73,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 
 	client, _ := getKubeClientset()
 
-	_, err = client.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
-
+	ns, err := client.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		labels := map[string]string{
 			"description": strings.ReplaceAll(customer.Description, " ", "_"),
@@ -90,6 +95,15 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 		}
 		res := NewResponse("Namespace Created for Customer", success, nil, 200)
 		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	if ns != nil {
+		msg := "Customer namespace exists"
+		res := NewResponse(msg, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
 	}
 }
 
@@ -129,11 +143,8 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		CloudType:   dp.CloudType,
 		CloudRegion: dp.CloudRegion,
 		CloudAuth: v1.CloudAuth{
-			SecretRef: v1.SecretRef{
-				SecretName:    dp.CloudAuth.SecretRef.SecretName,
-				AccessKeyName: dp.CloudAuth.SecretRef.AccessKeyName,
-				SecretKeyName: dp.CloudAuth.SecretRef.SecretKeyName,
-			},
+			AwsAccessKey: dp.CloudAuth.AwsAccessKey,
+			AwsSecretKey: dp.CloudAuth.AwsSecretKey,
 		},
 		KubeConfig: v1.KubernetesConfig{
 			EKS: v1.EKSConfig{
@@ -147,9 +158,20 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 
 	_, dc := getKubeClientset()
 
+	dpSecret := getAwsEksSecret(dataPlaneName, dataplane)
+
+	_, err = dc.Resource(secretGVK).Namespace(shared_namespace).Create(context.TODO(), dpSecret, metav1.CreateOptions{})
+	if err != nil {
+		msg := "create data plane secret failed"
+		res := NewResponse(msg, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
 	dpDeploy := getAwsEksConfig(dataPlaneName, dataplane)
 
-	_, err = dc.Resource(dpRes).Namespace(shared_namespace).Create(context.TODO(), dpDeploy, metav1.CreateOptions{})
+	_, err = dc.Resource(dpGVK).Namespace(shared_namespace).Create(context.TODO(), dpDeploy, metav1.CreateOptions{})
 	if err != nil {
 		msg := "create data plane config failed"
 		res := NewResponse(msg, internal_error, err, http.StatusInternalServerError)
