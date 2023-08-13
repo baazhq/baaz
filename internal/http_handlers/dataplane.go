@@ -3,7 +3,6 @@ package http_handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -112,7 +111,6 @@ func GetDataPlaneStatus(w http.ResponseWriter, req *http.Request) {
 	namespace := getNamespace(customerName, v1.SaaSTypes(saasType))
 	_, dc := getKubeClientset()
 
-	fmt.Println(namespace)
 	dp, err := dc.Resource(dpGVK).Namespace(namespace).Get(context.TODO(), dataPlaneName, metav1.GetOptions{})
 	if err != nil {
 		msg := "GET DataPlane Status Fail"
