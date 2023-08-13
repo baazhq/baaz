@@ -3,9 +3,9 @@ package v1
 type SaaSTypes string
 
 const (
-	SharedSaaS    SaaSTypes = "Shared-SaaS"
-	DedicatedSaaS SaaSTypes = "Dedicated-SaaS"
-	PrivateSaaS   SaaSTypes = "Private-SaaS"
+	SharedSaaS    SaaSTypes = "shared"
+	DedicatedSaaS SaaSTypes = "dedicated"
+	PrivateSaaS   SaaSTypes = "private"
 )
 
 type Customer struct {
@@ -15,11 +15,12 @@ type Customer struct {
 }
 
 type DataPlane struct {
-	CloudType   CloudType        `json:"cloud_type"`
-	SaaSType    SaaSTypes        `json:"saas_type"`
-	CloudRegion string           `json:"cloud_region"`
-	CloudAuth   CloudAuth        `json:"cloud_auth"`
-	KubeConfig  KubernetesConfig `json:"kubernetes_config"`
+	CloudType    CloudType        `json:"cloud_type"`
+	CustomerName string           `json:"customer_name"`
+	SaaSType     SaaSTypes        `json:"saas_type"`
+	CloudRegion  string           `json:"cloud_region"`
+	CloudAuth    CloudAuth        `json:"cloud_auth"`
+	KubeConfig   KubernetesConfig `json:"kubernetes_config"`
 }
 
 type CloudAuth struct {

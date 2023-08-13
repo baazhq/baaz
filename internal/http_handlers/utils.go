@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	v1 "datainfra.io/ballastdata/api/v1/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -55,4 +56,13 @@ func mergeMaps(m1 map[string]string, m2 map[string]string) map[string]string {
 		merged[key] = value
 	}
 	return merged
+}
+
+func getNamespace(customerName string, saasType v1.SaaSTypes) string {
+	if saasType == v1.SharedSaaS {
+		return shared_namespace
+	} else if saasType == v1.DedicatedSaaS {
+		return customerName
+	}
+	return ""
 }
