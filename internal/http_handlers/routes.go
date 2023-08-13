@@ -62,22 +62,21 @@ var routes = Routes{
 	// -------------------------------------- CREATE DATAPLANE  ---------------------------------------//
 	// {
 	// 	"cloud_type":"aws",
+	//  "saas_type": "shared",
+	//  "customer_name": "parseable",
 	// 	"cloud_region":"us-east-1",
 	// 	"cloud_auth":{
-	// 	   "secret_ref":{
-	// 		  "secretName":"aws-secret",
-	// 		  "accessKeyName":"accessKey",
-	// 		  "secretKeyName":"secretKey"
-	// 	   }
+	// 	   "awsAccessKey": "AKIAWLZK4B6ACNA3H43S",
+	//        "awsSecretKey": "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"
 	// 	},
 	// 	"kubernetes_config":{
 	// 	   "eks":{
-	// 		  "name":"dataplatform-eks",
-	// 		  "subnetIds":[
+	// 		  "name":"shared",
+	// 		  "subnet_ids":[
 	// 			 "subnet-01cbca574f0d8b8d8",
 	// 			 "subnet-0a4d9c31739a9ac87"
 	// 		  ],
-	// 		  "securityGroupIds":[
+	// 		  "security_group_ids":[
 	// 			 "sg-0da08285aacbdea70"
 	// 		  ],
 	// 		  "version":"1.25"
@@ -87,7 +86,13 @@ var routes = Routes{
 	Route{
 		"CREATE DATA PLANE",
 		"POST",
-		"/api/v1/dataplane/{name}",
+		"/api/v1/dataplane/{dataplane_name}",
 		CreateDataPlane,
+	},
+	Route{
+		"GET DATA PLANE STATUS",
+		"GET",
+		"/api/v1/dataplane/{dataplane_name}/customer/{customer_name}/type/{saas_type}",
+		GetDataPlaneStatus,
 	},
 }
