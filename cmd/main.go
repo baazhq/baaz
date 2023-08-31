@@ -19,7 +19,7 @@ import (
 	datainfraiov1 "datainfra.io/ballastdata/api/v1/types"
 	"datainfra.io/ballastdata/internal/app_controller"
 	dataplane_controller "datainfra.io/ballastdata/internal/dataplane_controller"
-	http_handlers "datainfra.io/ballastdata/internal/http_handlers"
+	khota "datainfra.io/ballastdata/internal/khota_handler"
 	"datainfra.io/ballastdata/internal/tenant_controller"
 	//+kubebuilder:scaffold:imports
 )
@@ -38,7 +38,7 @@ func init() {
 
 func init() {
 	go func() {
-		router := http_handlers.NewRouter()
+		router := khota.NewRouter()
 		setupLog.Info("Started Ballast HTTP server on :8000")
 		if err := http.ListenAndServe(":8000", (router)); err != nil {
 			setupLog.Error(err, "unable to start HTTP server")

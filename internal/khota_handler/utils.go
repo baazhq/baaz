@@ -1,8 +1,12 @@
-package http_handlers
+package khota_handler
 
 import (
+	"encoding/base64"
+	"math/rand"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	v1 "datainfra.io/ballastdata/api/v1/types"
 	"k8s.io/client-go/dynamic"
@@ -65,4 +69,35 @@ func getNamespace(customerName string, saasType v1.SaaSTypes) string {
 		return customerName
 	}
 	return ""
+}
+
+func makeDataPlaneName(cloudType v1.CloudType, region string, saas_type v1.SaaSTypes) string {
+	s := string(saas_type) + "-" + string(cloudType) + "-" + region
+	return strings.ToLower(s) + "-" + String(4)
+}
+
+func generateRandomString(length int) string {
+	b := make([]byte, length)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	return base64.StdEncoding.EncodeToString(b)
+}
+
+const charset = "abcdefghijklmnopqrstuvwxyz"
+
+var seededRand *rand.Rand = rand.New(
+	rand.NewSource(time.Now().UnixNano()))
+
+func stringWithCharset(length int, charset string) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+func String(length int) string {
+	return stringWithCharset(length, charset)
 }

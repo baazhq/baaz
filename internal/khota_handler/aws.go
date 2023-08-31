@@ -1,4 +1,4 @@
-package http_handlers
+package khota_handler
 
 import (
 	v1 "datainfra.io/ballastdata/api/v1/types"
@@ -30,13 +30,13 @@ func getAwsEksSecret(dataPlaneName string, dataplane v1.DataPlane) *unstructured
 				"name": dataPlaneName + "-aws-secret",
 			},
 			"stringData": map[string]interface{}{
-				access_key: dataplane.CloudAuth.AwsAccessKey,
-				secret_key: dataplane.CloudAuth.AwsSecretKey,
+				access_key: dataplane.CloudAuth.AwsAuth.AwsAccessKey,
+				secret_key: dataplane.CloudAuth.AwsAuth.AwsSecretKey,
 			},
 		}}
 }
 
-func getAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane) *unstructured.Unstructured {
+func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "datainfra.io/v1",

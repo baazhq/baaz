@@ -3,7 +3,7 @@
     <img alt="DataInfra Logo" src="https://raw.githubusercontent.com/datainfrahq/.github/main/images/ballastdata.png" width="200" height="200">
   </picture>
   <br>
-  Control Plane For SAAS Infrastructure
+  Centralised Control Plane For SaaS
   </br>
 </h2>
 
@@ -12,7 +12,7 @@
 
 
 </div>
-Organisations seeking to build a SAAS product require a centralised control plane to deploy software to data planes located either within the customer premises or at the SAAS provider. Ballast Data is control plane which simplfyes infrastructure provisioning for applications with built in multi-tenancy and state management. 
+Organisations seeking to build a SAAS product require a centralised control plane to deploy software to data planes located either within the customer premises or at the SAAS provider. Ballast is control plane which simplfyes infrastructure provisioning for applications with built in multi-tenancy and state management. 
 
 
 ## :rocket: Features
