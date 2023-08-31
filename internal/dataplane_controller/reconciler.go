@@ -16,7 +16,6 @@ const (
 )
 
 func (r *DataPlaneReconciler) do(ctx context.Context, dp *v1.DataPlanes) error {
-
 	switch dp.Spec.CloudInfra.CloudType {
 
 	case v1.CloudType(v1.AWS):

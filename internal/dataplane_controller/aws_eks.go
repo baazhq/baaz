@@ -8,7 +8,6 @@ import (
 	"time"
 
 	v1 "datainfra.io/ballastdata/api/v1/types"
-	"datainfra.io/ballastdata/pkg/application/calico"
 	"datainfra.io/ballastdata/pkg/aws/eks"
 	"datainfra.io/ballastdata/pkg/store"
 	"datainfra.io/ballastdata/pkg/utils"
@@ -98,7 +97,6 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 		}
 	}
-
 	if eksDescribeClusterOutput != nil {
 		if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusActive {
 			// checking for version upgrade
@@ -158,15 +156,6 @@ func (ae *awsEnv) reconcileAwsEks() error {
 	}
 
 	if eksDescribeClusterOutput != nil && eksDescribeClusterOutput.Cluster != nil && eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusActive {
-
-		calico := calico.NewCali(
-			ae.dp.Spec.CloudInfra.Eks.Name,
-			v1.CloudType(ae.dp.Spec.CloudInfra.CloudType),
-		)
-
-		if err := calico.ReconcileCalico(); err != nil {
-			return err
-		}
 
 		oidcOutput, err := ae.reconcileOIDCProvider(eksDescribeClusterOutput)
 		if err != nil {

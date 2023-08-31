@@ -1,4 +1,4 @@
-package http_handlers
+package khota_handler
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strings"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,16 +38,14 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
-		msg := "Request Size exceeds LimitReader"
-		res := NewResponse(msg, req_error, err, http.StatusBadRequest)
+		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
 
 	if err := req.Body.Close(); err != nil {
-		msg := "req body failed to close"
-		res := NewResponse(msg, req_error, err, http.StatusInternalServerError)
+		res := NewResponse(ServerBodyCloseError, req_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
@@ -57,8 +54,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 	var customer v1.Customer
 
 	if err := json.Unmarshal(body, &customer); err != nil {
-		msg := "Unmarshall error"
-		res := NewResponse(msg, internal_error, err, http.StatusInternalServerError)
+		res := NewResponse(ServerUnmarshallError, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
@@ -68,9 +64,9 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 
 	ns, err := client.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
+
 		labels := map[string]string{
-			"description": strings.ReplaceAll(customer.Description, " ", "_"),
-			"saas_type":   string(customer.SaaSType),
+			"saas_type": string(customer.SaaSType),
 		}
 
 		_, err := client.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
@@ -80,21 +76,19 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			},
 		}, metav1.CreateOptions{})
 		if err != nil {
-			msg := "Create Namespace error"
-			res := NewResponse(msg, internal_error, err, http.StatusInternalServerError)
+			res := NewResponse(CustomerNamespaceFail, internal_error, err, http.StatusInternalServerError)
 			res.SetResponse(&w)
 			res.LogResponse()
 			return
 		}
-		res := NewResponse("Namespace Created for Customer", success, nil, 200)
+		res := NewResponse(CustomerNamespaceSuccess, success, nil, 200)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
 
 	if ns != nil {
-		msg := "Customer namespace exists"
-		res := NewResponse(msg, internal_error, err, http.StatusInternalServerError)
+		res := NewResponse(CustomerNamespaceExists, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 	}

@@ -1,4 +1,4 @@
-package http_handlers
+package khota_handler
 
 import (
 	"net/http"
@@ -41,14 +41,14 @@ var routes = Routes{
 	// Request:
 	// {
 	// 	"saas_type": "SHARED",
-	// 	"description": "logging platform",
 	// 	"labels": {
-	// 	  "tier": "free"
+	// 		"tier": "free",
+	// 		"app": "logging"
 	// 	}
 	// }
 	// Response:
 	// {
-	// 	"Msg": "Namespace Created for Customer",
+	// 	"Msg": "Customer Namespace Created",
 	// 	"Status": "SUCCESS",
 	// 	"StatusCode": 200,
 	// 	"Err": null
@@ -61,32 +61,32 @@ var routes = Routes{
 	},
 	// -------------------------------------- CREATE DATAPLANE  ---------------------------------------//
 	// {
-	// 	"cloud_type":"aws",
-	//  "saas_type": "shared",
-	//  "customer_name": "parseable",
+	// 	"cloud_type":"AWS",
 	// 	"cloud_region":"us-east-1",
+	// 	"saas_type": "SHARED",
 	// 	"cloud_auth":{
-	// 	   "awsAccessKey": "AKIAWLZK4B6ACNA3H43S",
-	//        "awsSecretKey": "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"
+	// 	  "awsAuth": {
+	// 		  "awsAccessKey": "adsfadfa",
+	// 		  "awsSecretKey": "asfasfasfadf"
+	// 	  }
 	// 	},
 	// 	"kubernetes_config":{
-	// 	   "eks":{
-	// 		  "name":"shared",
-	// 		  "subnet_ids":[
-	// 			 "subnet-01cbca574f0d8b8d8",
-	// 			 "subnet-0a4d9c31739a9ac87"
-	// 		  ],
-	// 		  "security_group_ids":[
-	// 			 "sg-0da08285aacbdea70"
-	// 		  ],
-	// 		  "version":"1.25"
-	// 	   }
+	// 	"eks":{
+	// 		"subnet_ids":[
+	// 			"subnet-01cbca574f0d8b8d8",
+	// 			"subnet-0a4d9c31739a9ac87"
+	// 		],
+	// 		"security_group_ids":[
+	// 			"sg-0da08285aacbdea70"
+	// 		],
+	// 		"version":"1.25"
 	// 	}
-	//  }
+	// 	}
+	// }
 	Route{
 		"CREATE DATA PLANE",
 		"POST",
-		"/api/v1/dataplane/{dataplane_name}",
+		"/api/v1/dataplane",
 		CreateDataPlane,
 	},
 	Route{
