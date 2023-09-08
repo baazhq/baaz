@@ -56,7 +56,7 @@ var routes = Routes{
 	Route{
 		"CREATE CUSTOMER",
 		"POST",
-		"/api/v1/customer/{name}",
+		"/api/v1/customer/{customer_name}",
 		CreateCustomer,
 	},
 	// -------------------------------------- CREATE DATAPLANE  ---------------------------------------//
@@ -86,13 +86,13 @@ var routes = Routes{
 	Route{
 		"CREATE DATA PLANE",
 		"POST",
-		"/api/v1/dataplane",
+		"/api/v1/dataplane/{customer_name}",
 		CreateDataPlane,
 	},
 	Route{
 		"GET DATA PLANE STATUS",
 		"GET",
-		"/api/v1/dataplane/{dataplane_name}/customer/{customer_name}/type/{saas_type}",
+		"/api/v1/dataplane/{customer_name}",
 		GetDataPlaneStatus,
 	},
 }
