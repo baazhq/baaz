@@ -120,23 +120,31 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 func GetDataPlaneStatus(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	dataPlaneName := vars["dataplane_name"]
 	customerName := vars["customer_name"]
-	saasType := vars["saas_type"]
 
-	namespace := getNamespace(customerName, v1.SaaSTypes(saasType))
-	_, dc := getKubeClientset()
+	kc, dc := getKubeClientset()
 
-	dp, err := dc.Resource(dpGVK).Namespace(namespace).Get(context.TODO(), dataPlaneName, metav1.GetOptions{})
-	if err != nil {
-		res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
+	namespace, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
+	if getErr != nil {
+		res := NewResponse(DataPlaneGetFail, internal_error, getErr, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
 
-	status, _, _ := unstructured.NestedString(dp.Object, "status", "phase")
+	if namespace.Labels["saas_type"] == string(v1.SharedSaaS) {
+		dp := namespace.Labels["dataplane"]
+		dpObj, err := dc.Resource(dpGVK).Namespace("shared").Get(context.TODO(), dp, metav1.GetOptions{})
+		if err != nil {
+			res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
 
-	res := NewResponse("", status, nil, 200)
-	res.SetResponse(&w)
+		status, _, _ := unstructured.NestedString(dpObj.Object, "status", "phase")
+		res := NewResponse("", status, nil, 200)
+		res.SetResponse(&w)
+	}
+
 }

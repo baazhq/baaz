@@ -9,8 +9,9 @@ const (
 )
 
 type Customer struct {
-	SaaSType SaaSTypes         `json:"saas_type"`
-	Labels   map[string]string `json:"labels"`
+	SaaSType SaaSTypes `json:"saas_type"`
+	CloudType
+	Labels map[string]string `json:"labels"`
 }
 
 type DataPlane struct {

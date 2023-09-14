@@ -41,6 +41,7 @@ var routes = Routes{
 	// Request:
 	// {
 	// 	"saas_type": "SHARED",
+	//  "cloud_type": "AWS",
 	// 	"labels": {
 	// 		"tier": "free",
 	// 		"app": "logging"
@@ -59,7 +60,7 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}",
 		CreateCustomer,
 	},
-	// -------------------------------------- CREATE DATAPLANE  ---------------------------------------//
+	// -------------------------------------- DATAPLANE ROUTES ---------------------------------------//
 	// {
 	// 	"cloud_type":"AWS",
 	// 	"cloud_region":"us-east-1",
@@ -94,5 +95,37 @@ var routes = Routes{
 		"GET",
 		"/api/v1/dataplane/{customer_name}",
 		GetDataPlaneStatus,
+	},
+	// -------------------------------------- TENANT ROUTES ---------------------------------------//
+	//
+	// {
+	// 	"name": "backstage",
+	// 	"type": "siloed",
+	// 	"dataplane_name": "shared-aws-us-east-1-qrkf",
+	// 	"application":
+	// 	{
+	// 			"name": "backstage",
+	// 			"size": "backstage-small"
+	// 	},
+	// 	"sizes": {
+	// 		"name": "backstage-small",
+	// 		"nodes": [
+	// 			{
+	// 				"name": "backstage-server",
+	// 				"size": "t2.medium",
+	// 				"min": 1,
+	// 				"max": 3,
+	// 				"labels": {
+	// 					"app": "backstage"
+	// 				}
+	// 			}
+	// 		]
+	// 	}
+	// }
+	Route{
+		"CREATE TENANT",
+		"POST",
+		"/api/v1/tenant/{customer_name}",
+		CreateTenant,
 	},
 }

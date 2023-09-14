@@ -58,8 +58,6 @@ spec:
                     properties:
                       enabled:
                         type: boolean
-                    required:
-                    - enabled
                     type: object
                   network:
                     properties:
@@ -71,11 +69,7 @@ spec:
                         type: boolean
                     required:
                     - allowNamespaces
-                    - enabled
                     type: object
-                required:
-                - machine
-                - network
                 type: object
               sizes:
                 description: Define Size consists of AppType
@@ -118,7 +112,6 @@ spec:
             required:
             - config
             - envRef
-            - isolation
             - sizes
             type: object
           status:

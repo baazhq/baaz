@@ -13,20 +13,20 @@ type TenantsSpec struct {
 	// Define Size consists of AppType
 	TenantSizes []TenantSizes `json:"sizes"`
 	// Isolation
-	Isolation IsolationConfig `json:"isolation"`
+	Isolation IsolationConfig `json:"isolation,omitempty"`
 }
 
 type IsolationConfig struct {
-	Machine MachineConfig `json:"machine"`
-	Network NetworkConfig `json:"network"`
+	Machine MachineConfig `json:"machine,omitempty"`
+	Network NetworkConfig `json:"network,omitempty"`
 }
 
 type MachineConfig struct {
-	Enabled bool `json:"enabled"`
+	Enabled bool `json:"enabled,omitempty"`
 }
 
 type NetworkConfig struct {
-	Enabled         bool     `json:"enabled"`
+	Enabled         bool     `json:"enabled,omitempty"`
 	AllowNamespaces []string `json:"allowNamespaces"`
 }
 

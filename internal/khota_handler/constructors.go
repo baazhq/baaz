@@ -65,3 +65,42 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane) *unstructure
 		},
 	}
 }
+
+func makeTenantConfig(tenant v1.Tenant) *unstructured.Unstructured {
+	var isolationEnabled bool
+	if tenant.Type == v1.Siloed {
+		isolationEnabled = true
+	} else if tenant.Type == v1.Pool {
+		isolationEnabled = false
+	}
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "datainfra.io/v1",
+			"kind":       "Tenants",
+			"metadata": map[string]interface{}{
+				"name": tenant.TenantName,
+			},
+			"spec": map[string]interface{}{
+				"envRef": tenant.DataplaneName,
+				"isolation": map[string]interface{}{
+					"machine": map[string]interface{}{
+						"enabled": isolationEnabled,
+					},
+				},
+				"config": []map[string]interface{}{
+					{
+						"appType": tenant.Application.Name,
+						"size":    tenant.Application.Size,
+					},
+				},
+				"sizes": []map[string]interface{}{
+					{
+						"name":  tenant.Sizes.Name,
+						"nodes": tenant.Sizes.Nodes,
+					},
+				},
+			},
+		},
+	}
+
+}

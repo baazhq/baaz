@@ -22,3 +22,10 @@ const (
 	DataPlaneCreateIntiated CustomMsg = "DataPlane Creation Initated"
 	DataPlaneGetFail        CustomMsg = "DataPlane Get Fail"
 )
+
+// Tenant
+const (
+	TenantCreateFail     CustomMsg = "Tenant Creation Fail"
+	TenantCreateIntiated CustomMsg = "Tenant Creation Initated"
+	TenantPlaneGetFail   CustomMsg = "Tenant Get Fail"
+)
