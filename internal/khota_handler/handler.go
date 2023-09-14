@@ -34,7 +34,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 
 	vars := mux.Vars(req)
 
-	customerName := vars["name"]
+	customerName := vars["customer_name"]
 
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {

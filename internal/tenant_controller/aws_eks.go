@@ -159,7 +159,7 @@ func (ae *awsEnv) getNodeSpecForTenantSize(tenantConfig v1.TenantConfig) (*[]v1.
 
 func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, nodeSpec *v1.NodeSpec) (input *awseks.CreateNodegroupInput) {
 
-	var taints *[]types.Taint
+	var taints = &[]types.Taint{}
 
 	if ae.tenant.Spec.Isolation.Machine.Enabled {
 		taints = makeTaints(nodeName)

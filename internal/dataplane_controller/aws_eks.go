@@ -130,7 +130,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 			if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 				in := obj.(*v1.DataPlanes)
-				in.Status.Phase = v1.Success
+				in.Status.Phase = v1.Active
 				in.Status.Version = in.Spec.CloudInfra.Eks.Version
 				in.Status.Conditions = in.AddCondition(v1.DataPlaneCondition{
 					Type:               v1.ControlPlaneCreated,
@@ -249,7 +249,7 @@ func (ae *awsEnv) reconcilePhase() error {
 
 	if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 		in := obj.(*v1.DataPlanes)
-		in.Status.Phase = v1.Success
+		in.Status.Phase = v1.Active
 		return in
 	}); err != nil {
 		return err

@@ -3,6 +3,7 @@ package tenant_controller
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -57,7 +58,15 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	dpObj := &v1.DataPlanes{}
-	err = r.Get(ctx, types.NamespacedName{Name: tenantObj.Spec.EnvRef, Namespace: tenantObj.Namespace}, dpObj)
+	var namespace string
+
+	if strings.Contains(tenantObj.Spec.EnvRef, "shared") {
+		namespace = "shared"
+	} else {
+		namespace = tenantObj.Namespace
+	}
+
+	err = r.Get(ctx, types.NamespacedName{Name: tenantObj.Spec.EnvRef, Namespace: namespace}, dpObj)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}

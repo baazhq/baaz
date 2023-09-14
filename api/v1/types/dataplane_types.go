@@ -33,7 +33,7 @@ type DataPlanePhase string
 const (
 	Pending     DataPlanePhase = "Pending"
 	Creating    DataPlanePhase = "Creating"
-	Success     DataPlanePhase = "Success"
+	Active      DataPlanePhase = "Active"
 	Failed      DataPlanePhase = "Failed"
 	Updating    DataPlanePhase = "Updating"
 	Terminating DataPlanePhase = "Terminating"

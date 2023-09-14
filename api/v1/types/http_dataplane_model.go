@@ -9,17 +9,17 @@ const (
 )
 
 type Customer struct {
-	SaaSType SaaSTypes         `json:"saas_type"`
-	Labels   map[string]string `json:"labels"`
+	SaaSType SaaSTypes `json:"saas_type"`
+	CloudType
+	Labels map[string]string `json:"labels"`
 }
 
 type DataPlane struct {
-	CloudType    CloudType        `json:"cloud_type"`
-	SaaSType     SaaSTypes        `json:"saas_type"`
-	CustomerName string           `json:"customerName,omitempty"`
-	CloudRegion  string           `json:"cloud_region"`
-	CloudAuth    CloudAuth        `json:"cloud_auth"`
-	KubeConfig   KubernetesConfig `json:"kubernetes_config"`
+	CloudType   CloudType        `json:"cloud_type"`
+	SaaSType    SaaSTypes        `json:"saas_type"`
+	CloudRegion string           `json:"cloud_region"`
+	CloudAuth   CloudAuth        `json:"cloud_auth"`
+	KubeConfig  KubernetesConfig `json:"kubernetes_config"`
 }
 
 type CloudAuth struct {
