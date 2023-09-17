@@ -87,13 +87,13 @@ var routes = Routes{
 	Route{
 		"CREATE DATA PLANE",
 		"POST",
-		"/api/v1/dataplane/{customer_name}",
+		"/api/v1/customer/{customer_name}/dataplane",
 		CreateDataPlane,
 	},
 	Route{
 		"GET DATA PLANE STATUS",
 		"GET",
-		"/api/v1/dataplane/{customer_name}",
+		"/api/v1/customer/{customer_name}/dataplane",
 		GetDataPlaneStatus,
 	},
 	// -------------------------------------- TENANT ROUTES ---------------------------------------//
@@ -101,7 +101,6 @@ var routes = Routes{
 	// {
 	// 	"name": "backstage",
 	// 	"type": "siloed",
-	// 	"dataplane_name": "shared-aws-us-east-1-qrkf",
 	// 	"application":
 	// 	{
 	// 			"name": "backstage",
@@ -125,7 +124,7 @@ var routes = Routes{
 	Route{
 		"CREATE TENANT",
 		"POST",
-		"/api/v1/tenant/{customer_name}",
+		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant",
 		CreateTenant,
 	},
 }

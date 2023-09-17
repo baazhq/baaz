@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
-	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 )
 
 func (ec *eks) DescribeAddon(addonName string) (*awseks.DescribeAddonOutput, error) {
@@ -26,21 +25,9 @@ type CreateAddonInput struct {
 	ClusterName string `json:"clusterName"`
 }
 
-func (ec *eks) CreateAddon(ctx context.Context, params *CreateAddonInput) (*awseks.CreateAddonOutput, error) {
+func (ec *eks) CreateAddon(ctx context.Context, params *awseks.CreateAddonInput) (*awseks.CreateAddonOutput, error) {
 
-	role, err := ec.createEbsCSIRole(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	input := &awseks.CreateAddonInput{
-		AddonName:             aws.String(params.Name),
-		ClusterName:           aws.String(params.ClusterName),
-		ResolveConflicts:      types.ResolveConflictsOverwrite,
-		ServiceAccountRoleArn: role.Role.Arn,
-	}
-
-	result, err := ec.awsClient.CreateAddon(ctx, input)
+	result, err := ec.awsClient.CreateAddon(ctx, params)
 	if err != nil {
 		return nil, err
 	}

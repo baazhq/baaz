@@ -212,7 +212,7 @@ func (ae *awsEnv) patchStatus(name, status string) error {
 			in.Status.NodegroupStatus = make(map[string]string)
 		}
 		in.Status.NodegroupStatus[name] = status
-		in.Status.Phase = v1.DataPlanePhase(status)
+		in.Status.Phase = v1.TenantPhase(status)
 		return in
 	})
 	return err

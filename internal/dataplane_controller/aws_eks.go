@@ -23,6 +23,7 @@ import (
 
 const (
 	awsEbsCsiDriver string = "aws-ebs-csi-driver"
+	vpcCni          string = "vpc-cni"
 )
 
 func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v1.DataPlanes) error {
@@ -74,7 +75,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 			if createEksResult.Success {
 				if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 					in := obj.(*v1.DataPlanes)
-					in.Status.Phase = v1.Creating
+					in.Status.Phase = v1.CreatingD
 					in.Status.Conditions = in.AddCondition(v1.DataPlaneCondition{
 						Type:               v1.ControlPlaneCreateInitiated,
 						Status:             corev1.ConditionTrue,
@@ -106,7 +107,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 				klog.Info("Updating Kubernetes version to: ", ae.dp.Spec.CloudInfra.Eks.Version)
 				if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 					in := obj.(*v1.DataPlanes)
-					in.Status.Phase = v1.Updating
+					in.Status.Phase = v1.UpdatingD
 					in.Status.Conditions = in.AddCondition(v1.DataPlaneCondition{
 						Type:               v1.VersionUpgradeInitiated,
 						Status:             corev1.ConditionTrue,
@@ -130,7 +131,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 			if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 				in := obj.(*v1.DataPlanes)
-				in.Status.Phase = v1.Active
+				in.Status.Phase = v1.ActiveD
 				in.Status.Version = in.Spec.CloudInfra.Eks.Version
 				in.Status.Conditions = in.AddCondition(v1.DataPlaneCondition{
 					Type:               v1.ControlPlaneCreated,
@@ -249,7 +250,7 @@ func (ae *awsEnv) reconcilePhase() error {
 
 	if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 		in := obj.(*v1.DataPlanes)
-		in.Status.Phase = v1.Active
+		in.Status.Phase = v1.ActiveD
 		return in
 	}); err != nil {
 		return err
@@ -279,7 +280,6 @@ func (ae *awsEnv) reconcileSystemNodeGroup() error {
 		DiskSize:           nil,
 		InstanceTypes:      []string{os.Getenv("AWS_SYSTEM_NODEGROUP_SIZE")},
 		Labels: map[string]string{
-			"cloud":    "aws",
 			"nodeType": "system",
 			"name":     systemNodeGroupName,
 		},
@@ -363,9 +363,17 @@ func (ae *awsEnv) ReconcileDefaultAddons() error {
 		var notFoundErr *types.ResourceNotFoundException
 		if errors.As(err, &notFoundErr) {
 			klog.Info("Creating aws-ebs-csi-driver addon")
-			_, cErr := ae.eksIC.CreateAddon(ae.ctx, &eks.CreateAddonInput{
-				Name:        awsEbsCsiDriver,
-				ClusterName: clusterName,
+
+			role, err := ae.eksIC.CreateEbsCSIRole(ae.ctx)
+			if err != nil {
+				return err
+			}
+
+			_, cErr := ae.eksIC.CreateAddon(ae.ctx, &awseks.CreateAddonInput{
+				AddonName:             aws.String(awsEbsCsiDriver),
+				ClusterName:           aws.String(clusterName),
+				ResolveConflicts:      types.ResolveConflictsOverwrite,
+				ServiceAccountRoleArn: role.Role.Arn,
 			})
 			if cErr != nil {
 				return cErr
@@ -379,6 +387,39 @@ func (ae *awsEnv) ReconcileDefaultAddons() error {
 	if ebsAddon != nil && ebsAddon.Addon != nil {
 		addonRes := ebsAddon.Addon
 		klog.Info("aws-ebs-csi-driver addon status: ", addonRes.Status)
+		if err := ae.wrapAddonPatchStatus(*addonRes.AddonName, string(addonRes.Status)); err != nil {
+			return err
+		}
+	}
+
+	vpcCniAddon, err := ae.eksIC.DescribeAddon(vpcCni)
+	if err != nil {
+		var notFoundErr *types.ResourceNotFoundException
+		if errors.As(err, &notFoundErr) {
+			klog.Info("Creating vpc cni addon")
+			role, err := ae.eksIC.CreateVpcCniRole(ae.ctx)
+			if err != nil {
+				return err
+			}
+
+			_, cErr := ae.eksIC.CreateAddon(ae.ctx, &awseks.CreateAddonInput{
+				AddonName:             aws.String(vpcCni),
+				ClusterName:           aws.String(clusterName),
+				ResolveConflicts:      types.ResolveConflictsOverwrite,
+				ServiceAccountRoleArn: role.Role.Arn,
+			})
+			if cErr != nil {
+				return cErr
+			}
+			klog.Info("vpc cni addon creation is initiated")
+		} else {
+			return err
+		}
+		return nil
+	}
+	if vpcCniAddon != nil && vpcCniAddon.Addon != nil {
+		addonRes := vpcCniAddon.Addon
+		klog.Info("vpc cni addon status: ", addonRes.Status)
 		if err := ae.wrapAddonPatchStatus(*addonRes.AddonName, string(addonRes.Status)); err != nil {
 			return err
 		}

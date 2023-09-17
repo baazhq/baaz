@@ -4,6 +4,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type TenantPhase string
+
+const (
+	PendingT     TenantPhase = "Pending"
+	CreatingT    TenantPhase = "Creating"
+	ActiveT      TenantPhase = "Active"
+	FailedT      TenantPhase = "Failed"
+	UpdatingT    TenantPhase = "Updating"
+	TerminatingT TenantPhase = "Terminating"
+)
+
 // TenantsSpec defines the desired state of Tenants
 type TenantsSpec struct {
 	// Environment ref
@@ -27,7 +38,7 @@ type MachineConfig struct {
 
 type NetworkConfig struct {
 	Enabled         bool     `json:"enabled,omitempty"`
-	AllowNamespaces []string `json:"allowNamespaces"`
+	AllowNamespaces []string `json:"allowNamespaces,omitempty"`
 }
 
 type TenantSizes struct {
@@ -42,7 +53,7 @@ type TenantConfig struct {
 
 // TenantsStatus defines the observed state of Tenants
 type TenantsStatus struct {
-	Phase           DataPlanePhase    `json:"phase,omitempty"`
+	Phase           TenantPhase       `json:"phase,omitempty"`
 	NodegroupStatus map[string]string `json:"nodegroupStatus,omitempty"`
 	Namespace       map[string]string `json:"namespace,omitempty"`
 }

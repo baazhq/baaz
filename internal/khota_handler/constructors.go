@@ -1,6 +1,8 @@
 package khota_handler
 
 import (
+	"fmt"
+
 	v1 "datainfra.io/ballastdata/api/v1/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -66,13 +68,16 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane) *unstructure
 	}
 }
 
-func makeTenantConfig(tenant v1.Tenant) *unstructured.Unstructured {
+func makeTenantConfig(tenant v1.Tenant, dataplaneName string) *unstructured.Unstructured {
 	var isolationEnabled bool
+
 	if tenant.Type == v1.Siloed {
 		isolationEnabled = true
 	} else if tenant.Type == v1.Pool {
 		isolationEnabled = false
 	}
+
+	fmt.Println(isolationEnabled, tenant.Type)
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "datainfra.io/v1",
@@ -81,7 +86,7 @@ func makeTenantConfig(tenant v1.Tenant) *unstructured.Unstructured {
 				"name": tenant.TenantName,
 			},
 			"spec": map[string]interface{}{
-				"envRef": tenant.DataplaneName,
+				"envRef": dataplaneName,
 				"isolation": map[string]interface{}{
 					"machine": map[string]interface{}{
 						"enabled": isolationEnabled,
