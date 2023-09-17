@@ -23,8 +23,7 @@ type NetworkSecurity struct {
 
 type Tenant struct {
 	TenantName      string                `json:"name"`
-	Type            TenantDeploymentType  `json:"tenant_type"`
-	DataplaneName   string                `json:"dataplane_name"`
+	Type            TenantDeploymentType  `json:"type"`
 	Application     HTTPTenantApplication `json:"application"`
 	Sizes           HTTPTenantSizes       `json:"sizes"`
 	NetworkSecurity NetworkSecurity       `json:"network_security,omitempty"`

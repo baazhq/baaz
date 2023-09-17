@@ -67,8 +67,6 @@ spec:
                         type: array
                       enabled:
                         type: boolean
-                    required:
-                    - allowNamespaces
                     type: object
                 type: object
               sizes:

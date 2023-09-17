@@ -23,6 +23,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
 	customerName := vars["customer_name"]
+	dataplaneName := vars["dataplane_name"]
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
@@ -48,9 +49,8 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 	}
 
 	tenantNew := v1.Tenant{
-		TenantName:    tenant.TenantName,
-		Type:          tenant.Type,
-		DataplaneName: tenant.DataplaneName,
+		TenantName: tenant.TenantName,
+		Type:       tenant.Type,
 		Application: v1.HTTPTenantApplication{
 			Name: tenant.Application.Name,
 			Size: tenant.Application.Size,
@@ -63,7 +63,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 
 	_, dc := getKubeClientset()
 
-	tenantDeploy := makeTenantConfig(tenantNew)
+	tenantDeploy := makeTenantConfig(tenantNew, dataplaneName)
 
 	_, err = dc.Resource(tenantGVK).Namespace(customerName).Create(context.TODO(), tenantDeploy, metav1.CreateOptions{})
 	if err != nil {

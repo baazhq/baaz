@@ -31,12 +31,12 @@ type CloudInfraConfig struct {
 type DataPlanePhase string
 
 const (
-	Pending     DataPlanePhase = "Pending"
-	Creating    DataPlanePhase = "Creating"
-	Active      DataPlanePhase = "Active"
-	Failed      DataPlanePhase = "Failed"
-	Updating    DataPlanePhase = "Updating"
-	Terminating DataPlanePhase = "Terminating"
+	PendingD     DataPlanePhase = "Pending"
+	CreatingD    DataPlanePhase = "Creating"
+	ActiveD      DataPlanePhase = "Active"
+	FailedD      DataPlanePhase = "Failed"
+	UpdatingD    DataPlanePhase = "Updating"
+	TerminatingD DataPlanePhase = "Terminating"
 )
 
 // DataPlaneStatus defines the observed state of DataPlane

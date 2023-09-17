@@ -16,6 +16,10 @@ func MakeEBSCSIRoleName(region, clusterName string) string {
 	return region + "-" + clusterName + "-" + "ebs-role"
 }
 
+func MakeVpcCniRoleName(region, clusterName string) string {
+	return region + "-" + clusterName + "-" + "vpccni-role"
+}
+
 func newAwsClient(ctx context.Context, region string) *awseks.Client {
 	config, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {

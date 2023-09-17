@@ -70,14 +70,41 @@ var ebsCSIRoleTrustJsonTemplate = `
     ]
 }
 `
+
 var (
 	ebsCSIPolicyARN = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 )
 
-type eBSCSIRoleTemplateInput struct {
+var (
+	vpcCNIPolicyARN = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+)
+
+type genericRoleTemplateInput struct {
 	AccountID    string
 	OIDCProvider string
 }
+
+var (
+	vpcCniTrustPolicy = `
+	{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Principal": {
+					"Federated": "arn:aws:iam::{{.AccountID}}:oidc-provider/{{.OIDCProvider}}"
+				},
+				"Action": "sts:AssumeRoleWithWebIdentity",
+				"Condition": {
+					"StringEquals": {
+						"{{.OIDCProvider}}:aud": "sts.amazonaws.com",
+						"{{.OIDCProvider}}:sub": "system:serviceaccount:kube-system:aws-node"
+					}
+				}
+			}
+		]
+	}`
+)
 
 func (ec *eks) CreateClusterIamRole() (*awsiam.GetRoleOutput, error) {
 
@@ -142,7 +169,7 @@ func (ec *eks) CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error) {
 	return result, nil
 }
 
-func (ec *eks) createEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, error) {
+func (ec *eks) CreateEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, error) {
 	oidcProvider := ec.dp.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
 
 	roleName := MakeEBSCSIRoleName(ec.dp.Spec.CloudInfra.Region, ec.dp.Spec.CloudInfra.Eks.Name)
@@ -167,7 +194,7 @@ func (ec *eks) createEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, 
 		}
 		var tmplOutput bytes.Buffer
 
-		if err := tmpl.Execute(&tmplOutput, eBSCSIRoleTemplateInput{
+		if err := tmpl.Execute(&tmplOutput, genericRoleTemplateInput{
 			AccountID:    accountID,
 			OIDCProvider: oidcProviderURL,
 		}); err != nil {
@@ -188,6 +215,64 @@ func (ec *eks) createEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, 
 
 		attachPolicyInput := awsiam.AttachRolePolicyInput{
 			PolicyArn: &ebsCSIPolicyARN,
+			RoleName:  roleOutput.Role.RoleName,
+		}
+
+		if _, err := ec.awsIamClient.AttachRolePolicy(ctx, &attachPolicyInput); err != nil {
+			return nil, err
+		}
+		return roleOutput, nil
+	}
+
+	return &awsiam.CreateRoleOutput{}, nil
+}
+
+func (ec *eks) CreateVpcCniRole(ctx context.Context) (*awsiam.CreateRoleOutput, error) {
+	oidcProvider := ec.dp.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
+
+	roleName := MakeVpcCniRoleName(ec.dp.Spec.CloudInfra.Region, ec.dp.Spec.CloudInfra.Eks.Name)
+
+	_, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
+		RoleName: aws.String(roleName),
+	})
+
+	if err != nil {
+		_, oidcProviderURL, found := strings.Cut(oidcProvider, "oidc-provider/")
+		if !found {
+			return nil, errors.New("invalid oidc provider arn")
+		}
+		accountID, err := ec.getAccountID()
+		if err != nil {
+			return nil, err
+		}
+
+		tmpl, err := template.New("vpcni-template").Parse(vpcCniTrustPolicy)
+		if err != nil {
+			return nil, err
+		}
+		var tmplOutput bytes.Buffer
+
+		if err := tmpl.Execute(&tmplOutput, genericRoleTemplateInput{
+			AccountID:    accountID,
+			OIDCProvider: oidcProviderURL,
+		}); err != nil {
+			return nil, err
+		}
+
+		trustPolicy := tmplOutput.String()
+
+		roleInput := awsiam.CreateRoleInput{
+			AssumeRolePolicyDocument: aws.String(strings.TrimSpace(trustPolicy)),
+			RoleName:                 &roleName,
+		}
+
+		roleOutput, err := ec.awsIamClient.CreateRole(ctx, &roleInput)
+		if err != nil {
+			return nil, err
+		}
+
+		attachPolicyInput := awsiam.AttachRolePolicyInput{
+			PolicyArn: &vpcCNIPolicyARN,
 			RoleName:  roleOutput.Role.RoleName,
 		}
 

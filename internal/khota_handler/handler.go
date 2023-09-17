@@ -66,7 +66,8 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 	if apierrors.IsNotFound(err) {
 
 		labels := map[string]string{
-			"saas_type": string(customer.SaaSType),
+			"saas_type":  string(customer.SaaSType),
+			"cloud_type": string(customer.CloudType),
 		}
 
 		_, err := client.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{

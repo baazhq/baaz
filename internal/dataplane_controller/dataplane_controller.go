@@ -87,7 +87,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if desiredObj.Status.Phase == "" {
 		if _, _, err := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
-			in.Status.Phase = v1.Pending
+			in.Status.Phase = v1.PendingD
 			return in
 		}); err != nil {
 			return ctrl.Result{}, err
@@ -97,7 +97,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	if err := r.do(ctx, desiredObj); err != nil {
 		if _, _, upErr := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
-			in.Status.Phase = v1.Failed
+			in.Status.Phase = v1.FailedD
 			return in
 		}); upErr != nil {
 			return ctrl.Result{}, upErr
@@ -113,7 +113,7 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	// update phase to terminating
 	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 		in := obj.(*v1.DataPlanes)
-		in.Status.Phase = v1.Terminating
+		in.Status.Phase = v1.TerminatingD
 		return in
 	})
 	if err != nil {

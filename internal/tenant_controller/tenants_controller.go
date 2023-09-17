@@ -97,7 +97,7 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if tenantObj.Status.Phase == "" {
 		if _, _, err := utils.PatchStatus(ctx, r.Client, tenantObj, func(obj client.Object) client.Object {
 			in := obj.(*v1.Tenants)
-			in.Status.Phase = v1.Pending
+			in.Status.Phase = v1.PendingT
 			return in
 		}); err != nil {
 			return ctrl.Result{}, err
@@ -107,7 +107,7 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err := r.do(ctx, tenantObj, dpObj); err != nil {
 		if _, _, patchErr := utils.PatchStatus(ctx, r.Client, tenantObj, func(obj client.Object) client.Object {
 			in := obj.(*v1.Tenants)
-			in.Status.Phase = v1.Failed
+			in.Status.Phase = v1.FailedT
 			return in
 		}); patchErr != nil {
 			return ctrl.Result{}, patchErr
@@ -146,7 +146,7 @@ func (r *TenantsReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	// update phase to terminating
 	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.tenant, func(obj client.Object) client.Object {
 		in := obj.(*v1.Tenants)
-		in.Status.Phase = v1.Terminating
+		in.Status.Phase = v1.TerminatingT
 		return in
 	})
 	if err != nil {

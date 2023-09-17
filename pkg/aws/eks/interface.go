@@ -31,11 +31,14 @@ type Eks interface {
 	CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error)
 	CreateClusterIamRole() (*awsiam.GetRoleOutput, error)
 	// addons
-	CreateAddon(ctx context.Context, params *CreateAddonInput) (*awseks.CreateAddonOutput, error)
+	CreateAddon(ctx context.Context, params *awseks.CreateAddonInput) (*awseks.CreateAddonOutput, error)
 	DescribeAddon(addonName string) (*awseks.DescribeAddonOutput, error)
 	// auth
 	GetEksClientSet() (*kubernetes.Clientset, error)
 	GetRestConfig() (*rest.Config, error)
+	// roles
+	CreateEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, error)
+	CreateVpcCniRole(ctx context.Context) (*awsiam.CreateRoleOutput, error)
 }
 
 type eks struct {
