@@ -55,6 +55,10 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 			Name: tenant.Application.Name,
 			Size: tenant.Application.Size,
 		},
+		NetworkSecurity: v1.NetworkSecurity{
+			InterNamespaceTraffic: tenant.NetworkSecurity.InterNamespaceTraffic,
+			AllowedNamespaces:     tenant.NetworkSecurity.AllowedNamespaces,
+		},
 		Sizes: v1.HTTPTenantSizes{
 			Name:  tenant.Sizes.Name,
 			Nodes: tenant.Sizes.Nodes,

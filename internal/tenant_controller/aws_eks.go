@@ -257,7 +257,5 @@ func (ae *awsEnv) createOrUpdateNetworkPolicy(clientset *kubernetes.Clientset) e
 		klog.Infof("Network Policy [%s] created for tenant [%s]", ns.Name, ae.tenant.Name)
 	}
 
-	// TODO
-	// update logic
 	return nil
 }

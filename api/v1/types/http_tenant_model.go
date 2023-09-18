@@ -17,8 +17,16 @@ type HTTPTenantSizes struct {
 	Nodes []NodeSpec `json:"nodes"`
 }
 
+type NetworkRules string
+
+const (
+	Allow NetworkRules = "Allow"
+	Deny  NetworkRules = "Deny"
+)
+
 type NetworkSecurity struct {
-	Network NetworkConfig `json:"network,omitempty"`
+	InterNamespaceTraffic NetworkRules `json:"inter_namespace_traffic"`
+	AllowedNamespaces     []string     `json:"allowed_namespace"`
 }
 
 type Tenant struct {
