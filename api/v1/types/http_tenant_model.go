@@ -3,8 +3,8 @@ package v1
 type TenantDeploymentType string
 
 const (
-	Siloed TenantDeploymentType = "SILOED"
-	Pool   TenantDeploymentType = "POOL"
+	Siloed TenantDeploymentType = "siloed"
+	Pool   TenantDeploymentType = "pool"
 )
 
 type HTTPTenantApplication struct {
@@ -26,7 +26,7 @@ const (
 
 type NetworkSecurity struct {
 	InterNamespaceTraffic NetworkRules `json:"inter_namespace_traffic"`
-	AllowedNamespaces     []string     `json:"allowed_namespace"`
+	AllowedNamespaces     []string     `json:"allowed_namespaces"`
 }
 
 type Tenant struct {

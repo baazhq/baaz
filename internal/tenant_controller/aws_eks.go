@@ -131,8 +131,7 @@ func (ae *awsEnv) tenantExpansion(desiredSize string) error {
 		}
 
 		for _, nodeSpec := range *nodeSpecs {
-			fmt.Println(nodeSpec.Size)
-			fmt.Println(desiredSize)
+
 			if nodeSpec.Size != desiredSize {
 				klog.Infof(
 					"Tenant Expansion: Tenant [%s], Node Name [%s], Current Size [%s], Desired Size [%s]",
@@ -240,14 +239,13 @@ func (ae *awsEnv) createNamespace(clientset *kubernetes.Clientset) error {
 func (ae *awsEnv) createOrUpdateNetworkPolicy(clientset *kubernetes.Clientset) error {
 
 	networkPolicyName := ae.tenant.Name + "-network-policy"
-
 	_, err := clientset.NetworkingV1().NetworkPolicies(ae.tenant.Name).Get(ae.ctx, networkPolicyName, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		ns, err := clientset.NetworkingV1().NetworkPolicies(ae.tenant.Name).Create(ae.ctx,
 			resources.MakeNetworkPolicy(
 				networkPolicyName,
 				ae.tenant.Name,
-				ae.tenant.Spec.Isolation.Network.AllowNamespaces,
+				ae.tenant.Spec.Isolation.Network.AllowedNamespaces,
 				resources.MakeOwnerRef(ae.tenant.APIVersion, ae.tenant.Kind, ae.tenant.Name, ae.tenant.UID),
 			), metav1.CreateOptions{},
 		)

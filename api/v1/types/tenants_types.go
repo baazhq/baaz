@@ -37,8 +37,8 @@ type MachineConfig struct {
 }
 
 type NetworkConfig struct {
-	Enabled         bool     `json:"enabled,omitempty"`
-	AllowNamespaces []string `json:"allowNamespaces,omitempty"`
+	Enabled           bool     `json:"enabled,omitempty"`
+	AllowedNamespaces []string `json:"allowedNamespaces,omitempty"`
 }
 
 type TenantSizes struct {

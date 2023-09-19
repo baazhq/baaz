@@ -99,23 +99,27 @@ var routes = Routes{
 	// -------------------------------------- TENANT ROUTES ---------------------------------------//
 	//
 	// {
-	// 	"name": "backstage",
-	// 	"type": "siloed",
+	// 	"name": "parseables",
+	// 	"type": "pool",
+	// 	"network_security": {
+	// 		"inter_namespace_traffic": "Deny",
+	// 		"allowed_namespaces": ["nginx"]
+	// 	},
 	// 	"application":
 	// 	{
-	// 			"name": "backstage",
-	// 			"size": "backstage-small"
+	// 			"name": "parseable",
+	// 			"size": "parseable-small"
 	// 	},
 	// 	"sizes": {
-	// 		"name": "backstage-small",
+	// 		"name": "parseable-small",
 	// 		"nodes": [
 	// 			{
-	// 				"name": "backstage-server",
-	// 				"size": "t2.medium",
+	// 				"name": "parseable-server",
+	// 				"size": "t2.small",
 	// 				"min": 1,
 	// 				"max": 3,
 	// 				"labels": {
-	// 					"app": "backstage"
+	// 					"app": "parseable"
 	// 				}
 	// 			}
 	// 		]
@@ -126,5 +130,11 @@ var routes = Routes{
 		"POST",
 		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant",
 		CreateTenant,
+	},
+	Route{
+		"GET TENANT STATUS",
+		"GET",
+		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant/{tenant_name}",
+		GetTenantStatus,
 	},
 }

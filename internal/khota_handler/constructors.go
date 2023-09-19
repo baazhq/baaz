@@ -68,7 +68,7 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane) *unstructure
 
 func makeTenantConfig(tenant v1.Tenant, dataplaneName string) *unstructured.Unstructured {
 	var isolationEnabled, networkSecurityEnabled bool
-	var allowNamespaces []string
+	var allowedNamespaces []string
 
 	if tenant.Type == v1.Siloed {
 		isolationEnabled = true
@@ -79,7 +79,7 @@ func makeTenantConfig(tenant v1.Tenant, dataplaneName string) *unstructured.Unst
 	if tenant.NetworkSecurity.InterNamespaceTraffic == v1.Deny {
 		networkSecurityEnabled = true
 		if tenant.NetworkSecurity.AllowedNamespaces != nil {
-			allowNamespaces = tenant.NetworkSecurity.AllowedNamespaces
+			allowedNamespaces = tenant.NetworkSecurity.AllowedNamespaces
 		}
 	} else if tenant.NetworkSecurity.InterNamespaceTraffic == v1.Allow {
 		networkSecurityEnabled = false
@@ -99,8 +99,8 @@ func makeTenantConfig(tenant v1.Tenant, dataplaneName string) *unstructured.Unst
 						"enabled": isolationEnabled,
 					},
 					"network": map[string]interface{}{
-						"enabled":         networkSecurityEnabled,
-						"allowNamespaces": allowNamespaces,
+						"enabled":           networkSecurityEnabled,
+						"allowedNamespaces": allowedNamespaces,
 					},
 				},
 				"config": []map[string]interface{}{
