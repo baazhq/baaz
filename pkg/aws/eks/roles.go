@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"html/template"
 	"strings"
 
@@ -227,28 +228,28 @@ func (ec *eks) CreateEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, 
 	return &awsiam.CreateRoleOutput{}, nil
 }
 
-func (ec *eks) CreateVpcCniRole(ctx context.Context) (*awsiam.CreateRoleOutput, error) {
+func (ec *eks) CreateVpcCniRole(ctx context.Context) (roleOutput *awsiam.CreateRoleOutput, arn string, err error) {
 	oidcProvider := ec.dp.Status.CloudInfraStatus.AwsCloudInfraConfigStatus.EksStatus.OIDCProviderArn
 
 	roleName := MakeVpcCniRoleName(ec.dp.Spec.CloudInfra.Region, ec.dp.Spec.CloudInfra.Eks.Name)
 
-	_, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
+	_, err = ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
 		RoleName: aws.String(roleName),
 	})
 
 	if err != nil {
 		_, oidcProviderURL, found := strings.Cut(oidcProvider, "oidc-provider/")
 		if !found {
-			return nil, errors.New("invalid oidc provider arn")
+			return nil, "", errors.New("invalid oidc provider arn")
 		}
 		accountID, err := ec.getAccountID()
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 
 		tmpl, err := template.New("vpcni-template").Parse(vpcCniTrustPolicy)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		var tmplOutput bytes.Buffer
 
@@ -256,7 +257,7 @@ func (ec *eks) CreateVpcCniRole(ctx context.Context) (*awsiam.CreateRoleOutput, 
 			AccountID:    accountID,
 			OIDCProvider: oidcProviderURL,
 		}); err != nil {
-			return nil, err
+			return nil, "", err
 		}
 
 		trustPolicy := tmplOutput.String()
@@ -268,7 +269,7 @@ func (ec *eks) CreateVpcCniRole(ctx context.Context) (*awsiam.CreateRoleOutput, 
 
 		roleOutput, err := ec.awsIamClient.CreateRole(ctx, &roleInput)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 
 		attachPolicyInput := awsiam.AttachRolePolicyInput{
@@ -277,10 +278,11 @@ func (ec *eks) CreateVpcCniRole(ctx context.Context) (*awsiam.CreateRoleOutput, 
 		}
 
 		if _, err := ec.awsIamClient.AttachRolePolicy(ctx, &attachPolicyInput); err != nil {
-			return nil, err
+			return nil, "", err
 		}
-		return roleOutput, nil
+
+		return roleOutput, fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName), nil
 	}
 
-	return &awsiam.CreateRoleOutput{}, nil
+	return &awsiam.CreateRoleOutput{}, "", nil
 }

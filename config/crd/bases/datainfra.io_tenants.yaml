@@ -61,7 +61,7 @@ spec:
                     type: object
                   network:
                     properties:
-                      allowNamespaces:
+                      allowedNamespaces:
                         items:
                           type: string
                         type: array

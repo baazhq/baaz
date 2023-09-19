@@ -397,16 +397,20 @@ func (ae *awsEnv) ReconcileDefaultAddons() error {
 		var notFoundErr *types.ResourceNotFoundException
 		if errors.As(err, &notFoundErr) {
 			klog.Info("Creating vpc cni addon")
-			role, err := ae.eksIC.CreateVpcCniRole(ae.ctx)
+			_, arn, err := ae.eksIC.CreateVpcCniRole(ae.ctx)
 			if err != nil {
 				return err
 			}
+
+			v := `{"enableNetworkPolicy": "true"}`
 
 			_, cErr := ae.eksIC.CreateAddon(ae.ctx, &awseks.CreateAddonInput{
 				AddonName:             aws.String(vpcCni),
 				ClusterName:           aws.String(clusterName),
 				ResolveConflicts:      types.ResolveConflictsOverwrite,
-				ServiceAccountRoleArn: role.Role.Arn,
+				ServiceAccountRoleArn: aws.String(arn),
+				AddonVersion:          aws.String("v1.15.0-eksbuild.2"),
+				ConfigurationValues:   aws.String(v),
 			})
 			if cErr != nil {
 				return cErr

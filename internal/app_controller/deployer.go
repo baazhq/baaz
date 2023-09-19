@@ -2,7 +2,6 @@ package app_controller
 
 import (
 	"context"
-	"fmt"
 
 	"datainfra.io/ballastdata/pkg/application/helm"
 	"datainfra.io/ballastdata/pkg/aws/eks"
@@ -44,8 +43,6 @@ func (a *Application) ReconcileApplicationDeployer() error {
 		} else if app.Scope == v1.TenantScope {
 			namespace = app.Tenant
 		}
-
-		fmt.Println(app)
 
 		helm := helm.NewHelm(app.Name, namespace, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
 

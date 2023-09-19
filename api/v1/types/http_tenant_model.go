@@ -3,8 +3,8 @@ package v1
 type TenantDeploymentType string
 
 const (
-	Siloed TenantDeploymentType = "SILOED"
-	Pool   TenantDeploymentType = "POOL"
+	Siloed TenantDeploymentType = "siloed"
+	Pool   TenantDeploymentType = "pool"
 )
 
 type HTTPTenantApplication struct {
@@ -17,8 +17,16 @@ type HTTPTenantSizes struct {
 	Nodes []NodeSpec `json:"nodes"`
 }
 
+type NetworkRules string
+
+const (
+	Allow NetworkRules = "Allow"
+	Deny  NetworkRules = "Deny"
+)
+
 type NetworkSecurity struct {
-	Network NetworkConfig `json:"network,omitempty"`
+	InterNamespaceTraffic NetworkRules `json:"inter_namespace_traffic"`
+	AllowedNamespaces     []string     `json:"allowed_namespaces"`
 }
 
 type Tenant struct {

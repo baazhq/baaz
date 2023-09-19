@@ -10,6 +10,7 @@ import (
 	v1 "datainfra.io/ballastdata/api/v1/types"
 	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -55,6 +56,10 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 			Name: tenant.Application.Name,
 			Size: tenant.Application.Size,
 		},
+		NetworkSecurity: v1.NetworkSecurity{
+			InterNamespaceTraffic: tenant.NetworkSecurity.InterNamespaceTraffic,
+			AllowedNamespaces:     tenant.NetworkSecurity.AllowedNamespaces,
+		},
 		Sizes: v1.HTTPTenantSizes{
 			Name:  tenant.Sizes.Name,
 			Nodes: tenant.Sizes.Nodes,
@@ -74,6 +79,29 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 	}
 
 	res := NewResponse(TenantCreateIntiated, success, nil, 200)
+	res.SetResponse(&w)
+
+}
+
+func GetTenantStatus(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	customerName := vars["customer_name"]
+	_ = vars["dataplane_name"]
+	tenantName := vars["tenant_name"]
+
+	_, dc := getKubeClientset()
+
+	tenant, err := dc.Resource(tenantGVK).Namespace(customerName).Get(context.TODO(), tenantName, metav1.GetOptions{})
+	if err != nil {
+		res := NewResponse(TenantGetFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	status, _, _ := unstructured.NestedString(tenant.Object, "status", "phase")
+	res := NewResponse("", status, nil, 200)
 	res.SetResponse(&w)
 
 }

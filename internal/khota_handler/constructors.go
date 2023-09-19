@@ -1,8 +1,6 @@
 package khota_handler
 
 import (
-	"fmt"
-
 	v1 "datainfra.io/ballastdata/api/v1/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -69,7 +67,8 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane) *unstructure
 }
 
 func makeTenantConfig(tenant v1.Tenant, dataplaneName string) *unstructured.Unstructured {
-	var isolationEnabled bool
+	var isolationEnabled, networkSecurityEnabled bool
+	var allowedNamespaces []string
 
 	if tenant.Type == v1.Siloed {
 		isolationEnabled = true
@@ -77,7 +76,15 @@ func makeTenantConfig(tenant v1.Tenant, dataplaneName string) *unstructured.Unst
 		isolationEnabled = false
 	}
 
-	fmt.Println(isolationEnabled, tenant.Type)
+	if tenant.NetworkSecurity.InterNamespaceTraffic == v1.Deny {
+		networkSecurityEnabled = true
+		if tenant.NetworkSecurity.AllowedNamespaces != nil {
+			allowedNamespaces = tenant.NetworkSecurity.AllowedNamespaces
+		}
+	} else if tenant.NetworkSecurity.InterNamespaceTraffic == v1.Allow {
+		networkSecurityEnabled = false
+	}
+
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "datainfra.io/v1",
@@ -90,6 +97,10 @@ func makeTenantConfig(tenant v1.Tenant, dataplaneName string) *unstructured.Unst
 				"isolation": map[string]interface{}{
 					"machine": map[string]interface{}{
 						"enabled": isolationEnabled,
+					},
+					"network": map[string]interface{}{
+						"enabled":           networkSecurityEnabled,
+						"allowedNamespaces": allowedNamespaces,
 					},
 				},
 				"config": []map[string]interface{}{
@@ -107,5 +118,4 @@ func makeTenantConfig(tenant v1.Tenant, dataplaneName string) *unstructured.Unst
 			},
 		},
 	}
-
 }

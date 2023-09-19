@@ -38,7 +38,7 @@ type Eks interface {
 	GetRestConfig() (*rest.Config, error)
 	// roles
 	CreateEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, error)
-	CreateVpcCniRole(ctx context.Context) (*awsiam.CreateRoleOutput, error)
+	CreateVpcCniRole(ctx context.Context) (roleOutput *awsiam.CreateRoleOutput, arn string, err error)
 }
 
 type eks struct {

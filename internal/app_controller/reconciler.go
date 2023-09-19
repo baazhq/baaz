@@ -2,7 +2,6 @@ package app_controller
 
 import (
 	"context"
-	"fmt"
 
 	v1 "datainfra.io/ballastdata/api/v1/types"
 	"datainfra.io/ballastdata/pkg/aws/eks"
@@ -14,9 +13,6 @@ func (r *ApplicationReconciler) do(ctx context.Context, app *v1.Application, dp 
 	if app == nil {
 		return nil
 	}
-
-	fmt.Println("app", app)
-	fmt.Println("env", dp)
 
 	klog.Info("Reconciling Application")
 	eksIc := eks.NewEks(ctx, dp)

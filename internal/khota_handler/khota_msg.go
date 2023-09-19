@@ -27,5 +27,5 @@ const (
 const (
 	TenantCreateFail     CustomMsg = "Tenant Creation Fail"
 	TenantCreateIntiated CustomMsg = "Tenant Creation Initated"
-	TenantPlaneGetFail   CustomMsg = "Tenant Get Fail"
+	TenantGetFail        CustomMsg = "Tenant Get Fail"
 )
