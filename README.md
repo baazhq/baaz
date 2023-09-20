@@ -3,16 +3,15 @@
     <img alt="DataInfra Logo" src="https://raw.githubusercontent.com/datainfrahq/.github/main/images/ballastdata.png" width="200" height="200">
   </picture>
   <br>
-  Centralised Control Plane For SaaS
+  Gabey ( ਗਬੇ )
   </br>
 </h2>
 
 
 <div align="center">
 
-
 </div>
-Organisations seeking to build a SAAS product require a centralised control plane to deploy software to data planes located either within the customer premises or at the SAAS provider. Ballast is control plane which simplfyes infrastructure provisioning for applications with built in multi-tenancy and state management. 
+Organisations seeking to build a SAAS product require a centralised control plane to deploy software to data planes located either within the customer premises or at the SAAS provider. Gabey is control plane which simplfyes infrastructure provisioning for applications with built in multi-tenancy and state management. 
 
 
 ## :rocket: Features
@@ -27,11 +26,11 @@ Organisations seeking to build a SAAS product require a centralised control plan
 ## :stethoscope: Support
 
 - For questions and feedback please feel free to reach out to us on [Slack ↗︎](https://launchpass.com/datainfra-workspace).
-- For bugs, please create issue on [GitHub ↗︎](https://github.com/datainfrahq/ballastdata/issues).
+- For bugs, please create issue on [GitHub ↗︎](https://github.com/datainfrahq/gabey/issues).
 - For commercial support and consultation, please reach out to us at [`hi@datainfra.io` ↗︎](mailto:hi@datainfra.io).
 
 ## :trophy: Contributing
 
 ### Contributors
 
-<a href="https://github.com/datainfrahq/ballastdata/graphs/contributors"><img src="https://contrib.rocks/image?repo=datainfrahq/ballastdata" /></a>
+<a href="https://github.com/datainfrahq/ballastdata/graphs/contributors"><img src="https://contrib.rocks/image?repo=datainfrahq/gabey" /></a>
