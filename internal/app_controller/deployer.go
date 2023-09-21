@@ -12,7 +12,7 @@ import (
 
 type Application struct {
 	Context      context.Context
-	App          *v1.Application
+	App          *v1.Applications
 	DataPlanes   *v1.DataPlanes
 	K8sClientSet *kubernetes.Clientset
 	EksIC        eks.Eks
@@ -20,7 +20,7 @@ type Application struct {
 
 func NewApplication(
 	ctx context.Context,
-	app *v1.Application,
+	app *v1.Applications,
 	dp *v1.DataPlanes,
 	k8sClientSet *kubernetes.Clientset,
 ) *Application {

@@ -41,7 +41,7 @@ type ApplicationStatus struct {
 //+kubebuilder:subresource:status
 
 // Application is the Schema for the applications API
-type Application struct {
+type Applications struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -52,12 +52,12 @@ type Application struct {
 //+kubebuilder:object:root=true
 
 // ApplicationList contains a list of Application
-type ApplicationList struct {
+type ApplicationsList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Application `json:"items"`
+	Items           []Applications `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Application{}, &ApplicationList{})
+	SchemeBuilder.Register(&Applications{}, &ApplicationsList{})
 }
