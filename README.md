@@ -3,7 +3,7 @@
     <img alt="DataInfra Logo" src="https://raw.githubusercontent.com/datainfrahq/.github/main/images/ballastdata.png" width="200" height="200">
   </picture>
   <br>
-  Gabey ( ਗਬੇ )
+  Baaz ( ਬਾਜ਼ )
   </br>
 </h2>
 
