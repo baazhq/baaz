@@ -8,7 +8,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func (r *ApplicationReconciler) do(ctx context.Context, app *v1.Application, dp *v1.DataPlanes) error {
+func (r *ApplicationReconciler) do(ctx context.Context, app *v1.Applications, dp *v1.DataPlanes) error {
 
 	if app == nil {
 		return nil

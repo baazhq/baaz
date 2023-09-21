@@ -9,10 +9,10 @@ metadata:
 spec:
   group: datainfra.io
   names:
-    kind: Application
-    listKind: ApplicationList
+    kind: Applications
+    listKind: ApplicationsList
     plural: applications
-    singular: application
+    singular: applications
   scope: Namespaced
   versions:
   - name: v1

@@ -3,6 +3,7 @@ package app_controller
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -33,7 +34,7 @@ func NewApplicationReconciler(mgr ctrl.Manager) *ApplicationReconciler {
 		Log:           initLogger,
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
-		Recorder:      mgr.GetEventRecorderFor("application-controller"),
+		Recorder:      mgr.GetEventRecorderFor("applications-controller"),
 	}
 }
 
@@ -42,21 +43,29 @@ func NewApplicationReconciler(mgr ctrl.Manager) *ApplicationReconciler {
 // +kubebuilder:rbac:groups=datainfra.io,resources=applications/finalizers,verbs=update
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
-	applicationObj := &v1.Application{}
+	applicationObj := &v1.Applications{}
 	err := r.Get(ctx, req.NamespacedName, applicationObj)
 	if err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, err
 	}
 
 	dpObj := &v1.DataPlanes{}
-	err = r.Get(ctx, types.NamespacedName{Name: applicationObj.Spec.EnvRef, Namespace: applicationObj.Namespace}, dpObj)
+	var namespace string
+
+	if strings.Contains(applicationObj.Spec.EnvRef, "shared") {
+		namespace = "shared"
+	} else {
+		namespace = applicationObj.Namespace
+	}
+
+	err = r.Get(ctx, types.NamespacedName{Name: applicationObj.Spec.EnvRef, Namespace: namespace}, dpObj)
 	if err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, err
 	}
 
 	err = r.Get(ctx, req.NamespacedName, applicationObj)
 	if err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return ctrl.Result{}, err
 	}
 	if err := r.do(ctx, applicationObj, dpObj); err != nil {
 		klog.Errorf("failed to reconcile application: reason: %s", err.Error())
@@ -70,7 +79,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 // SetupWithManager sets up the controller with the Manager.
 func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.Application{}).
+		For(&v1.Applications{}).
 		Complete(r)
 }
 

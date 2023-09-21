@@ -137,4 +137,11 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant/{tenant_name}",
 		GetTenantStatus,
 	},
+	// -------------------------------------- TENANT ROUTES ---------------------------------------//
+	Route{
+		"CREATE APPLICATION",
+		"POST",
+		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant",
+		CreateTenant,
+	},
 }
