@@ -66,7 +66,7 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane) *unstructure
 	}
 }
 
-func makeTenantConfig(tenant v1.Tenant, dataplaneName string) *unstructured.Unstructured {
+func makeTenantConfig(tenant v1.HTTPTenant, dataplaneName string) *unstructured.Unstructured {
 	var isolationEnabled, networkSecurityEnabled bool
 	var allowedNamespaces []string
 
@@ -113,6 +113,41 @@ func makeTenantConfig(tenant v1.Tenant, dataplaneName string) *unstructured.Unst
 					{
 						"name":  tenant.Sizes.Name,
 						"nodes": tenant.Sizes.Nodes,
+					},
+				},
+			},
+		},
+	}
+}
+
+func makeApplicationConfig(app v1.HTTPApplication, dataplaneName, applicationName string) *unstructured.Unstructured {
+
+	var values []string
+
+	if app.Values != nil {
+		values = app.Values
+	}
+
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "datainfra.io/v1",
+			"kind":       "Applications",
+			"metadata": map[string]interface{}{
+				"name": applicationName,
+			},
+			"spec": map[string]interface{}{
+				"envRef": dataplaneName,
+				"applications": []map[string]interface{}{
+					{
+						"name":  applicationName,
+						"scope": app.Scope,
+						"spec": map[string]interface{}{
+							"chartName": app.ChartName,
+							"repoName":  app.RepoName,
+							"repoUrl":   app.RepoURL,
+							"version":   app.Version,
+							"values":    values,
+						},
 					},
 				},
 			},

@@ -29,7 +29,7 @@ type NetworkSecurity struct {
 	AllowedNamespaces     []string     `json:"allowed_namespaces"`
 }
 
-type Tenant struct {
+type HTTPTenant struct {
 	TenantName      string                `json:"name"`
 	Type            TenantDeploymentType  `json:"type"`
 	Application     HTTPTenantApplication `json:"application"`
