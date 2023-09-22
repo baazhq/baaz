@@ -40,7 +40,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var tenant v1.Tenant
+	var tenant v1.HTTPTenant
 
 	if err := json.Unmarshal(body, &tenant); err != nil {
 		res := NewResponse(ServerUnmarshallError, internal_error, err, http.StatusInternalServerError)
@@ -49,7 +49,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tenantNew := v1.Tenant{
+	tenantNew := v1.HTTPTenant{
 		TenantName: tenant.TenantName,
 		Type:       tenant.Type,
 		Application: v1.HTTPTenantApplication{

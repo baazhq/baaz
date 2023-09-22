@@ -251,7 +251,6 @@ func repoAdd(name, url string) {
 	if err := f.WriteFile(repoFile, 0644); err != nil {
 		klog.Error(err)
 	}
-	klog.Infof("%q has been added to your repositories\n", name)
 }
 
 type simpleRESTClientGetter struct {

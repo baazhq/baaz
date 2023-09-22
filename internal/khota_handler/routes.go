@@ -67,8 +67,8 @@ var routes = Routes{
 	// 	"saas_type": "SHARED",
 	// 	"cloud_auth":{
 	// 	  "awsAuth": {
-	// 		  "awsAccessKey": "adsfadfa",
-	// 		  "awsSecretKey": "asfasfasfadf"
+	// 		  "awsAccessKey": "tuniboldaterayaarbolda",
+	// 		  "awsSecretKey": "sohneyenargazitani"
 	// 	  }
 	// 	},
 	// 	"kubernetes_config":{
@@ -137,11 +137,11 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant/{tenant_name}",
 		GetTenantStatus,
 	},
-	// -------------------------------------- TENANT ROUTES ---------------------------------------//
+	// -------------------------------------- APPLICATIONS ROUTES ---------------------------------------//
 	Route{
 		"CREATE APPLICATION",
 		"POST",
-		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant",
-		CreateTenant,
+		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
+		CreateApplications,
 	},
 }
