@@ -4,9 +4,9 @@ metadata:
   labels:
     app.kubernetes.io/name: tenants
     app.kubernetes.io/instance: tenants-sample
-    app.kubernetes.io/part-of: ballastdata
+    app.kubernetes.io/part-of: baaz
     app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/created-by: ballastdata
+    app.kubernetes.io/created-by: baaz
   name: tenants-sample
 spec:
   # TODO(user): Add fields here

@@ -2,7 +2,7 @@ apiVersion: datainfra.io/v1
 kind: Application
 metadata:
   labels:
-    app: ballastdata
+    app: baaz
     env: druid
   name: datainfra
   namespace: demo

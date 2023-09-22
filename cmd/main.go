@@ -16,11 +16,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	datainfraiov1 "datainfra.io/ballastdata/api/v1/types"
-	"datainfra.io/ballastdata/internal/app_controller"
-	dataplane_controller "datainfra.io/ballastdata/internal/dataplane_controller"
-	khota "datainfra.io/ballastdata/internal/khota_handler"
-	"datainfra.io/ballastdata/internal/tenant_controller"
+	datainfraiov1 "datainfra.io/baaz/api/v1/types"
+	"datainfra.io/baaz/internal/app_controller"
+	dataplane_controller "datainfra.io/baaz/internal/dataplane_controller"
+	khota "datainfra.io/baaz/internal/khota_handler"
+	"datainfra.io/baaz/internal/tenant_controller"
 	//+kubebuilder:scaffold:imports
 )
 

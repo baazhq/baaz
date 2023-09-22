@@ -11,6 +11,12 @@ const (
 	TenantScope      AppScope = "tenant"
 )
 
+type ApplicationPhase string
+
+const (
+	PendingA ApplicationPhase = "Pending"
+)
+
 type ApplicationType string
 
 // ApplicationSpec defines the desired state of Application
@@ -35,6 +41,8 @@ type ChartSpec struct {
 }
 
 type ApplicationStatus struct {
+	Phase                  ApplicationPhase `json:"phase,omitempty"`
+	ApplicationCurrentSpec ApplicationSpec  `json:"applicationCurrentSpec,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -2,7 +2,7 @@ apiVersion: datainfra.io/v1
 kind: Environment
 metadata:
   labels:
-    app: ballastdata
+    app: baaz
     env: dataplatform
   name: dataplaform
   namespace: demo

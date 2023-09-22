@@ -3,8 +3,8 @@ package tenant_controller
 import (
 	"context"
 
-	v1 "datainfra.io/ballastdata/api/v1/types"
-	"datainfra.io/ballastdata/pkg/aws/eks"
+	v1 "datainfra.io/baaz/api/v1/types"
+	"datainfra.io/baaz/pkg/aws/eks"
 )
 
 func (r *TenantsReconciler) do(ctx context.Context, tenant *v1.Tenants, dp *v1.DataPlanes) error {

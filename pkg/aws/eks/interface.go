@@ -3,7 +3,7 @@ package eks
 import (
 	"context"
 
-	v1 "datainfra.io/ballastdata/api/v1/types"
+	v1 "datainfra.io/baaz/api/v1/types"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	awssts "github.com/aws/aws-sdk-go-v2/service/sts"

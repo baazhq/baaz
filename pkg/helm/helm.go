@@ -33,7 +33,7 @@ var settings *cli.EnvSettings
 
 type HelmAct interface {
 	Apply(rest *rest.Config) error
-	List(rest *rest.Config) bool
+	List(rest *rest.Config) (status string, exists bool)
 }
 
 type Helm struct {
@@ -62,13 +62,13 @@ func NewHelm(
 
 // HelmList Method installs the chart.
 // https://helm.sh/docs/topics/advanced/#simple-example
-func (h *Helm) List(rest *rest.Config) bool {
+func (h *Helm) List(rest *rest.Config) (status string, exists bool) {
 
 	settings := cli.New()
 	restGetter := NewRESTClientGetter(rest, h.Namespace)
 
 	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
-		return false
+		return "", false
 	}
 
 	clientList := action.NewList(h.Action)
@@ -79,15 +79,15 @@ func (h *Helm) List(rest *rest.Config) bool {
 	clientList.Deployed = true
 	results, err := clientList.Run()
 	if err != nil {
-		return false
+		return "", false
 	}
 
 	for _, result := range results {
 		if result.Name == h.ReleaseName {
-			return true
+			return result.Info.Status.String(), true
 		}
 	}
-	return false
+	return "", false
 }
 
 // HelmInstall Method installs the chart.

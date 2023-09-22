@@ -115,10 +115,6 @@ spec:
           status:
             description: TenantsStatus defines the observed state of Tenants
             properties:
-              namespace:
-                additionalProperties:
-                  type: string
-                type: object
               nodegroupStatus:
                 additionalProperties:
                   type: string

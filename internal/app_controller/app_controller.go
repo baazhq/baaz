@@ -14,7 +14,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1 "datainfra.io/ballastdata/api/v1/types"
+	v1 "datainfra.io/baaz/api/v1/types"
+	"datainfra.io/baaz/pkg/utils"
 )
 
 // ApplicationReconciler reconciles a Application object
@@ -63,10 +64,17 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	err = r.Get(ctx, req.NamespacedName, applicationObj)
-	if err != nil {
-		return ctrl.Result{}, err
+	if applicationObj.Status.Phase == "" {
+		if _, _, err := utils.PatchStatus(ctx, r.Client, applicationObj, func(obj client.Object) client.Object {
+			in := obj.(*v1.Applications)
+			in.Status.Phase = v1.ApplicationPhase(v1.PendingA)
+			//	in.Status.ApplicationCurrentSpec = applicationObj
+			return in
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
+
 	if err := r.do(ctx, applicationObj, dpObj); err != nil {
 		klog.Errorf("failed to reconcile application: reason: %s", err.Error())
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil

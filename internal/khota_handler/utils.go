@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	v1 "datainfra.io/ballastdata/api/v1/types"
+	v1 "datainfra.io/baaz/api/v1/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
