@@ -108,7 +108,7 @@ var routes = Routes{
 	// 	"application":
 	// 	{
 	// 			"name": "parseable",
-	// 			"size": "parseable-small"
+	// 			"size": "infra-system-pool"
 	// 	},
 	// 	"sizes": {
 	// 		"name": "parseable-small",
@@ -142,6 +142,12 @@ var routes = Routes{
 		"CREATE APPLICATION",
 		"POST",
 		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
-		CreateApplications,
+		CreateApplication,
+	},
+	Route{
+		"GET APPLICATION STATUS",
+		"GET",
+		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
+		GetApplicationStatus,
 	},
 }

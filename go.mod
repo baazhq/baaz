@@ -1,4 +1,4 @@
-module datainfra.io/ballastdata
+module datainfra.io/baaz
 
 go 1.19
 

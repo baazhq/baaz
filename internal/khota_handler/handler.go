@@ -13,7 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "datainfra.io/ballastdata/api/v1/types"
+	v1 "datainfra.io/baaz/api/v1/types"
 	"github.com/gorilla/mux"
 )
 

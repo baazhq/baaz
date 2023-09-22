@@ -1,6 +1,6 @@
 <h2 align="center">
   <picture>
-    <img alt="DataInfra Logo" src="https://raw.githubusercontent.com/datainfrahq/.github/main/images/ballastdata.png" width="200" height="200">
+    <img alt="DataInfra Logo" src="https://raw.githubusercontent.com/datainfrahq/.github/main/images/baaz.png" width="200" height="200">
   </picture>
   <br>
   Baaz ( ਬਾਜ਼ )
@@ -33,4 +33,4 @@ Organisations seeking to build a SAAS product require a centralised control plan
 
 ### Contributors
 
-<a href="https://github.com/datainfrahq/ballastdata/graphs/contributors"><img src="https://contrib.rocks/image?repo=datainfrahq/gabey" /></a>
+<a href="https://github.com/datainfrahq/baaz/graphs/contributors"><img src="https://contrib.rocks/image?repo=datainfrahq/gabey" /></a>

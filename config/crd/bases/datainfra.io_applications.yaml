@@ -77,6 +77,53 @@ spec:
             - envRef
             type: object
           status:
+            properties:
+              applicationCurrentSpec:
+                description: ApplicationSpec defines the desired state of Application
+                properties:
+                  applications:
+                    items:
+                      properties:
+                        name:
+                          type: string
+                        scope:
+                          type: string
+                        spec:
+                          properties:
+                            chartName:
+                              type: string
+                            repoName:
+                              type: string
+                            repoUrl:
+                              type: string
+                            values:
+                              items:
+                                type: string
+                              type: array
+                            version:
+                              type: string
+                          required:
+                          - chartName
+                          - repoName
+                          - repoUrl
+                          - version
+                          type: object
+                        tenant:
+                          type: string
+                      required:
+                      - name
+                      - scope
+                      - spec
+                      type: object
+                    type: array
+                  envRef:
+                    type: string
+                required:
+                - applications
+                - envRef
+                type: object
+              phase:
+                type: string
             type: object
         type: object
     served: true

@@ -3,9 +3,8 @@ package app_controller
 import (
 	"context"
 
-	v1 "datainfra.io/ballastdata/api/v1/types"
-	"datainfra.io/ballastdata/pkg/aws/eks"
-	"k8s.io/klog/v2"
+	v1 "datainfra.io/baaz/api/v1/types"
+	"datainfra.io/baaz/pkg/aws/eks"
 )
 
 func (r *ApplicationReconciler) do(ctx context.Context, app *v1.Applications, dp *v1.DataPlanes) error {
@@ -14,13 +13,13 @@ func (r *ApplicationReconciler) do(ctx context.Context, app *v1.Applications, dp
 		return nil
 	}
 
-	klog.Info("Reconciling Application")
 	eksIc := eks.NewEks(ctx, dp)
-	clientset, err := eksIc.GetEksClientSet()
+	eksClientSet, err := eksIc.GetEksClientSet()
 	if err != nil {
 		return err
 	}
-	applications := NewApplication(ctx, app, dp, clientset)
+
+	applications := NewApplication(ctx, app, dp, r.Client, eksClientSet)
 
 	if err := applications.ReconcileApplicationDeployer(); err != nil {
 		return err

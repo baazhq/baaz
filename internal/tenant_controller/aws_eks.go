@@ -11,11 +11,11 @@ import (
 
 	"k8s.io/client-go/kubernetes"
 
-	v1 "datainfra.io/ballastdata/api/v1/types"
-	"datainfra.io/ballastdata/pkg/aws/eks"
-	"datainfra.io/ballastdata/pkg/resources"
-	"datainfra.io/ballastdata/pkg/store"
-	"datainfra.io/ballastdata/pkg/utils"
+	v1 "datainfra.io/baaz/api/v1/types"
+	"datainfra.io/baaz/pkg/aws/eks"
+	"datainfra.io/baaz/pkg/resources"
+	"datainfra.io/baaz/pkg/store"
+	"datainfra.io/baaz/pkg/utils"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go/aws"

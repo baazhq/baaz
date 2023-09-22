@@ -5,8 +5,8 @@
 domain: datainfra.io
 layout:
 - go.kubebuilder.io/v4-alpha
-projectName: ballastdata
-repo: datainfra.io/ballastdata
+projectName: baaz
+repo: datainfra.io/baaz
 resources:
 - api:
     crdVersion: v1
@@ -15,7 +15,7 @@ resources:
   domain: datainfra
   group: datainfra.io
   kind: Dataplane
-  path: datainfra.io/ballastdata/api/v1
+  path: datainfra.io/baaz/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -24,7 +24,7 @@ resources:
   domain: datainfra.io
   group: datainfra.io
   kind: Application
-  path: datainfra.io/ballastdata/api/v1
+  path: datainfra.io/baaz/api/v1
   version: v1
 - api:
     crdVersion: v1
@@ -33,6 +33,6 @@ resources:
   domain: datainfra.io
   group: datainfra.io
   kind: Tenant
-  path: datainfra.io/ballastdata/api/v1
+  path: datainfra.io/baaz/api/v1
   version: v1
 version: "3"

@@ -7,9 +7,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	v1 "datainfra.io/ballastdata/api/v1/types"
+	v1 "datainfra.io/baaz/api/v1/types"
 	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -19,7 +20,7 @@ var applicationGVK = schema.GroupVersionResource{
 	Resource: "applications",
 }
 
-func CreateApplications(w http.ResponseWriter, req *http.Request) {
+func CreateApplication(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
 	customerName := vars["customer_name"]
@@ -72,6 +73,28 @@ func CreateApplications(w http.ResponseWriter, req *http.Request) {
 	}
 
 	res := NewResponse(ApplicationCreateIntiated, success, nil, 200)
+	res.SetResponse(&w)
+
+}
+
+func GetApplicationStatus(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	customerName := vars["customer_name"]
+	applicationName := vars["application_name"]
+
+	_, dc := getKubeClientset()
+
+	application, err := dc.Resource(applicationGVK).Namespace(customerName).Get(context.TODO(), applicationName, metav1.GetOptions{})
+	if err != nil {
+		res := NewResponse(ApplicationGetFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	status, _, _ := unstructured.NestedString(application.Object, "status", "phase")
+	res := NewResponse("", status, nil, 200)
 	res.SetResponse(&w)
 
 }
