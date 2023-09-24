@@ -35,4 +35,6 @@ const (
 	ApplicationCreateFail     CustomMsg = "Application Creation Fail"
 	ApplicationCreateIntiated CustomMsg = "Application Creation Initated"
 	ApplicationGetFail        CustomMsg = "Application Get Fail"
+	ApplicationDeleteFail     CustomMsg = "Application Delete Fail"
+	ApplicationDeleteIntiated CustomMsg = "Application Delete Initated"
 )

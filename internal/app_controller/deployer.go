@@ -82,3 +82,34 @@ func (a *Application) ReconcileApplicationDeployer() error {
 
 	return nil
 }
+
+func (a *Application) UninstallApplications() error {
+
+	for _, app := range a.App.Spec.Applications {
+		var namespace string
+		if app.Scope == v1.EnvironmentScope {
+			namespace = app.Name
+		} else if app.Scope == v1.TenantScope {
+			namespace = app.Tenant
+		}
+
+		helm := helm.NewHelm(app.Name, namespace, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
+
+		restConfig, err := a.EksIC.GetRestConfig()
+		if err != nil {
+			return err
+		}
+
+		err = helm.Uninstall(restConfig)
+		if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
+			in := obj.(*v1.Applications)
+			in.Status.Phase = v1.ApplicationPhase(v1.UninstallingA)
+			in.Status.ApplicationCurrentSpec = a.App.Spec
+			return in
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

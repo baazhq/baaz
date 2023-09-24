@@ -168,4 +168,10 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
 		GetApplicationStatus,
 	},
+	Route{
+		"DELETE APPLICATION",
+		"DELETE",
+		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
+		DeleteApplicationStatus,
+	},
 }

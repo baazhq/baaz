@@ -14,7 +14,8 @@ const (
 type ApplicationPhase string
 
 const (
-	PendingA ApplicationPhase = "Pending"
+	PendingA      ApplicationPhase = "Pending"
+	UninstallingA ApplicationPhase = "Uninstall"
 )
 
 type ApplicationType string
