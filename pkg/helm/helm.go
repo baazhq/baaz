@@ -33,6 +33,7 @@ var settings *cli.EnvSettings
 
 type HelmAct interface {
 	Apply(rest *rest.Config) error
+	Uninstall(rest *rest.Config) error
 	List(rest *rest.Config) (status string, exists bool)
 }
 

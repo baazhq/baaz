@@ -98,3 +98,24 @@ func GetApplicationStatus(w http.ResponseWriter, req *http.Request) {
 	res.SetResponse(&w)
 
 }
+
+func DeleteApplicationStatus(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	customerName := vars["customer_name"]
+	applicationName := vars["application_name"]
+
+	_, dc := getKubeClientset()
+
+	err := dc.Resource(applicationGVK).Namespace(customerName).Delete(context.TODO(), applicationName, metav1.DeleteOptions{})
+	if err != nil {
+		res := NewResponse(ApplicationGetFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	res := NewResponse("", string(ApplicationDeleteIntiated), nil, 200)
+	res.SetResponse(&w)
+
+}
