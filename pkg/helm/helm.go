@@ -90,6 +90,33 @@ func (h *Helm) List(rest *rest.Config) (status string, exists bool) {
 	return "", false
 }
 
+func (h *Helm) Uninstall(rest *rest.Config) error {
+
+	settings := cli.New()
+
+	restGetter := NewRESTClientGetter(rest, h.Namespace)
+
+	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+		return err
+	}
+
+	client := action.NewUninstall(h.Action)
+
+	settings.EnvVars()
+
+	client.Wait = true
+	client.Timeout = 120 * time.Second
+
+	release, err := client.Run(h.ChartName)
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("Uninstalling Release Name: [%s] Namespace [%s] Status [%s]", release.Release.Name, release.Release.Namespace, release.Release.Info.Status)
+
+	return nil
+}
+
 // HelmInstall Method installs the chart.
 // ref: https://github.com/PrasadG193/helm-clientgo-example/tree/master
 func (h *Helm) Apply(rest *rest.Config) error {

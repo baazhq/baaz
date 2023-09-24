@@ -93,7 +93,7 @@ func makeTenantConfig(tenant v1.HTTPTenant, dataplaneName string) *unstructured.
 				"name": tenant.TenantName,
 			},
 			"spec": map[string]interface{}{
-				"envRef": dataplaneName,
+				"dataplaneName": dataplaneName,
 				"isolation": map[string]interface{}{
 					"machine": map[string]interface{}{
 						"enabled": isolationEnabled,
@@ -106,15 +106,10 @@ func makeTenantConfig(tenant v1.HTTPTenant, dataplaneName string) *unstructured.
 				"config": []map[string]interface{}{
 					{
 						"appType": tenant.Application.Name,
-						"size":    tenant.Application.Size,
+						"appSize": tenant.Application.Size,
 					},
 				},
-				"sizes": []map[string]interface{}{
-					{
-						"name":  tenant.Sizes.Name,
-						"nodes": tenant.Sizes.Nodes,
-					},
-				},
+				"appSizes": tenant.Sizes,
 			},
 		},
 	}

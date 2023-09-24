@@ -49,6 +49,12 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	var sizes []v1.HTTPTenantSizes
+
+	for _, size := range tenant.Sizes {
+		sizes = append(sizes, size)
+	}
+
 	tenantNew := v1.HTTPTenant{
 		TenantName: tenant.TenantName,
 		Type:       tenant.Type,
@@ -60,10 +66,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 			InterNamespaceTraffic: tenant.NetworkSecurity.InterNamespaceTraffic,
 			AllowedNamespaces:     tenant.NetworkSecurity.AllowedNamespaces,
 		},
-		Sizes: v1.HTTPTenantSizes{
-			Name:  tenant.Sizes.Name,
-			Nodes: tenant.Sizes.Nodes,
-		},
+		Sizes: sizes,
 	}
 
 	_, dc := getKubeClientset()

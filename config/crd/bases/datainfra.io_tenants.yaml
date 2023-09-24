@@ -35,47 +35,11 @@ spec:
           spec:
             description: TenantsSpec defines the desired state of Tenants
             properties:
-              config:
-                description: Tenant Config consists of AppType
-                items:
-                  properties:
-                    appType:
-                      type: string
-                    size:
-                      type: string
-                  required:
-                  - appType
-                  - size
-                  type: object
-                type: array
-              envRef:
-                description: Environment ref
-                type: string
-              isolation:
-                description: Isolation
-                properties:
-                  machine:
-                    properties:
-                      enabled:
-                        type: boolean
-                    type: object
-                  network:
-                    properties:
-                      allowedNamespaces:
-                        items:
-                          type: string
-                        type: array
-                      enabled:
-                        type: boolean
-                    type: object
-                type: object
-              sizes:
+              appSizes:
                 description: Define Size consists of AppType
                 items:
                   properties:
-                    name:
-                      type: string
-                    nodes:
+                    machine_pool:
                       items:
                         properties:
                           labels:
@@ -102,20 +66,56 @@ spec:
                         - size
                         type: object
                       type: array
+                    name:
+                      type: string
                   required:
+                  - machine_pool
                   - name
-                  - nodes
                   type: object
                 type: array
+              config:
+                description: Tenant Config consists of AppType
+                items:
+                  properties:
+                    appSize:
+                      type: string
+                    appType:
+                      type: string
+                  required:
+                  - appSize
+                  - appType
+                  type: object
+                type: array
+              dataplaneName:
+                description: Environment ref
+                type: string
+              isolation:
+                description: Isolation
+                properties:
+                  machine:
+                    properties:
+                      enabled:
+                        type: boolean
+                    type: object
+                  network:
+                    properties:
+                      allowedNamespaces:
+                        items:
+                          type: string
+                        type: array
+                      enabled:
+                        type: boolean
+                    type: object
+                type: object
             required:
+            - appSizes
             - config
-            - envRef
-            - sizes
+            - dataplaneName
             type: object
           status:
             description: TenantsStatus defines the observed state of Tenants
             properties:
-              nodegroupStatus:
+              machinePoolStatus:
                 additionalProperties:
                   type: string
                 type: object
