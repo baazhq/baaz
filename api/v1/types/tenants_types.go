@@ -18,11 +18,11 @@ const (
 // TenantsSpec defines the desired state of Tenants
 type TenantsSpec struct {
 	// Environment ref
-	EnvRef string `json:"envRef"`
+	DataplaneName string `json:"dataplaneName"`
 	// Tenant Config consists of AppType
 	TenantConfig []TenantConfig `json:"config"`
 	// Define Size consists of AppType
-	TenantSizes []TenantSizes `json:"sizes"`
+	TenantSizes []TenantSizes `json:"appSizes"`
 	// Isolation
 	Isolation IsolationConfig `json:"isolation,omitempty"`
 }
@@ -43,18 +43,18 @@ type NetworkConfig struct {
 
 type TenantSizes struct {
 	Name string     `json:"name"`
-	Spec []NodeSpec `json:"nodes"`
+	Spec []NodeSpec `json:"machine_pool"`
 }
 
 type TenantConfig struct {
 	AppType ApplicationType `json:"appType"`
-	Size    string          `json:"size"`
+	Size    string          `json:"appSize"`
 }
 
 // TenantsStatus defines the observed state of Tenants
 type TenantsStatus struct {
 	Phase           TenantPhase       `json:"phase,omitempty"`
-	NodegroupStatus map[string]string `json:"nodegroupStatus,omitempty"`
+	NodegroupStatus map[string]string `json:"machinePoolStatus,omitempty"`
 }
 
 type NodeSpec struct {

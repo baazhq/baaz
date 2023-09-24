@@ -99,7 +99,7 @@ var routes = Routes{
 	// -------------------------------------- TENANT ROUTES ---------------------------------------//
 	//
 	// {
-	// 	"name": "parseables",
+	// 	"name": "free-tier-tenant",
 	// 	"type": "pool",
 	// 	"network_security": {
 	// 		"inter_namespace_traffic": "Deny",
@@ -107,23 +107,41 @@ var routes = Routes{
 	// 	},
 	// 	"application":
 	// 	{
-	// 			"name": "parseable",
-	// 			"size": "infra-system-pool"
+	// 			"name": "appone",
+	// 			"app_size": "appone-small"
 	// 	},
-	// 	"sizes": {
-	// 		"name": "parseable-small",
-	// 		"nodes": [
-	// 			{
-	// 				"name": "parseable-server",
-	// 				"size": "t2.small",
-	// 				"min": 1,
-	// 				"max": 3,
-	// 				"labels": {
-	// 					"app": "parseable"
+	// 	"app_sizes": [
+	// 		{
+	// 			"name": "appone-small",
+	// 			"machine_pool": [
+	// 				{
+	// 					"name": "appone-server",
+	// 					"size": "t2.nano",
+	// 					"min": 1,
+	// 					"max": 3,
+	// 					"labels": {
+	// 						"app": "appone",
+	// 						"size": "small"
+	// 					}
 	// 				}
-	// 			}
-	// 		]
-	// 	}
+	// 			]
+	// 		},
+	// 		{
+	// 			"name": "appone-medium",
+	// 			"machine_pool": [
+	// 				{
+	// 					"name": "appone-server",
+	// 					"size": "t2.small",
+	// 					"min": 1,
+	// 					"max": 3,
+	// 					"labels": {
+	// 						"app": "appone",
+	// 						"size": "medium"
+	// 					}
+	// 				}
+	// 			]
+	// 		}
+	// 	]
 	// }
 	Route{
 		"CREATE TENANT",

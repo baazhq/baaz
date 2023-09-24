@@ -510,7 +510,13 @@ func (in *HTTPApplication) DeepCopy() *HTTPApplication {
 func (in *HTTPTenant) DeepCopyInto(out *HTTPTenant) {
 	*out = *in
 	out.Application = in.Application
-	in.Sizes.DeepCopyInto(&out.Sizes)
+	if in.Sizes != nil {
+		in, out := &in.Sizes, &out.Sizes
+		*out = make([]HTTPTenantSizes, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	in.NetworkSecurity.DeepCopyInto(&out.NetworkSecurity)
 }
 

@@ -18,10 +18,10 @@ spec:
       - kube-system
   config:
   - appType: parseable
-    size: parseable-small
-  sizes:
+    appSize: parseable-small
+  appSizes:
     - name: parseable-small
-      nodes: 
+      machine_pool: 
       - name: server-nodes
         size: t2.medium
         min: 1
