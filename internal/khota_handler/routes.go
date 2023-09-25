@@ -96,6 +96,12 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}/dataplane",
 		GetDataPlaneStatus,
 	},
+	Route{
+		"DELETE DATA PLANE",
+		"DELETE",
+		"/api/v1/customer/{customer_name}/dataplane",
+		DeleteDataPlane,
+	},
 	// -------------------------------------- TENANT ROUTES ---------------------------------------//
 	//
 	// {

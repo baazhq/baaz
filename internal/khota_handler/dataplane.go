@@ -148,3 +148,46 @@ func GetDataPlaneStatus(w http.ResponseWriter, req *http.Request) {
 	}
 
 }
+
+func DeleteDataPlane(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	customerName := vars["customer_name"]
+
+	kc, dc := getKubeClientset()
+
+	namespace, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
+	if getErr != nil {
+		res := NewResponse(DataPlaneGetFail, internal_error, getErr, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	if namespace.Labels["saas_type"] == string(v1.SharedSaaS) {
+		dp := namespace.Labels["dataplane"]
+		err := dc.Resource(dpGVK).Namespace("shared").Delete(context.TODO(), dp, metav1.DeleteOptions{})
+		if err != nil {
+			res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		res := NewResponse("", string(DataplaneDeletionInitiated), nil, 200)
+		res.SetResponse(&w)
+	} else if namespace.Labels["saas_type"] == string(v1.DedicatedSaaS) {
+		dp := namespace.Labels["dataplane"]
+		err := dc.Resource(dpGVK).Namespace(customerName).Delete(context.TODO(), dp, metav1.DeleteOptions{})
+		if err != nil {
+			res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		res := NewResponse("", string(DataplaneDeletionInitiated), nil, 200)
+		res.SetResponse(&w)
+	}
+
+}

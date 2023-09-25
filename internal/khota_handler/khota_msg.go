@@ -18,23 +18,24 @@ const (
 
 // DataPlane
 const (
-	DataPlaneCreateFail     CustomMsg = "DataPlane Creation Fail"
-	DataPlaneCreateIntiated CustomMsg = "DataPlane Creation Initated"
-	DataPlaneGetFail        CustomMsg = "DataPlane Get Fail"
+	DataPlaneCreateFail        CustomMsg = "DataPlane Creation Fail"
+	DataPlaneCreateIntiated    CustomMsg = "DataPlane Creation Initiated"
+	DataPlaneGetFail           CustomMsg = "DataPlane Get Fail"
+	DataplaneDeletionInitiated CustomMsg = "Dataplane Deletion Initiated"
 )
 
 // Tenant
 const (
 	TenantCreateFail     CustomMsg = "Tenant Creation Fail"
-	TenantCreateIntiated CustomMsg = "Tenant Creation Initated"
+	TenantCreateIntiated CustomMsg = "Tenant Creation Initiated"
 	TenantGetFail        CustomMsg = "Tenant Get Fail"
 )
 
 // Application
 const (
 	ApplicationCreateFail     CustomMsg = "Application Creation Fail"
-	ApplicationCreateIntiated CustomMsg = "Application Creation Initated"
+	ApplicationCreateIntiated CustomMsg = "Application Creation Initiated"
 	ApplicationGetFail        CustomMsg = "Application Get Fail"
 	ApplicationDeleteFail     CustomMsg = "Application Delete Fail"
-	ApplicationDeleteIntiated CustomMsg = "Application Delete Initated"
+	ApplicationDeleteIntiated CustomMsg = "Application Delete Initiated"
 )

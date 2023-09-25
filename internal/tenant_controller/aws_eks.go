@@ -229,7 +229,7 @@ func (ae *awsEnv) createNamespace(clientset *kubernetes.Clientset) error {
 		if err != nil {
 			return err
 		}
-		klog.Infof("Namespace [%s] created for environment [%s]", ns.Name, ae.dp.Name)
+		klog.Infof("Namespace [%s] created for dataplane [%s]", ns.Name, ae.dp.Name)
 
 	}
 	return nil
