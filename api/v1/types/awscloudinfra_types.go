@@ -2,7 +2,7 @@ package v1
 
 type AwsCloudInfraConfig struct {
 	// AuthSecretRef holds the secret info which contains aws secret key & access key info
-	// Secret must be in the same namespace as environment
+	// Secret must be in the same namespace as dataplane
 	AuthSecretRef AWSAuthSecretRef `json:"authSecretRef"`
 	Eks           EksConfig        `json:"eks"`
 }

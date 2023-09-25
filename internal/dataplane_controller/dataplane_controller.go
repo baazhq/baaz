@@ -121,30 +121,25 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	}
 	systemNodeGroupName := ae.dp.Spec.CloudInfra.Eks.Name + "-system"
 
-	if ae.dp.Status.NodegroupStatus[systemNodeGroupName] != "DELETING" {
-		_, err := ae.eksIC.DeleteNodeGroup(systemNodeGroupName)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		// update status with current nodegroup status
-		_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
-			in := obj.(*v1.DataPlanes)
-			if in.Status.NodegroupStatus == nil {
-				in.Status.NodegroupStatus = make(map[string]string)
-			}
-			in.Status.NodegroupStatus[systemNodeGroupName] = "DELETING"
-			return in
-		})
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-
-	_, found, err := ae.eksIC.DescribeNodegroup(systemNodeGroupName)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	_, found, _ := ae.eksIC.DescribeNodegroup(systemNodeGroupName)
 	if found {
+
+		if ae.dp.Status.NodegroupStatus[systemNodeGroupName] != "DELETING" {
+			_, _ = ae.eksIC.DeleteNodeGroup(systemNodeGroupName)
+			// update status with current nodegroup status
+			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
+				if in.Status.NodegroupStatus == nil {
+					in.Status.NodegroupStatus = make(map[string]string)
+				}
+				in.Status.NodegroupStatus[systemNodeGroupName] = "DELETING"
+				return in
+			})
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+
+		}
 		klog.Infof("waiting for nodegroup %s to be deleted", systemNodeGroupName)
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
@@ -163,7 +158,7 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 
 	// remove our finalizer from the list and update it.
 	controllerutil.RemoveFinalizer(ae.dp, dataplaneFinalizer)
-	klog.Infof("Deleted Environment [%s]", ae.dp.GetName())
+	klog.Infof("Deleted Dataplane [%s]", ae.dp.GetName())
 	if err := ae.client.Update(ae.ctx, ae.dp.DeepCopyObject().(*v1.DataPlanes)); err != nil {
 		return ctrl.Result{}, err
 	}
