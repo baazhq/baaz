@@ -48,7 +48,7 @@ spec:
                   authSecretRef:
                     description: AuthSecretRef holds the secret info which contains
                       aws secret key & access key info Secret must be in the same
-                      namespace as environment
+                      namespace as dataplane
                     properties:
                       accessKeyName:
                         type: string
