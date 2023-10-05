@@ -81,7 +81,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res := NewResponse(TenantCreateIntiated, success, nil, 200)
+	res := NewResponse(TenantCreateIntiated, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 
 }
@@ -104,7 +104,7 @@ func GetTenantStatus(w http.ResponseWriter, req *http.Request) {
 	}
 
 	status, _, _ := unstructured.NestedString(tenant.Object, "status", "phase")
-	res := NewResponse("", status, nil, 200)
+	res := NewResponse("", status, nil, http.StatusOK)
 	res.SetResponse(&w)
 
 }

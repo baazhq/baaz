@@ -60,6 +60,12 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}",
 		CreateCustomer,
 	},
+	Route{
+		"LIST CUSTOMERS",
+		"GET",
+		"/api/v1/customer",
+		ListCustomer,
+	},
 	// -------------------------------------- DATAPLANE ROUTES ---------------------------------------//
 	// {
 	// 	"cloud_type":"AWS",

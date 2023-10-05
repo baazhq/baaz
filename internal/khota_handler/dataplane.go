@@ -21,6 +21,11 @@ var dpGVK = schema.GroupVersionResource{
 	Resource: "dataplanes",
 }
 
+var secretGVK = schema.GroupVersionResource{
+	Version:  "v1",
+	Resource: "secrets",
+}
+
 func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
@@ -112,7 +117,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res := NewResponse(DataPlaneCreateIntiated, success, nil, 200)
+	res := NewResponse(DataPlaneCreateIntiated, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 
 }
@@ -143,7 +148,7 @@ func GetDataPlaneStatus(w http.ResponseWriter, req *http.Request) {
 		}
 
 		status, _, _ := unstructured.NestedString(dpObj.Object, "status", "phase")
-		res := NewResponse("", status, nil, 200)
+		res := NewResponse("", status, nil, http.StatusOK)
 		res.SetResponse(&w)
 	}
 
@@ -174,7 +179,7 @@ func DeleteDataPlane(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		res := NewResponse("", string(DataplaneDeletionInitiated), nil, 200)
+		res := NewResponse("", string(DataplaneDeletionInitiated), nil, http.StatusOK)
 		res.SetResponse(&w)
 	} else if namespace.Labels["saas_type"] == string(v1.DedicatedSaaS) {
 		dp := namespace.Labels["dataplane"]
@@ -186,7 +191,7 @@ func DeleteDataPlane(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		res := NewResponse("", string(DataplaneDeletionInitiated), nil, 200)
+		res := NewResponse("", string(DataplaneDeletionInitiated), nil, http.StatusOK)
 		res.SetResponse(&w)
 	}
 

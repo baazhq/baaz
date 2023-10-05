@@ -72,7 +72,7 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res := NewResponse(ApplicationCreateIntiated, success, nil, 200)
+	res := NewResponse(ApplicationCreateIntiated, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 
 }
@@ -115,7 +115,7 @@ func DeleteApplicationStatus(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res := NewResponse("", string(ApplicationDeleteIntiated), nil, 200)
+	res := NewResponse("", string(ApplicationDeleteIntiated), nil, http.StatusOK)
 	res.SetResponse(&w)
 
 }

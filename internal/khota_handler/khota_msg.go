@@ -11,16 +11,19 @@ const (
 
 // Customer
 const (
-	CustomerNamespaceExists  CustomMsg = "Customer Namespace Exists"
-	CustomerNamespaceSuccess CustomMsg = "Customer Namespace Created"
-	CustomerNamespaceFail    CustomMsg = "Customer Namespace Failed"
+	CustomerNamespaceExists     CustomMsg = "Customer Namespace Exists"
+	CustomerNamespaceSuccess    CustomMsg = "Customer Namespace Created"
+	CustomerNamespaceGetFail    CustomMsg = "Customer Namespace GET Failed"
+	CustomerNamespaceCreateFail CustomMsg = "Customer Namespace CREATE Failed"
+	CustomerNamespaceListEmpty  CustomMsg = "Customer Namespace LIST Empty"
+	CustomerNamespaceList       CustomMsg = "Customer Namespace LIST"
 )
 
 // DataPlane
 const (
 	DataPlaneCreateFail        CustomMsg = "DataPlane Creation Fail"
 	DataPlaneCreateIntiated    CustomMsg = "DataPlane Creation Initiated"
-	DataPlaneGetFail           CustomMsg = "DataPlane Get Fail"
+	DataPlaneGetFail           CustomMsg = "DataPlane GET Fail"
 	DataplaneDeletionInitiated CustomMsg = "Dataplane Deletion Initiated"
 )
 
@@ -28,14 +31,19 @@ const (
 const (
 	TenantCreateFail     CustomMsg = "Tenant Creation Fail"
 	TenantCreateIntiated CustomMsg = "Tenant Creation Initiated"
-	TenantGetFail        CustomMsg = "Tenant Get Fail"
+	TenantGetFail        CustomMsg = "Tenant GET Fail"
 )
 
 // Application
 const (
 	ApplicationCreateFail     CustomMsg = "Application Creation Fail"
 	ApplicationCreateIntiated CustomMsg = "Application Creation Initiated"
-	ApplicationGetFail        CustomMsg = "Application Get Fail"
+	ApplicationGetFail        CustomMsg = "Application GET Fail"
 	ApplicationDeleteFail     CustomMsg = "Application Delete Fail"
 	ApplicationDeleteIntiated CustomMsg = "Application Delete Initiated"
+)
+
+// Json
+const (
+	JsonMarshallError CustomMsg = "Json Marshall Error"
 )
