@@ -11,9 +11,10 @@ const (
 
 // Customer
 const (
-	CustomerNamespaceExists     CustomMsg = "Customer Namespace Exists"
-	CustomerNamespaceSuccess    CustomMsg = "Customer Namespace Created"
+	CustomerNamespaceExists     CustomMsg = "Customer Namespace EXISTS"
+	CustomerNamespaceSuccess    CustomMsg = "Customer Namespace CREATE success"
 	CustomerNamespaceGetFail    CustomMsg = "Customer Namespace GET Failed"
+	CustomerNamespaceUpdateFail CustomMsg = "Customer Namespace UPDATE Failed"
 	CustomerNamespaceCreateFail CustomMsg = "Customer Namespace CREATE Failed"
 	CustomerNamespaceListEmpty  CustomMsg = "Customer Namespace LIST Empty"
 	CustomerNamespaceList       CustomMsg = "Customer Namespace LIST"
@@ -21,10 +22,11 @@ const (
 
 // DataPlane
 const (
-	DataPlaneCreateFail        CustomMsg = "DataPlane Creation Fail"
-	DataPlaneCreateIntiated    CustomMsg = "DataPlane Creation Initiated"
+	DataPlaneCreateFail        CustomMsg = "DataPlane CREATE Fail"
+	DataPlaneCreateIntiated    CustomMsg = "DataPlane CREATION Initiated"
 	DataPlaneGetFail           CustomMsg = "DataPlane GET Fail"
-	DataplaneDeletionInitiated CustomMsg = "Dataplane Deletion Initiated"
+	DataplaneDeletionInitiated CustomMsg = "Dataplane DELETE Initiated"
+	DataplaneAddedSuccess      CustomMsg = "Dataplane ADDED success"
 )
 
 // Tenant

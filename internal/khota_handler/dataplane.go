@@ -26,6 +26,38 @@ var secretGVK = schema.GroupVersionResource{
 	Resource: "secrets",
 }
 
+func AddDataPlane(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	customerName := vars["customer_name"]
+	dataplaneName := vars["dataplane_name"]
+
+	kc, _ := getKubeClientset()
+
+	result, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
+	if getErr != nil {
+		res := NewResponse(CustomerNamespaceGetFail, internal_error, getErr, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	result.ObjectMeta.Labels = mergeMaps(result.Labels, map[string]string{
+		"dataplane": dataplaneName,
+	})
+
+	_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), result, metav1.UpdateOptions{})
+	if updateErr != nil {
+		res := NewResponse(CustomerNamespaceUpdateFail, internal_error, getErr, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	res := NewResponse(DataplaneAddedSuccess, success, nil, http.StatusOK)
+	res.SetResponse(&w)
+}
+
 func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 

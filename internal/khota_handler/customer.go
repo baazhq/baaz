@@ -23,7 +23,7 @@ const (
 	shared_namespace            string = "shared"
 	dataplane_creation_initated string = "Dataplane Creation Initiated"
 	active                      string = "ACTIVE"
-	dataplane_unassigned        string = "UNASSIGNED"
+	dataplane_unavailable       string = "UNAVAILABLE"
 )
 
 type CustomerListResponse struct {
@@ -64,17 +64,11 @@ func ListCustomer(w http.ResponseWriter, req *http.Request) {
 				res.LogResponse()
 			}
 
-			var dataplane string
-
-			if ns.Labels["dataplane"] == "" {
-				dataplane = dataplane_unassigned
-			}
-
 			newCrListResp := CustomerListResponse{
 				Name:      ns.Name,
 				CloudType: ns.Labels["cloud_type"],
 				SaaSType:  ns.Labels["saas_type"],
-				Dataplane: dataplane,
+				Dataplane: ns.Labels["dataplane"],
 				Status:    active,
 			}
 
@@ -133,6 +127,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			"saas_type":     string(customer.SaaSType),
 			"cloud_type":    string(customer.CloudType),
 			"customer_name": string(customerName),
+			"dataplane":     dataplane_unavailable,
 			"controlplane":  "baaz",
 		}
 
