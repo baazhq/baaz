@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,11 +22,76 @@ const (
 	success                     string = "SUCCESS"
 	shared_namespace            string = "shared"
 	dataplane_creation_initated string = "Dataplane Creation Initiated"
+	active                      string = "ACTIVE"
+	dataplane_unassigned        string = "UNASSIGNED"
 )
 
-var secretGVK = schema.GroupVersionResource{
-	Version:  "v1",
-	Resource: "secrets",
+type CustomerListResponse struct {
+	Name      string
+	SaaSType  string
+	CloudType string
+	Status    string
+	Dataplane string
+}
+
+func ListCustomer(w http.ResponseWriter, req *http.Request) {
+
+	client, _ := getKubeClientset()
+	nsList, err := client.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "controlplane=baaz",
+	})
+	if apierrors.IsNotFound(err) {
+		res := NewResponse(CustomerNamespaceListEmpty, internal_error, nil, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	if nsList == nil {
+		res := NewResponse(CustomerNamespaceListEmpty, success, nil, 204)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+	var customerListResponse []CustomerListResponse
+
+	if nsList != nil {
+		for _, ns := range nsList.Items {
+			ns, err := client.CoreV1().Namespaces().Get(context.TODO(), ns.Name, metav1.GetOptions{})
+			if err != nil {
+				res := NewResponse(CustomerNamespaceGetFail, internal_error, err, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+			}
+
+			var dataplane string
+
+			if ns.Labels["dataplane"] == "" {
+				dataplane = dataplane_unassigned
+			}
+
+			newCrListResp := CustomerListResponse{
+				Name:      ns.Name,
+				CloudType: ns.Labels["cloud_type"],
+				SaaSType:  ns.Labels["saas_type"],
+				Dataplane: dataplane,
+				Status:    active,
+			}
+
+			customerListResponse = append(customerListResponse, newCrListResp)
+
+		}
+
+	}
+	resp, err := json.Marshal(customerListResponse)
+	if err != nil {
+		res := NewResponse(JsonMarshallError, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+	}
+	res := NewResponse(CustomMsg(resp), success, nil, http.StatusOK)
+	res.SetResponse(&w)
+	res.LogResponse()
 }
 
 func CreateCustomer(w http.ResponseWriter, req *http.Request) {
@@ -69,6 +133,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			"saas_type":     string(customer.SaaSType),
 			"cloud_type":    string(customer.CloudType),
 			"customer_name": string(customerName),
+			"controlplane":  "baaz",
 		}
 
 		_, err := client.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
@@ -78,7 +143,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			},
 		}, metav1.CreateOptions{})
 		if err != nil {
-			res := NewResponse(CustomerNamespaceFail, internal_error, err, http.StatusInternalServerError)
+			res := NewResponse(CustomerNamespaceGetFail, internal_error, err, http.StatusInternalServerError)
 			res.SetResponse(&w)
 			res.LogResponse()
 			return
