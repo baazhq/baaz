@@ -13,17 +13,19 @@ var getValidArgs = []string{
 var (
 	getCmd = &cobra.Command{
 		Use:       "get",
-		Short:     "bz get - list entites [Customers, Dataplane, Tenants, Applications] in baaz control palne",
+		Short:     "bz get - list entites [Customers, Dataplane, Tenants, Applications] in baaz control plane",
 		Args:      cobra.ExactArgs(1),
 		ValidArgs: getValidArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			switch args[0] {
-			case "customers":
-				return customers.GetCustomers()
-			default:
-				return NotValidArgs(getValidArgs)
+			for _, arg := range args {
+				switch arg {
+				case "customers":
+					return customers.GetCustomers()
+				default:
+					return NotValidArgs(getValidArgs)
+				}
 			}
-
+			return nil
 		},
 	}
 )

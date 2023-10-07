@@ -1,20 +1,18 @@
 package customers
 
 import (
+	"bz/pkg/common"
 	"encoding/json"
 	"io"
 	"net/http"
 	"os"
 
+	log "k8s.io/klog/v2"
+
 	"github.com/olekukonko/tablewriter"
 )
 
-type resp struct {
-	Msg        string      `json:"Msg"`
-	Status     string      `json:"Status"`
-	StatusCode int         `json:"StatusCode"`
-	Err        interface{} `json:"Err"`
-}
+var customersUrlPath = "/api/v1/customer"
 
 type customerList struct {
 	Name      string `json:"Name"`
@@ -51,17 +49,22 @@ func GetCustomers() error {
 }
 
 func getCustomerList() ([]customerList, error) {
-	url := "http://localhost:8000/api/v1/customer"
-	response, err := http.Get(url)
+
+	response, err := http.Get(common.GetBzUrl() + customersUrlPath)
 	if err != nil {
 		return nil, err
 	}
+
 	defer response.Body.Close()
+
 	body, err := io.ReadAll(response.Body)
+	if response.StatusCode > 299 {
+		log.Fatalf("Response failed with status code: %d and\nbody: %s\n", response.StatusCode, body)
+	}
 	if err != nil {
 		return nil, err
 	}
-	var resp resp
+	var resp common.ServerResp
 
 	err = json.Unmarshal([]byte(body), &resp)
 	if err != nil {
