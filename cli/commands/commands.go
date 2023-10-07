@@ -8,7 +8,7 @@ var (
 	rootCmd = &cobra.Command{
 		Use:           "bz",
 		Short:         "baaz cli - cli to interact with baaz server",
-		Long:          ``,
+		Version:       version,
 		SilenceErrors: true,
 		SilenceUsage:  true,
 	}
