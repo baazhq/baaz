@@ -2,7 +2,6 @@ package commands
 
 import (
 	"bz/pkg/customers"
-
 	"github.com/spf13/cobra"
 )
 
@@ -17,13 +16,11 @@ var (
 		Args:      cobra.ExactArgs(1),
 		ValidArgs: getValidArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			for _, arg := range args {
-				switch arg {
-				case "customers":
-					return customers.GetCustomers()
-				default:
-					return NotValidArgs(getValidArgs)
-				}
+			switch args[0] {
+			case "customers":
+				return customers.GetCustomers()
+			default:
+				return NotValidArgs(getValidArgs)
 			}
 			return nil
 		},
