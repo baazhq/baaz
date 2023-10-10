@@ -2,6 +2,7 @@ package commands
 
 import (
 	"bz/pkg/customers"
+
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +23,6 @@ var (
 			default:
 				return NotValidArgs(getValidArgs)
 			}
-			return nil
 		},
 	}
 )
