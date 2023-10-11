@@ -3,11 +3,11 @@ dataplane:
   cloudType: AWS
   cloudRegion: us-east-1
   saasType: SHARED
-  cloudAuth: 
+  cloudAuth:
     awsAuth:
       awsAccessKey: AKIAWLZK4B6ACNA3H43S
       awsSecretKey: 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
-  kubernetes_config:
+  kubernetesConfig:
     eks:
       subnet_ids:
       - subnet-01cbca574f0d8b8d8

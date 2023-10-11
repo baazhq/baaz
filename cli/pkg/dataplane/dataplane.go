@@ -25,9 +25,10 @@ func CreateDataplane(filePath string) (string, error) {
 	}
 
 	newCreateDataplane := createDataPlane{
-		CloudType:   viper.GetString("dataplane.cloudType"),
-		CloudRegion: viper.GetString("dataplane.cloudRegion"),
-		CloudAuth:   viper.GetStringMap("dataplane.cloudAuth"),
+		CloudType:        viper.GetString("dataplane.cloudType"),
+		CloudRegion:      viper.GetString("dataplane.cloudRegion"),
+		CloudAuth:        viper.GetStringMap("dataplane.cloudAuth"),
+		KubernetesConfig: viper.GetStringMap("dataplane.kubernetesConfig"),
 	}
 
 	ccByte, err := json.Marshal(newCreateDataplane)
