@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"bz/pkg/common"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -108,13 +109,13 @@ func CreateCustomer(filePath string) (string, error) {
 		Name      string            `json:"name"`
 		SaaSType  string            `json:"saas_type"`
 		CloudType string            `json:"cloud_type"`
-		Labels    map[string]string `json:"lablels"`
+		Labels    map[string]string `json:"lables"`
 	}
 
 	newCreateCustomer := createCustomer{
 		Name:      viper.GetString("customer.name"),
-		SaaSType:  viper.GetString("customer.saasType"),
-		CloudType: viper.GetString("customer.cloudType"),
+		SaaSType:  viper.GetString("customer.saas_type"),
+		CloudType: viper.GetString("customer.cloud_type"),
 		Labels:    viper.GetStringMapString("customer.labels"),
 	}
 
@@ -136,7 +137,7 @@ func CreateCustomer(filePath string) (string, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if resp.StatusCode > 299 {
-		log.Fatalf("Response failed with status code: %d and\nbody: %s\n", resp.StatusCode, string(body))
+		return "", fmt.Errorf("%s", string(body))
 	}
 
 	if err != nil {

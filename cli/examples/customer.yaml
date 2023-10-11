@@ -1,7 +1,7 @@
 customer:
-  name: godspeed
-  saasType: "SHARED"
-  cloudType: "AWS"
+  name: parseable
+  saas_type: "DEDICATED"
+  cloud_type: "GCP"
   labels: 
     free: tier
-    cloud: aws
+    cloud: gcp

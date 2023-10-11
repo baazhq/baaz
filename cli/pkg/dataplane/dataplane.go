@@ -1,11 +1,22 @@
 package dataplane
 
 import (
+	"bytes"
+	"bz/pkg/common"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 
 	"github.com/spf13/viper"
 )
+
+var customerUrlPath = "/api/v1/customer"
+var dataplanePath = "/dataplane"
+
+func makePostDataPlanePath(dataplaneName string) string {
+	return common.GetBzUrl() + customerUrlPath + "/" + dataplaneName + dataplanePath
+}
 
 func CreateDataplane(filePath string) (string, error) {
 
@@ -25,10 +36,10 @@ func CreateDataplane(filePath string) (string, error) {
 	}
 
 	newCreateDataplane := createDataPlane{
-		CloudType:        viper.GetString("dataplane.cloudType"),
-		CloudRegion:      viper.GetString("dataplane.cloudRegion"),
-		CloudAuth:        viper.GetStringMap("dataplane.cloudAuth"),
-		KubernetesConfig: viper.GetStringMap("dataplane.kubernetesConfig"),
+		CloudType:        viper.GetString("dataplane.cloud_type"),
+		CloudRegion:      viper.GetString("dataplane.cloud_region"),
+		CloudAuth:        viper.GetStringMap("dataplane.cloud_auth"),
+		KubernetesConfig: viper.GetStringMap("dataplane.kubernetes_config"),
 	}
 
 	ccByte, err := json.Marshal(newCreateDataplane)
@@ -38,28 +49,28 @@ func CreateDataplane(filePath string) (string, error) {
 
 	fmt.Println(string(ccByte))
 
-	// resp, err := http.Post(
-	// 	makePostCustomerPath(newCreateCustomer.Name),
-	// 	"application/json",
-	// 	bytes.NewBuffer(ccByte),
-	// )
-	// if err != nil {
-	// 	return "", err
-	// }
+	resp, err := http.Post(
+		makePostDataPlanePath(viper.GetString("dataplane.customer_name")),
+		"application/json",
+		bytes.NewBuffer(ccByte),
+	)
+	if err != nil {
+		return "", err
+	}
 
-	// defer resp.Body.Close()
+	defer resp.Body.Close()
 
-	// body, err := io.ReadAll(resp.Body)
-	// if resp.StatusCode > 299 {
-	// 	log.Fatalf("Response failed with status code: %d and\nbody: %s\n", resp.StatusCode, string(body))
-	// }
+	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("%s", string(body))
+	}
 
-	// if err != nil {
-	// 	return "", err
-	// }
-	// if resp.StatusCode == http.StatusOK {
-	// 	return "Customer Created Successfully", nil
-	// }
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == http.StatusOK {
+		return "Dataplane Creation Initiated Successfully", nil
+	}
 
 	return "", nil
 }
