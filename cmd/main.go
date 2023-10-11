@@ -7,6 +7,7 @@ import (
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
+	"github.com/gorilla/handlers"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,7 +41,7 @@ func init() {
 	go func() {
 		router := khota.NewRouter()
 		setupLog.Info("Started Ballast HTTP server on :8000")
-		if err := http.ListenAndServe(":8000", (router)); err != nil {
+		if err := http.ListenAndServe(":8000", handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "Access-Control-Allow-Origin"}), handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "DELETE", "OPTIONS"}), handlers.AllowedOrigins([]string{"*"}))(router)); err != nil {
 			setupLog.Error(err, "unable to start HTTP server")
 			os.Exit(1)
 		}
