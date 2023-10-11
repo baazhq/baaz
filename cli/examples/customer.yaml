@@ -1,0 +1,7 @@
+customer:
+  name: godspeed
+  saasType: "SHARED"
+  cloudType: "AWS"
+  labels: 
+    free: tier
+    cloud: aws
