@@ -3,6 +3,7 @@ package khota_handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -86,6 +87,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	fmt.Println(dp)
 	dataplaneName := makeDataPlaneName(dp.CloudType, dp.CloudRegion, dp.SaaSType)
 	dataplane := v1.DataPlane{
 		CloudType:   dp.CloudType,
@@ -226,5 +228,9 @@ func DeleteDataPlane(w http.ResponseWriter, req *http.Request) {
 		res := NewResponse("", string(DataplaneDeletionInitiated), nil, http.StatusOK)
 		res.SetResponse(&w)
 	}
+
+}
+
+func ListDataplane(w http.ResponseWriter, req *http.Request) {
 
 }

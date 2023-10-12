@@ -28,3 +28,6 @@ helm-config
 *~
 
 vendor/
+
+## ignore cli binary
+cli/bz

@@ -4,8 +4,8 @@ type SaaSTypes string
 
 const (
 	SharedSaaS    SaaSTypes = "SHARED"
-	DedicatedSaaS SaaSTypes = "DEDICATED"
-	PrivateSaaS   SaaSTypes = "PRIVATE"
+	DedicatedSaaS SaaSTypes = "dedicated"
+	PrivateSaaS   SaaSTypes = "private"
 )
 
 type Customer struct {
@@ -23,12 +23,12 @@ type DataPlane struct {
 }
 
 type CloudAuth struct {
-	AwsAuth AwsAuth `json:"awsAuth"`
+	AwsAuth AwsAuth `json:"aws_auth"`
 }
 
 type AwsAuth struct {
-	AwsAccessKey string `json:"awsAccessKey"`
-	AwsSecretKey string `json:"awsSecretKey"`
+	AwsAccessKey string `json:"aws_access_key"`
+	AwsSecretKey string `json:"aws_secret_key"`
 }
 
 type KubernetesConfig struct {
