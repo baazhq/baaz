@@ -3,7 +3,7 @@ package v1
 type SaaSTypes string
 
 const (
-	SharedSaaS    SaaSTypes = "SHARED"
+	SharedSaaS    SaaSTypes = "shared"
 	DedicatedSaaS SaaSTypes = "dedicated"
 	PrivateSaaS   SaaSTypes = "private"
 )

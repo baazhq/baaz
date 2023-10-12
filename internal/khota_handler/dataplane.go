@@ -3,7 +3,6 @@ package khota_handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -87,7 +86,6 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	fmt.Println(dp)
 	dataplaneName := makeDataPlaneName(dp.CloudType, dp.CloudRegion, dp.SaaSType)
 	dataplane := v1.DataPlane{
 		CloudType:   dp.CloudType,
@@ -141,7 +139,14 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	dpDeploy := makeAwsEksConfig(dataplaneName, dataplane)
+	labels := map[string]string{
+		"version":      dataplane.KubeConfig.EKS.Version,
+		"cloud_type":   string(dataplane.CloudType),
+		"cloud_region": dataplane.CloudRegion,
+		"saas_type":    string(dataplane.SaaSType),
+	}
+
+	dpDeploy := makeAwsEksConfig(dataplaneName, dataplane, labels)
 
 	_, err = dc.Resource(dpGVK).Namespace(namespace).Create(context.TODO(), dpDeploy, metav1.CreateOptions{})
 	if err != nil {
@@ -152,6 +157,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 	}
 
 	res := NewResponse(DataPlaneCreateIntiated, success, nil, http.StatusOK)
+	res.LogResponse()
 	res.SetResponse(&w)
 
 }
@@ -171,9 +177,18 @@ func GetDataPlaneStatus(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	type dataplaneResp struct {
+		Name        string `json:"name"`
+		CloudRegion string `json:"cloud_region"`
+		CloudType   string `json:"cloud_type"`
+		SaaSType    string `json:"saas_type"`
+		Version     string `json:"version"`
+		Status      string `json:"status"`
+	}
+
 	if namespace.Labels["saas_type"] == string(v1.SharedSaaS) {
-		dp := namespace.Labels["dataplane"]
-		dpObj, err := dc.Resource(dpGVK).Namespace("shared").Get(context.TODO(), dp, metav1.GetOptions{})
+		dpName := namespace.Labels["dataplane"]
+		dpObj, err := dc.Resource(dpGVK).Namespace("shared").Get(context.TODO(), dpName, metav1.GetOptions{})
 		if err != nil {
 			res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
 			res.SetResponse(&w)
@@ -182,7 +197,24 @@ func GetDataPlaneStatus(w http.ResponseWriter, req *http.Request) {
 		}
 
 		status, _, _ := unstructured.NestedString(dpObj.Object, "status", "phase")
-		res := NewResponse("", status, nil, http.StatusOK)
+
+		newdataplaneResp := dataplaneResp{
+			Name:        dpName,
+			CloudRegion: dpObj.GetLabels()["cloud_region"],
+			SaaSType:    dpObj.GetLabels()["saas_type"],
+			CloudType:   dpObj.GetLabels()["cloud_type"],
+			Version:     dpObj.GetLabels()["version"],
+			Status:      status,
+		}
+
+		dpResp, err := json.Marshal(newdataplaneResp)
+		if err != nil {
+			res := NewResponse(DataPlaneGetFail, string(JsonMarshallError), err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+		res := NewResponse(CustomMsg(dpResp), status, nil, http.StatusOK)
 		res.SetResponse(&w)
 	}
 

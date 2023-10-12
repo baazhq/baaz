@@ -36,13 +36,14 @@ func getAwsEksSecret(dataPlaneName string, dataplane v1.DataPlane) *unstructured
 		}}
 }
 
-func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane) *unstructured.Unstructured {
+func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[string]string) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "datainfra.io/v1",
 			"kind":       "DataPlanes",
 			"metadata": map[string]interface{}{
-				"name": dataPlaneName,
+				"name":   dataPlaneName,
+				"labels": labels,
 			},
 			"spec": map[string]interface{}{
 				"saasType": dataplane.SaaSType,
