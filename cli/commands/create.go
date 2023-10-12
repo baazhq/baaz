@@ -27,17 +27,16 @@ var (
 					return err
 				}
 				fmt.Println(resp)
-				return nil
 			case "dataplane":
 				resp, err := dataplane.CreateDataplane(file)
 				if err != nil {
 					return err
 				}
 				fmt.Println(resp)
-				return nil
 			default:
-				return NotValidArgs(getValidArgs)
+				return NotValidArgs(createValidArgs)
 			}
+			return nil
 		},
 	}
 )

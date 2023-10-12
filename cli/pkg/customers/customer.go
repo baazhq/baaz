@@ -113,7 +113,6 @@ func CreateCustomer(filePath string) (string, error) {
 	}
 
 	newCreateCustomer := createCustomer{
-		Name:      viper.GetString("customer.name"),
 		SaaSType:  viper.GetString("customer.saas_type"),
 		CloudType: viper.GetString("customer.cloud_type"),
 		Labels:    viper.GetStringMapString("customer.labels"),
@@ -125,7 +124,7 @@ func CreateCustomer(filePath string) (string, error) {
 	}
 
 	resp, err := http.Post(
-		makePostCustomerPath(newCreateCustomer.Name),
+		makePostCustomerPath(viper.GetString("customer.name")),
 		"application/json",
 		bytes.NewBuffer(ccByte),
 	)

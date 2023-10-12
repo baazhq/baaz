@@ -1,12 +1,12 @@
 dataplane:
-  customer_name: godspeed
-  cloud_type: AWS
+  customer_name: parseable
+  cloud_type: aws
   cloud_region: us-east-1
-  saas_type: SHARED
+  saas_type: shared
   cloud_auth:
-    awsAuth:
-      awsAccessKey: AKIAWLZK4B6ACNA3H43S
-      awsSecretKey: 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
+    aws_auth:
+      aws_access_key: AKIAWLZK4B6ACNA3H43S
+      aws_secret_key: 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
   kubernetes_config:
     eks:
       subnet_ids:

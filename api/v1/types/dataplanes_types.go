@@ -16,9 +16,9 @@ type DataPlaneSpec struct {
 type CloudType string
 
 const (
-	AWS   string = "AWS"
-	GCP   string = "GCP"
-	AZURE string = "AZURE"
+	AWS   string = "aws"
+	GCP   string = "gcp"
+	AZURE string = "azure"
 )
 
 type CloudInfraConfig struct {

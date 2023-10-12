@@ -1,7 +1,7 @@
 customer:
   name: parseable
-  saas_type: "DEDICATED"
-  cloud_type: "GCP"
+  saas_type: "SHARED"
+  cloud_type: "AWS"
   labels: 
     free: tier
     cloud: gcp
