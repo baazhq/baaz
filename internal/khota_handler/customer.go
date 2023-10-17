@@ -19,6 +19,7 @@ import (
 const (
 	req_error                   string = "REQUEST_ERROR"
 	internal_error              string = "INTERNAL_ERROR"
+	duplicate_entry             string = "ENTRY ALREADY EXISTS"
 	success                     string = "SUCCESS"
 	shared_namespace            string = "shared"
 	dataplane_creation_initated string = "Dataplane Creation Initiated"
@@ -32,6 +33,7 @@ type CustomerListResponse struct {
 	CloudType string
 	Status    string
 	Dataplane string
+	Labels    map[string]string
 }
 
 func ListCustomer(w http.ResponseWriter, req *http.Request) {
@@ -150,7 +152,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if ns != nil {
-		res := NewResponse(CustomerNamespaceExists, internal_error, err, http.StatusInternalServerError)
+		res := NewResponse(CustomerNamespaceExists, duplicate_entry, err, http.StatusConflict)
 		res.SetResponse(&w)
 		res.LogResponse()
 	}
