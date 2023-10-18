@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"net/http"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"net/http"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -172,7 +172,7 @@ func getCustomLabel(data map[string]string) map[string]string {
 	filtered_map := make(map[string]string)
 	for key, val := range data {
 		if key[:len(label_prefix)] == label_prefix {
-			filtered_map[key] = val
+			filtered_map[strings.TrimPrefix(key, label_prefix)] = val
 		}
 	}
 	return filtered_map
