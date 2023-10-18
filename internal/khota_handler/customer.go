@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	"net/http"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"net/http"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,6 +25,7 @@ const (
 	dataplane_creation_initated string = "Dataplane Creation Initiated"
 	active                      string = "ACTIVE"
 	dataplane_unavailable       string = "UNAVAILABLE"
+	label_prefix                string = "b_"
 )
 
 type CustomerListResponse struct {
@@ -66,12 +67,14 @@ func ListCustomer(w http.ResponseWriter, req *http.Request) {
 				res.LogResponse()
 			}
 
+			custLabels := getCustomLabel(ns.Labels)
 			newCrListResp := CustomerListResponse{
 				Name:      ns.Name,
 				CloudType: ns.Labels["cloud_type"],
 				SaaSType:  ns.Labels["saas_type"],
 				Dataplane: ns.Labels["dataplane"],
 				Status:    active,
+				Labels:    custLabels,
 			}
 
 			customerListResponse = append(customerListResponse, newCrListResp)
@@ -132,11 +135,10 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			"dataplane":     dataplane_unavailable,
 			"controlplane":  "baaz",
 		}
-
 		_, err := client.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   customerName,
-				Labels: mergeMaps(labels, customer.Labels),
+				Labels: mergeMaps(labels, setLabelPrefix(customer.Labels)),
 			},
 		}, metav1.CreateOptions{})
 		if err != nil {
@@ -156,4 +158,22 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 		res.SetResponse(&w)
 		res.LogResponse()
 	}
+}
+
+func setLabelPrefix(data map[string]string) map[string]string {
+	modified_labels := make(map[string]string)
+	for key, val := range data {
+		modified_labels[label_prefix+key] = val
+	}
+	return modified_labels
+}
+
+func getCustomLabel(data map[string]string) map[string]string {
+	filtered_map := make(map[string]string)
+	for key, val := range data {
+		if key[:len(label_prefix)] == label_prefix {
+			filtered_map[strings.TrimPrefix(key, label_prefix)] = val
+		}
+	}
+	return filtered_map
 }
