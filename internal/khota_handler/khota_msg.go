@@ -11,13 +11,15 @@ const (
 
 // Customer
 const (
-	CustomerNamespaceExists     CustomMsg = "Customer Namespace EXISTS"
-	CustomerNamespaceSuccess    CustomMsg = "Customer Namespace CREATE success"
-	CustomerNamespaceGetFail    CustomMsg = "Customer Namespace GET Failed"
-	CustomerNamespaceUpdateFail CustomMsg = "Customer Namespace UPDATE Failed"
-	CustomerNamespaceCreateFail CustomMsg = "Customer Namespace CREATE Failed"
-	CustomerNamespaceListEmpty  CustomMsg = "Customer Namespace LIST Empty"
-	CustomerNamespaceList       CustomMsg = "Customer Namespace LIST"
+	CustomerNamespaceExists        CustomMsg = "Customer Namespace EXISTS"
+	CustomerNamespaceDoesNotExists CustomMsg = "Customer Namespace DOESN'T EXISTS"
+	CustomerNamespaceSuccess       CustomMsg = "Customer Namespace CREATE success"
+	CustomerNamespaceGetFail       CustomMsg = "Customer Namespace GET Failed"
+	CustomerNamespaceUpdateSuccess CustomMsg = "Customer Namespace UPDATE success"
+	CustomerNamespaceUpdateFail    CustomMsg = "Customer Namespace UPDATE Failed"
+	CustomerNamespaceCreateFail    CustomMsg = "Customer Namespace CREATE Failed"
+	CustomerNamespaceListEmpty     CustomMsg = "Customer Namespace LIST Empty"
+	CustomerNamespaceList          CustomMsg = "Customer Namespace LIST"
 )
 
 // DataPlane

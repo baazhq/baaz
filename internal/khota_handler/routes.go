@@ -61,6 +61,12 @@ var routes = Routes{
 		CreateCustomer,
 	},
 	Route{
+		"UPDATE CUSTOMER",
+		"PUT",
+		"/api/v1/customer/{customer_name}",
+		UpdateCustomer,
+	},
+	Route{
 		"LIST CUSTOMERS",
 		"GET",
 		"/api/v1/customer",

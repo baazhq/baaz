@@ -20,6 +20,7 @@ const (
 	req_error                   string = "REQUEST_ERROR"
 	internal_error              string = "INTERNAL_ERROR"
 	duplicate_entry             string = "ENTRY ALREADY EXISTS"
+	entry_not_exists            string = "ENTRY DOSEN'T EXISTS"
 	success                     string = "SUCCESS"
 	shared_namespace            string = "shared"
 	dataplane_creation_initated string = "Dataplane Creation Initiated"
@@ -158,6 +159,66 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 		res.SetResponse(&w)
 		res.LogResponse()
 	}
+}
+func UpdateCustomer(w http.ResponseWriter, req *http.Request) {
+
+	vars := mux.Vars(req)
+
+	customerName := vars["customer_name"]
+
+	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	if err != nil {
+		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	if err := req.Body.Close(); err != nil {
+		res := NewResponse(ServerBodyCloseError, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	var customer v1.Customer
+
+	if err := json.Unmarshal(body, &customer); err != nil {
+		res := NewResponse(ServerUnmarshallError, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	client, _ := getKubeClientset()
+
+	ns, err := client.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
+
+	if apierrors.IsNotFound(err) {
+		res := NewResponse(CustomerNamespaceDoesNotExists, entry_not_exists, err, http.StatusNotFound)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	if ns != nil {
+		for key, val := range setLabelPrefix(customer.Labels) {
+			ns.Labels[key] = val
+		}
+		_, err := client.CoreV1().Namespaces().Update(context.TODO(), ns, metav1.UpdateOptions{})
+
+		if err != nil {
+			res := NewResponse(CustomerNamespaceUpdateFail, internal_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+		res := NewResponse(CustomerNamespaceUpdateSuccess, success, nil, 200)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
 }
 
 func setLabelPrefix(data map[string]string) map[string]string {
