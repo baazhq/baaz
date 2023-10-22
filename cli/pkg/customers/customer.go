@@ -23,11 +23,12 @@ func makePostCustomerPath(customerName string) string {
 }
 
 type customerList struct {
-	Name      string `json:"Name"`
-	SaaSType  string `json:"SaaSType"`
-	CloudType string `json:"CloudType"`
-	Status    string `json:"Status"`
-	Dataplane string `json:"Dataplane"`
+	Name      string            `json:"Name"`
+	SaaSType  string            `json:"SaaSType"`
+	CloudType string            `json:"CloudType"`
+	Status    string            `json:"Status"`
+	Dataplane string            `json:"Dataplane"`
+	Labels    map[string]string `json:"Labels"`
 }
 
 func GetCustomers() error {
@@ -41,8 +42,9 @@ func GetCustomers() error {
 		"Customer_Name",
 		"SaaS_Type",
 		"Cloud_Type",
-		"Status",
 		"Dataplane",
+		"Labels",
+		"Status",
 	},
 	)
 
@@ -51,9 +53,11 @@ func GetCustomers() error {
 			customer.Name,
 			customer.SaaSType,
 			customer.CloudType,
-			customer.Status,
 			customer.Dataplane,
+			createKeyValuePairs(customer.Labels),
+			customer.Status,
 		}
+		table.SetRowLine(true)
 		table.Append(row)
 	}
 
@@ -105,11 +109,15 @@ func CreateCustomer(filePath string) (string, error) {
 		return "", err
 	}
 
+	// if viper.GetString("customer") == "" {
+	// 	return "", fmt.Errorf(string(common.InvalidConfig))
+	// }
+
 	type createCustomer struct {
 		Name      string            `json:"name"`
 		SaaSType  string            `json:"saas_type"`
 		CloudType string            `json:"cloud_type"`
-		Labels    map[string]string `json:"lables"`
+		Labels    map[string]string `json:"labels"`
 	}
 
 	newCreateCustomer := createCustomer{
@@ -147,4 +155,12 @@ func CreateCustomer(filePath string) (string, error) {
 	}
 
 	return "", nil
+}
+
+func createKeyValuePairs(m map[string]string) string {
+	b := new(bytes.Buffer)
+	for key, value := range m {
+		fmt.Fprintf(b, "%s: %s\n", key, value)
+	}
+	return b.String()
 }
