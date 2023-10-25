@@ -30,3 +30,13 @@ func (res *Response) SetResponse(w *http.ResponseWriter) {
 	(*w).WriteHeader(res.StatusCode)
 	json.NewEncoder(*w).Encode(res)
 }
+func (res *Response) SetMsgResponse(w *http.ResponseWriter) {
+	jsonData, err := json.Marshal(res.Msg)
+	if err != nil {
+		klog.Errorf("ErrMsg: Unable to parse response Message json [%s], Error: [%s]", res.Msg, err.Error())
+		res.StatusCode = http.StatusInternalServerError
+	}
+	(*w).Header().Set("Content-Type", "application/json; charset=UTF-8")
+	(*w).WriteHeader(res.StatusCode)
+	(*w).Write(jsonData)
+}

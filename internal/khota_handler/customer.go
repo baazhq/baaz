@@ -90,7 +90,7 @@ func ListCustomer(w http.ResponseWriter, req *http.Request) {
 		res.LogResponse()
 	}
 	res := NewResponse(CustomMsg(resp), success, nil, http.StatusOK)
-	res.SetResponse(&w)
+	res.SetMsgResponse(&w)
 	res.LogResponse()
 }
 
