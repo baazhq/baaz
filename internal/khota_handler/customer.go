@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"net/http"
 	"strings"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +24,7 @@ const (
 	entry_not_exists            string = "ENTRY DOSEN'T EXISTS"
 	success                     string = "SUCCESS"
 	shared_namespace            string = "shared"
+	dedicated_namespace         string = "dedicated"
 	dataplane_creation_initated string = "Dataplane Creation Initiated"
 	active                      string = "ACTIVE"
 	dataplane_unavailable       string = "UNAVAILABLE"
