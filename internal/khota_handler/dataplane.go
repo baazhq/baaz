@@ -3,6 +3,7 @@ package khota_handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -32,9 +33,9 @@ func AddDataPlane(w http.ResponseWriter, req *http.Request) {
 	customerName := vars["customer_name"]
 	dataplaneName := vars["dataplane_name"]
 
-	kc, _ := getKubeClientset()
+	kc, dc := getKubeClientset()
 
-	result, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
+	customer, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
 	if getErr != nil {
 		res := NewResponse(CustomerNamespaceGetFail, internal_error, getErr, http.StatusInternalServerError)
 		res.SetResponse(&w)
@@ -42,11 +43,31 @@ func AddDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	result.ObjectMeta.Labels = mergeMaps(result.Labels, map[string]string{
+	customer.ObjectMeta.Labels = mergeMaps(customer.Labels, map[string]string{
 		"dataplane": dataplaneName,
 	})
 
-	_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), result, metav1.UpdateOptions{})
+	var dataplaneNs string
+	if customer.Labels["saas_type"] == string(v1.SharedSaaS) {
+		dataplaneNs = shared_namespace
+	} else {
+		dataplaneNs = dedicated_namespace
+	}
+
+	fmt.Println(dataplaneNs, dataplaneName)
+	dataplane, err := dc.Resource(dpGVK).Namespace("shared").Get(context.TODO(), dataplaneName, metav1.GetOptions{})
+	if err != nil {
+		res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	dataplane.SetLabels(mergeMaps(dataplane.GetLabels(), map[string]string{
+		"customer_" + customerName: customerName,
+	}))
+
+	_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), customer, metav1.UpdateOptions{})
 	if updateErr != nil {
 		res := NewResponse(CustomerNamespaceUpdateFail, internal_error, getErr, http.StatusInternalServerError)
 		res.SetResponse(&w)
@@ -140,10 +161,11 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 	}
 
 	labels := map[string]string{
-		"version":      dataplane.KubeConfig.EKS.Version,
-		"cloud_type":   string(dataplane.CloudType),
-		"cloud_region": dataplane.CloudRegion,
-		"saas_type":    string(dataplane.SaaSType),
+		"version":                  dataplane.KubeConfig.EKS.Version,
+		"cloud_type":               string(dataplane.CloudType),
+		"cloud_region":             dataplane.CloudRegion,
+		"saas_type":                string(dataplane.SaaSType),
+		"customer_" + customerName: customerName,
 	}
 
 	dpDeploy := makeAwsEksConfig(dataplaneName, dataplane, labels)
