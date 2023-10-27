@@ -91,9 +91,7 @@ func ListCustomer(w http.ResponseWriter, req *http.Request) {
 		res.SetResponse(&w)
 		res.LogResponse()
 	}
-	res := NewResponse(CustomMsg(resp), success, nil, http.StatusOK)
-	res.SetMsgResponse(&w)
-	res.LogResponse()
+	sendJsonResponse(resp, http.StatusOK, &w)
 }
 
 func CreateCustomer(w http.ResponseWriter, req *http.Request) {

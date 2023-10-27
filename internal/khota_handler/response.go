@@ -40,3 +40,9 @@ func (res *Response) SetMsgResponse(w *http.ResponseWriter) {
 	(*w).WriteHeader(res.StatusCode)
 	(*w).Write(jsonData)
 }
+
+func sendJsonResponse(jsonByte []byte, statusCode int, w *http.ResponseWriter) {
+	(*w).Header().Set("Content-Type", "application/json; charset=UTF-8")
+	(*w).WriteHeader(statusCode)
+	(*w).Write(jsonByte)
+}
