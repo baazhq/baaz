@@ -56,11 +56,9 @@ type awsEnv struct {
 func (ae *awsEnv) reconcileAwsEks() error {
 
 	eksDescribeClusterOutput, err := ae.eksIC.DescribeEks()
-
 	if err != nil {
 		var ngNotFound *types.ResourceNotFoundException
 		if errors.As(err, &ngNotFound) {
-
 			klog.Infof("Creating EKS Control plane: %s for Environment: %s/%s", ae.dp.Spec.CloudInfra.Eks.Name, ae.dp.Namespace, ae.dp.Name)
 			klog.Info("Updating Environment status to creating")
 
@@ -96,7 +94,10 @@ func (ae *awsEnv) reconcileAwsEks() error {
 				klog.Errorf(createEksResult.Result)
 			}
 
+		} else {
+			klog.Errorf("Dataplane Describe Fail [%s]", err.Error())
 		}
+
 	}
 	if eksDescribeClusterOutput != nil {
 		if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusActive {
