@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,8 +27,6 @@ func (r *DataPlaneReconciler) do(ctx context.Context, dp *v1.DataPlanes) error {
 		if err != nil {
 			return err
 		}
-
-		fmt.Println(awsSecret)
 
 		accessKey, found := awsSecret.Data[dp.Spec.CloudInfra.AuthSecretRef.AccessKeyName]
 		if !found {
