@@ -18,26 +18,26 @@ import (
 )
 
 const (
-	req_error                   string = "REQUEST_ERROR"
-	internal_error              string = "INTERNAL_ERROR"
-	duplicate_entry             string = "ENTRY ALREADY EXISTS"
-	entry_not_exists            string = "ENTRY DOSEN'T EXISTS"
-	success                     string = "SUCCESS"
+	req_error                   string = "request_error"
+	internal_error              string = "internal_error"
+	duplicate_entry             string = "entry already exists"
+	entry_not_exists            string = "entry doesn't exist"
+	success                     string = "success"
 	shared_namespace            string = "shared"
 	dedicated_namespace         string = "dedicated"
-	dataplane_creation_initated string = "Dataplane Creation Initiated"
-	active                      string = "ACTIVE"
-	dataplane_unavailable       string = "UNAVAILABLE"
+	dataplane_creation_initated string = "dataplane creation intiated"
+	active                      string = "active"
+	dataplane_unavailable       string = "unavailable"
 	label_prefix                string = "b_"
 )
 
 type CustomerListResponse struct {
-	Name      string
-	SaaSType  string
-	CloudType string
-	Status    string
-	Dataplane string
-	Labels    map[string]string
+	Name      string            `json:"name"`
+	SaaSType  string            `json:"saas_type"`
+	CloudType string            `json:"cloud_type"`
+	Status    string            `json:"status"`
+	Dataplane string            `json:"dataplane"`
+	Labels    map[string]string `json:"labels"`
 }
 
 func ListCustomer(w http.ResponseWriter, req *http.Request) {

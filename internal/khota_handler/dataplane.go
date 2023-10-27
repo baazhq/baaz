@@ -237,7 +237,8 @@ func GetDataPlaneStatus(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 		res := NewResponse(CustomMsg(dpResp), status, nil, http.StatusOK)
-		res.SetResponse(&w)
+		res.SetMsgResponse(&w)
+		res.LogResponse()
 	}
 
 }
