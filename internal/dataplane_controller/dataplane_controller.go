@@ -60,7 +60,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	klog.Infof("Reconciling Environment: %s/%s", desiredObj.Namespace, desiredObj.Name)
+	klog.Infof("Reconciling Dataplane: %s/%s", desiredObj.Namespace, desiredObj.Name)
 	// check for deletion time stamp
 	if desiredObj.DeletionTimestamp != nil {
 		// object is going to be deleted

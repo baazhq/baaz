@@ -79,7 +79,7 @@ func main() {
 	}
 
 	if err = (dataplane_controller.NewDataplaneReconciler(mgr)).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Environment")
+		setupLog.Error(err, "unable to create controller", "controller", "Dataplane")
 		os.Exit(1)
 	}
 
