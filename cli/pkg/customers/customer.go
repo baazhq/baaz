@@ -23,12 +23,12 @@ func makePostCustomerPath(customerName string) string {
 }
 
 type customerList struct {
-	Name      string            `json:"Name"`
-	SaaSType  string            `json:"SaaSType"`
-	CloudType string            `json:"CloudType"`
-	Status    string            `json:"Status"`
-	Dataplane string            `json:"Dataplane"`
-	Labels    map[string]string `json:"Labels"`
+	Name      string            `json:"name"`
+	SaaSType  string            `json:"saas_type"`
+	CloudType string            `json:"cloud_type"`
+	Status    string            `json:"status"`
+	Dataplane string            `json:"dataplane"`
+	Labels    map[string]string `json:"labels"`
 }
 
 func GetCustomers() error {
@@ -59,6 +59,7 @@ func GetCustomers() error {
 		}
 		table.SetRowLine(true)
 		table.Append(row)
+
 	}
 
 	table.Render()
@@ -82,20 +83,14 @@ func getCustomerList() ([]customerList, error) {
 	if err != nil {
 		return nil, err
 	}
-	var resp common.ServerResp
+	var resp []customerList
 
 	err = json.Unmarshal([]byte(body), &resp)
 	if err != nil {
 		return nil, err
 	}
-	var customerList []customerList
 
-	err = json.Unmarshal([]byte(resp.Msg), &customerList)
-	if err != nil {
-		return nil, err
-	}
-
-	return customerList, nil
+	return resp, nil
 
 }
 
