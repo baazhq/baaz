@@ -120,6 +120,12 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}/dataplane",
 		DeleteDataPlane,
 	},
+	Route{
+		"LIST ALL DATA PLANE",
+		"GET",
+		"/api/v1/dataplane",
+		ListDataPlane,
+	},
 	// -------------------------------------- TENANT ROUTES ---------------------------------------//
 	//
 	// {

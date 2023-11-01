@@ -2,7 +2,8 @@ package commands
 
 import (
 	"bz/pkg/customers"
-	"bz/pkg/dataplane"
+	"bz/pkg/dataplanes"
+
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -28,7 +29,7 @@ var (
 				}
 				fmt.Println(resp)
 			case "dataplane":
-				resp, err := dataplane.CreateDataplane(file)
+				resp, err := dataplanes.CreateDataplane(file)
 				if err != nil {
 					return err
 				}

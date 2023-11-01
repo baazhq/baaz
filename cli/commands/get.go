@@ -2,12 +2,14 @@ package commands
 
 import (
 	"bz/pkg/customers"
+	"bz/pkg/dataplanes"
 
 	"github.com/spf13/cobra"
 )
 
 var getValidArgs = []string{
 	"customers",
+	"dataplanes",
 }
 
 var (
@@ -20,6 +22,8 @@ var (
 			switch args[0] {
 			case "customers":
 				return customers.GetCustomers()
+			case "dataplanes":
+				return dataplanes.GetDataplanes()
 			default:
 				return NotValidArgs(getValidArgs)
 			}

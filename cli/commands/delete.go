@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"bz/pkg/dataplane"
+	"bz/pkg/dataplanes"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -23,7 +23,7 @@ var (
 			case "customer":
 				return nil
 			case "dataplane":
-				resp, err := dataplane.DeleteDataplane(customerName)
+				resp, err := dataplanes.DeleteDataplane(customerName)
 				if err != nil {
 					return err
 				}
