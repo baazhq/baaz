@@ -2,6 +2,7 @@ package khota_handler
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -100,4 +101,33 @@ func stringWithCharset(length int, charset string) string {
 
 func String(length int) string {
 	return stringWithCharset(length, charset)
+}
+
+func labels2Slice(labels map[string]string) []string {
+	var sliceString []string
+	for k, v := range labels {
+		if strings.Contains(k, "customer_") {
+			sliceString = append(sliceString, v)
+		}
+	}
+	return sliceString
+}
+
+// patchValue specifies a patch operation.
+type patchValue struct {
+	Op    string      `json:"op"`
+	Path  string      `json:"path"`
+	Value interface{} `json:"value"`
+}
+
+// constructor for patchValue{}
+func NewPatchValue(op, path string, value interface{}) []byte {
+	patchPayload := make([]patchValue, 1)
+
+	patchPayload[0].Op = op
+	patchPayload[0].Path = path
+	patchPayload[0].Value = value
+
+	bytes, _ := json.Marshal(patchPayload)
+	return bytes
 }

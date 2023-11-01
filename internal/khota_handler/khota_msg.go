@@ -27,8 +27,10 @@ const (
 	DataPlaneCreateFail        CustomMsg = "DataPlane CREATE Fail"
 	DataPlaneCreateIntiated    CustomMsg = "DataPlane CREATION Initiated"
 	DataPlaneGetFail           CustomMsg = "DataPlane GET Fail"
+	DataPlaneListFail          CustomMsg = "DataPlane LIST Fail"
 	DataplaneDeletionInitiated CustomMsg = "Dataplane DELETE Initiated"
 	DataplaneAddedSuccess      CustomMsg = "Dataplane ADDED success"
+	DataplanePatchFail         CustomMsg = "Dataplane PATCH Fail"
 )
 
 // Tenant

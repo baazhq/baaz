@@ -59,6 +59,7 @@ func GetCustomers() error {
 		}
 		table.SetRowLine(true)
 		table.Append(row)
+		table.SetAlignment(1)
 
 	}
 

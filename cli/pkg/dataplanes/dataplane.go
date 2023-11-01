@@ -1,4 +1,4 @@
-package dataplane
+package dataplanes
 
 import (
 	"bytes"
@@ -7,15 +7,107 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/viper"
 )
 
-var customerUrlPath = "/api/v1/customer"
-var dataplanePath = "/dataplane"
+var (
+	baazPath      = "/api/v1"
+	dataplanePath = "/dataplane"
+	customerPath  = "/customer"
+)
+
+type dpList struct {
+	Name        string   `json:"name"`
+	CloudRegion string   `json:"cloud_region"`
+	CloudType   string   `json:"cloud_type"`
+	Customers   []string `json:"customers"`
+	SaaSType    string   `json:"saas_type"`
+	Version     string   `json:"version"`
+	Status      string   `json:"status"`
+}
 
 func makePostDeleteDataplaneUrl(customerName string) string {
-	return common.GetBzUrl() + customerUrlPath + "/" + customerName + dataplanePath
+	return common.GetBzUrl() + baazPath + customerPath + "/" + customerName + dataplanePath
+}
+
+func makeListDataplaneUrl() string {
+	return common.GetBzUrl() + baazPath + dataplanePath
+}
+
+func GetDataplanes() error {
+	dpList, err := listDataplanes()
+	if err != nil {
+		return err
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{
+		"Dataplane_Name",
+		"Cloud_Region",
+		"Cloud_Type",
+		"Customers",
+		"SaaS_Type",
+		"Version",
+		"Status",
+	},
+	)
+
+	for _, dp := range dpList {
+		row := []string{
+			dp.Name,
+			dp.CloudRegion,
+			dp.CloudType,
+			strings.Join(dp.Customers, "\n"),
+			dp.SaaSType,
+			dp.Version,
+			dp.Status,
+		}
+		table.SetRowLine(true)
+		table.Append(row)
+		table.SetAlignment(1)
+
+	}
+
+	table.Render()
+
+	return nil
+
+}
+func listDataplanes() ([]dpList, error) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest(
+		http.MethodGet,
+		makeListDataplaneUrl(),
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 {
+		return nil, fmt.Errorf("%s", string(body))
+	}
+
+	var dp []dpList
+	err = json.Unmarshal(body, &dp)
+	if err != nil {
+		return nil, err
+	}
+
+	return dp, nil
 }
 
 func DeleteDataplane(customerName string) (string, error) {
