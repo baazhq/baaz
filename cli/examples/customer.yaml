@@ -1,5 +1,5 @@
 customer:
-  name: parseable
+  name: grafana
   saas_type: "shared"
   cloud_type: "aws"
   labels: 
