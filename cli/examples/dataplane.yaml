@@ -1,5 +1,5 @@
 dataplane:
-  customer_name: parseable
+  customer_name: grafana
   cloud_type: aws
   cloud_region: us-east-1
   saas_type: shared

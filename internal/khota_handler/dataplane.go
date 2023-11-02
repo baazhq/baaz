@@ -28,13 +28,42 @@ var secretGVK = schema.GroupVersionResource{
 	Resource: "secrets",
 }
 
-func AddDataPlane(w http.ResponseWriter, req *http.Request) {
+func AddRemoveDataPlane(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
 	customerName := vars["customer_name"]
 	dataplaneName := vars["dataplane_name"]
 
 	kc, dc := getKubeClientset()
+
+	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	if err != nil {
+		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	if err := req.Body.Close(); err != nil {
+		res := NewResponse(ServerBodyCloseError, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	type action struct {
+		Action string `json:"action"`
+	}
+
+	var a action
+
+	err = json.Unmarshal(body, &a)
+	if err != nil {
+		res := NewResponse(ServerUnmarshallError, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
 
 	customer, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
 	if getErr != nil {
@@ -44,9 +73,17 @@ func AddDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	customer.ObjectMeta.Labels = mergeMaps(customer.Labels, map[string]string{
-		"dataplane": dataplaneName,
-	})
+	var customerLabels map[string]string
+	if a.Action == "add" {
+		customerLabels = mergeMaps(customer.Labels, map[string]string{
+			"dataplane": dataplaneName,
+		})
+	} else if a.Action == "remove" {
+		customerLabels = mergeMaps(customer.Labels, map[string]string{
+			"dataplane": "unavailable",
+		})
+	}
+	customer.ObjectMeta.Labels = customerLabels
 
 	var dataplaneNs string
 	if customer.Labels["saas_type"] == string(v1.SharedSaaS) {
@@ -54,8 +91,6 @@ func AddDataPlane(w http.ResponseWriter, req *http.Request) {
 	} else {
 		dataplaneNs = customerName
 	}
-
-	fmt.Println(dataplaneNs, dataplaneName)
 
 	dataplane, err := dc.Resource(dpGVK).Namespace(dataplaneNs).Get(context.TODO(), dataplaneName, metav1.GetOptions{})
 	if err != nil {
@@ -65,9 +100,15 @@ func AddDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	dpLabels := mergeMaps(dataplane.GetLabels(), map[string]string{
-		"customer_" + customerName: customerName,
-	})
+	var dpLabels map[string]string
+
+	if a.Action == "add" {
+		dpLabels = mergeMaps(dataplane.GetLabels(), map[string]string{
+			"customer_" + customerName: customerName,
+		})
+	} else if a.Action == "remove" {
+		delete(dataplane.GetLabels(), "customer_"+customerName)
+	}
 
 	patchBytes := NewPatchValue("replace", "/metadata/labels", dpLabels)
 
@@ -157,7 +198,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 			return getErr
 		}
 
-		if customer.GetLabels()["dataplane"] != "" {
+		if customer.GetLabels()["dataplane"] != "unavailable" {
 			return fmt.Errorf("dataplane exists for customer")
 		}
 
