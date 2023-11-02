@@ -151,28 +151,34 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 	namespace := getNamespace(customerName, dataplane.SaaSType)
 	dpSecret := getAwsEksSecret(dataplaneName, dataplane)
 
-	_, err = dc.Resource(secretGVK).Namespace(namespace).Create(context.TODO(), dpSecret, metav1.CreateOptions{})
-	if err != nil {
-		res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		customer, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
+		if getErr != nil {
+			return getErr
+		}
+
+		if customer.GetLabels()["dataplane"] != "" {
+			return fmt.Errorf("dataplane exists for customer")
+		}
+
+		customer.ObjectMeta.Labels = mergeMaps(customer.Labels, map[string]string{
+			"dataplane": dataplaneName,
+		})
+		_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), customer, metav1.UpdateOptions{})
+		return updateErr
+	},
+	)
+
+	if retryErr != nil {
+		res := NewResponse(DataPlaneCreateFail, internal_error, retryErr, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
 
-	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		result, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
-		if getErr != nil {
-			return getErr
-		}
-
-		result.ObjectMeta.Labels = mergeMaps(result.Labels, map[string]string{
-			"dataplane": dataplaneName,
-		})
-		_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), result, metav1.UpdateOptions{})
-		return updateErr
-	})
-	if retryErr != nil {
-		res := NewResponse(DataPlaneCreateFail, internal_error, retryErr, http.StatusInternalServerError)
+	_, err = dc.Resource(secretGVK).Namespace(namespace).Create(context.TODO(), dpSecret, metav1.CreateOptions{})
+	if err != nil {
+		res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return

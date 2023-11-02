@@ -4,6 +4,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var commonValidArgs = []string{
+	"customers",
+	"customer",
+	"dataplanes",
+	"dataplane",
+}
+
 var (
 	rootCmd = &cobra.Command{
 		Use:           "bz",

@@ -30,12 +30,16 @@ type dpList struct {
 	Status      string   `json:"status"`
 }
 
-func makePostDeleteDataplaneUrl(customerName string) string {
+func makeCreateDeleteDataplaneUrl(customerName string) string {
 	return common.GetBzUrl() + baazPath + customerPath + "/" + customerName + dataplanePath
 }
 
 func makeListDataplaneUrl() string {
 	return common.GetBzUrl() + baazPath + dataplanePath
+}
+
+func makeAddDataplaneUrl(customerName, dataplaneName string) string {
+	return common.GetBzUrl() + baazPath + customerPath + "/" + customerName + dataplanePath + "/" + dataplaneName
 }
 
 func GetDataplanes() error {
@@ -115,7 +119,7 @@ func DeleteDataplane(customerName string) (string, error) {
 
 	req, err := http.NewRequest(
 		http.MethodDelete,
-		makePostDeleteDataplaneUrl(customerName),
+		makeCreateDeleteDataplaneUrl(customerName),
 		nil,
 	)
 	if err != nil {
@@ -139,6 +143,39 @@ func DeleteDataplane(customerName string) (string, error) {
 	}
 	if resp.StatusCode == http.StatusOK {
 		return "Dataplane Deletion Initiated Successfully", nil
+	}
+
+	return "", nil
+
+}
+
+func AddDataplane(dataplaneName, customerName string) (string, error) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest(
+		http.MethodPut,
+		makeAddDataplaneUrl(customerName, dataplaneName),
+		nil,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("%s", string(body))
+	}
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == http.StatusOK {
+		return "Dataplane Added to Customer", nil
 	}
 
 	return "", nil
@@ -177,7 +214,7 @@ func CreateDataplane(filePath string) (string, error) {
 	}
 
 	resp, err := http.Post(
-		makePostDeleteDataplaneUrl(viper.GetString("dataplane.customer_name")),
+		makeCreateDeleteDataplaneUrl(viper.GetString("dataplane.customer_name")),
 		"application/json",
 		bytes.NewBuffer(ccByte),
 	)

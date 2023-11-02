@@ -9,10 +9,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var createValidArgs = []string{
-	"customer",
-}
-
 var file string
 
 var (
@@ -22,20 +18,20 @@ var (
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch args[0] {
-			case "customer":
+			case "customer", "customers":
 				resp, err := customers.CreateCustomer(file)
 				if err != nil {
 					return err
 				}
 				fmt.Println(resp)
-			case "dataplane":
+			case "dataplane", "dataplanes":
 				resp, err := dataplanes.CreateDataplane(file)
 				if err != nil {
 					return err
 				}
 				fmt.Println(resp)
 			default:
-				return NotValidArgs(createValidArgs)
+				return NotValidArgs(commonValidArgs)
 			}
 			return nil
 		},
