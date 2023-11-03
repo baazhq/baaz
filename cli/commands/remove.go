@@ -8,15 +8,15 @@ import (
 )
 
 var (
-	addCmd = &cobra.Command{
-		Use:   "add",
-		Short: "bz add - add a customer to existing dataplane in baaz control plane",
+	removeCmd = &cobra.Command{
+		Use:   "remove",
+		Short: "bz remove - add a customer to existing dataplane in baaz control plane",
 		Args:  cobra.ExactArgs(3),
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			switch args[0] {
 			case "dataplane", "dataplanes":
-				resp, err := dataplanes.AddDataplane(args[1], args[2])
+				resp, err := dataplanes.RemoveDataplane(args[1], args[2])
 				if err != nil {
 					return err
 				}
@@ -31,5 +31,5 @@ var (
 )
 
 func init() {
-	rootCmd.AddCommand(addCmd)
+	rootCmd.AddCommand(removeCmd)
 }

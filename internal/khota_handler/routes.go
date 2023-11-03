@@ -106,7 +106,7 @@ var routes = Routes{
 		"ADD DATA PLANE",
 		"PUT",
 		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}",
-		AddDataPlane,
+		AddRemoveDataPlane,
 	},
 	Route{
 		"GET DATA PLANE STATUS",

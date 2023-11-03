@@ -30,6 +30,10 @@ type dpList struct {
 	Status      string   `json:"status"`
 }
 
+type action struct {
+	Action string `json:"action"`
+}
+
 func makeCreateDeleteDataplaneUrl(customerName string) string {
 	return common.GetBzUrl() + baazPath + customerPath + "/" + customerName + dataplanePath
 }
@@ -38,7 +42,7 @@ func makeListDataplaneUrl() string {
 	return common.GetBzUrl() + baazPath + dataplanePath
 }
 
-func makeAddDataplaneUrl(customerName, dataplaneName string) string {
+func makeAddRemoveDataplaneUrl(customerName, dataplaneName string) string {
 	return common.GetBzUrl() + baazPath + customerPath + "/" + customerName + dataplanePath + "/" + dataplaneName
 }
 
@@ -81,6 +85,7 @@ func GetDataplanes() error {
 	return nil
 
 }
+
 func listDataplanes() ([]dpList, error) {
 	client := &http.Client{}
 
@@ -152,11 +157,20 @@ func DeleteDataplane(customerName string) (string, error) {
 func AddDataplane(dataplaneName, customerName string) (string, error) {
 	client := &http.Client{}
 
+	action := action{
+		Action: "add",
+	}
+
+	actionByte, err := json.Marshal(action)
+	if err != nil {
+		return "", err
+	}
 	req, err := http.NewRequest(
 		http.MethodPut,
-		makeAddDataplaneUrl(customerName, dataplaneName),
-		nil,
+		makeAddRemoveDataplaneUrl(customerName, dataplaneName),
+		bytes.NewReader(actionByte),
 	)
+
 	if err != nil {
 		return "", err
 	}
@@ -176,6 +190,48 @@ func AddDataplane(dataplaneName, customerName string) (string, error) {
 	}
 	if resp.StatusCode == http.StatusOK {
 		return "Dataplane Added to Customer", nil
+	}
+
+	return "", nil
+
+}
+
+func RemoveDataplane(dataplaneName, customerName string) (string, error) {
+	client := &http.Client{}
+
+	action := action{
+		Action: "remove",
+	}
+
+	actionByte, err := json.Marshal(action)
+	if err != nil {
+		return "", err
+	}
+	req, err := http.NewRequest(
+		http.MethodPut,
+		makeAddRemoveDataplaneUrl(customerName, dataplaneName),
+		bytes.NewReader(actionByte),
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("%s", string(body))
+	}
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == http.StatusOK {
+		return "Dataplane Removed from Customer", nil
 	}
 
 	return "", nil
