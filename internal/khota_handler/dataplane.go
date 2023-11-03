@@ -100,42 +100,74 @@ func AddRemoveDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var dpLabels map[string]string
-
 	if a.Action == "add" {
-		dpLabels = mergeMaps(dataplane.GetLabels(), map[string]string{
+		dpLabels := mergeMaps(dataplane.GetLabels(), map[string]string{
 			"customer_" + customerName: customerName,
 		})
+		patchBytes := NewPatchValue("replace", "/metadata/labels", dpLabels)
+
+		_, patchErr := dc.Resource(dpGVK).Namespace(dataplaneNs).Patch(
+			context.TODO(),
+			dataplane.GetName(),
+			types.JSONPatchType,
+			patchBytes,
+			metav1.PatchOptions{},
+		)
+		if err != nil {
+			res := NewResponse(DataplanePatchFail, internal_error, patchErr, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), customer, metav1.UpdateOptions{})
+		if updateErr != nil {
+			res := NewResponse(CustomerNamespaceUpdateFail, internal_error, getErr, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		res := NewResponse(DataplaneAddedSuccess, success, nil, http.StatusOK)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
 	} else if a.Action == "remove" {
-		delete(dataplane.GetLabels(), "customer_"+customerName)
-	}
 
-	patchBytes := NewPatchValue("replace", "/metadata/labels", dpLabels)
+		labels := dataplane.GetLabels()
+		delete(labels, "customer_"+customerName)
 
-	_, patchErr := dc.Resource(dpGVK).Namespace(dataplaneNs).Patch(
-		context.TODO(),
-		dataplane.GetName(),
-		types.JSONPatchType,
-		patchBytes,
-		metav1.PatchOptions{},
-	)
-	if err != nil {
-		res := NewResponse(DataplanePatchFail, internal_error, patchErr, http.StatusInternalServerError)
+		patchBytes := NewPatchValue("replace", "/metadata/labels", labels)
+
+		_, patchErr := dc.Resource(dpGVK).Namespace(dataplaneNs).Patch(
+			context.TODO(),
+			dataplane.GetName(),
+			types.JSONPatchType,
+			patchBytes,
+			metav1.PatchOptions{},
+		)
+		if err != nil {
+			res := NewResponse(DataplanePatchFail, internal_error, patchErr, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), customer, metav1.UpdateOptions{})
+		if updateErr != nil {
+			res := NewResponse(CustomerNamespaceUpdateFail, internal_error, getErr, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		res := NewResponse(DataplaneRemoveSuccess, success, nil, http.StatusOK)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
+
 	}
 
-	_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), customer, metav1.UpdateOptions{})
-	if updateErr != nil {
-		res := NewResponse(CustomerNamespaceUpdateFail, internal_error, getErr, http.StatusInternalServerError)
-		res.SetResponse(&w)
-		res.LogResponse()
-		return
-	}
-
-	res := NewResponse(DataplaneAddedSuccess, success, nil, http.StatusOK)
-	res.SetResponse(&w)
 }
 
 func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
@@ -192,6 +224,14 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 	namespace := getNamespace(customerName, dataplane.SaaSType)
 	dpSecret := getAwsEksSecret(dataplaneName, dataplane)
 
+	_, err = dc.Resource(secretGVK).Namespace(namespace).Create(context.TODO(), dpSecret, metav1.CreateOptions{})
+	if err != nil {
+		res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		customer, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
 		if getErr != nil {
@@ -212,14 +252,6 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 
 	if retryErr != nil {
 		res := NewResponse(DataPlaneCreateFail, internal_error, retryErr, http.StatusInternalServerError)
-		res.SetResponse(&w)
-		res.LogResponse()
-		return
-	}
-
-	_, err = dc.Resource(secretGVK).Namespace(namespace).Create(context.TODO(), dpSecret, metav1.CreateOptions{})
-	if err != nil {
-		res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return

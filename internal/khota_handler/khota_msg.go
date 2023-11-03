@@ -30,6 +30,7 @@ const (
 	DataPlaneListFail          CustomMsg = "DataPlane LIST Fail"
 	DataplaneDeletionInitiated CustomMsg = "Dataplane DELETE Initiated"
 	DataplaneAddedSuccess      CustomMsg = "Dataplane ADDED success"
+	DataplaneRemoveSuccess     CustomMsg = "Dataplane REMOVE success"
 	DataplanePatchFail         CustomMsg = "Dataplane PATCH Fail"
 )
 
