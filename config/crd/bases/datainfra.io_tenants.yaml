@@ -35,44 +35,6 @@ spec:
           spec:
             description: TenantsSpec defines the desired state of Tenants
             properties:
-              appSizes:
-                description: Define Size consists of AppType
-                items:
-                  properties:
-                    machine_pool:
-                      items:
-                        properties:
-                          labels:
-                            additionalProperties:
-                              type: string
-                            type: object
-                          max:
-                            format: int32
-                            minimum: 1
-                            type: integer
-                          min:
-                            format: int32
-                            minimum: 1
-                            type: integer
-                          name:
-                            type: string
-                          size:
-                            type: string
-                        required:
-                        - labels
-                        - max
-                        - min
-                        - name
-                        - size
-                        type: object
-                      type: array
-                    name:
-                      type: string
-                  required:
-                  - machine_pool
-                  - name
-                  type: object
-                type: array
               config:
                 description: Tenant Config consists of AppType
                 items:
@@ -108,7 +70,6 @@ spec:
                     type: object
                 type: object
             required:
-            - appSizes
             - config
             - dataplaneName
             type: object

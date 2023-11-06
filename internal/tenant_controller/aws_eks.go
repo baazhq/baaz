@@ -2,6 +2,7 @@ package tenant_controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -147,16 +148,34 @@ func (ae *awsEnv) tenantExpansion(desiredSize string) error {
 	return nil
 }
 
-func (ae *awsEnv) getNodeSpecForTenantSize(tenantConfig v1.TenantConfig) (*[]v1.NodeSpec, error) {
-	for _, size := range ae.tenant.Spec.TenantSizes {
+func (ae *awsEnv) getNodeSpecForTenantSize(tenantConfig v1.TenantApplicationConfig) (*[]v1.MachineSpec, error) {
+
+	cm := corev1.ConfigMap{}
+	if err := ae.client.Get(
+		ae.ctx,
+		k8stypes.NamespacedName{Name: "tenant-sizes", Namespace: "kube-system"},
+		&cm,
+	); err != nil {
+		return nil, err
+	}
+	sizeJson := cm.Data["size.json"]
+
+	var appSize v1.TenantAppSize
+
+	err := json.Unmarshal([]byte(sizeJson), &appSize)
+
+	if err != nil {
+		return nil, err
+	}
+	for _, size := range appSize.AppSizes {
 		if size.Name == tenantConfig.Size {
-			return &size.Spec, nil
+			return &size.MachineSpec, nil
 		}
 	}
 	return nil, fmt.Errorf("no NodegroupSpec for app %s & size %s", tenantConfig.AppType, tenantConfig.Size)
 }
 
-func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, nodeSpec *v1.NodeSpec) (input *awseks.CreateNodegroupInput) {
+func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, machineSpec *v1.MachineSpec) (input *awseks.CreateNodegroupInput) {
 
 	var taints = &[]types.Taint{}
 
@@ -173,15 +192,15 @@ func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, nodeSpec *v1.NodeS
 		CapacityType:       "",
 		ClientRequestToken: nil,
 		DiskSize:           nil,
-		InstanceTypes:      []string{nodeSpec.Size},
-		Labels:             nodeSpec.NodeLabels,
+		InstanceTypes:      []string{machineSpec.Size},
+		Labels:             machineSpec.NodeLabels,
 		LaunchTemplate:     nil,
 		ReleaseVersion:     nil,
 		RemoteAccess:       nil,
 		ScalingConfig: &types.NodegroupScalingConfig{
-			DesiredSize: aws.Int32(nodeSpec.Min),
-			MaxSize:     aws.Int32(nodeSpec.Max),
-			MinSize:     aws.Int32(nodeSpec.Min),
+			DesiredSize: aws.Int32(machineSpec.Min),
+			MaxSize:     aws.Int32(machineSpec.Max),
+			MinSize:     aws.Int32(machineSpec.Min),
 		},
 		Tags: map[string]string{
 			fmt.Sprintf("kubernetes.io/cluster/%s", ae.dp.Spec.CloudInfra.Eks.Name): "owned",

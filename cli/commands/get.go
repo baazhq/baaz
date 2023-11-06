@@ -3,6 +3,7 @@ package commands
 import (
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
+	"bz/pkg/tenants"
 
 	"github.com/spf13/cobra"
 )
@@ -11,7 +12,6 @@ var (
 	getCmd = &cobra.Command{
 		Use:       "get",
 		Short:     "bz get - list entites [Customers, Dataplane, Tenants, Applications] in baaz control plane",
-		Args:      cobra.ExactArgs(1),
 		ValidArgs: commonValidArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch args[0] {
@@ -19,9 +19,14 @@ var (
 				return customers.GetCustomers()
 			case "dataplanes":
 				return dataplanes.GetDataplanes()
+			case "tenant", "tenants":
+				if args[1] == "size" || args[1] == "sizes" {
+					return tenants.GetTenantSizes()
+				}
 			default:
 				return NotValidArgs(commonValidArgs)
 			}
+			return nil
 		},
 	}
 )

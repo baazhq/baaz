@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var tenantGVK = schema.GroupVersionResource{
@@ -71,9 +72,53 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 
 	_, dc := getKubeClientset()
 
-	tenantDeploy := makeTenantConfig(tenantNew, dataplaneName)
+	labels := map[string]string{
+		"tenant_type":              string(tenant.Type),
+		"dataplane":                dataplaneName,
+		"customer_" + customerName: customerName,
+		"application":              tenant.Application.Name,
+		"size":                     tenant.Application.Size,
+	}
 
-	_, err = dc.Resource(tenantGVK).Namespace(customerName).Create(context.TODO(), tenantDeploy, metav1.CreateOptions{})
+	tenantDeploy := makeTenantConfig(tenantNew, dataplaneName, labels)
+
+	dpList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "customer_" + customerName + "=" + customerName,
+	})
+	if err != nil {
+		return
+	}
+
+	for _, dp := range dpList.Items {
+
+		dpLabels := mergeMaps(dp.GetLabels(), map[string]string{
+			"tenant_" + tenant.TenantName: tenant.TenantName,
+		})
+		patchBytes := NewPatchValue("replace", "/metadata/labels", dpLabels)
+
+		_, patchErr := dc.Resource(dpGVK).Namespace(dp.GetNamespace()).Patch(
+			context.TODO(),
+			dp.GetName(),
+			types.JSONPatchType,
+			patchBytes,
+			metav1.PatchOptions{},
+		)
+		if err != nil {
+			res := NewResponse(DataplanePatchFail, internal_error, patchErr, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+	}
+
+	var tenantNamespace string
+	if tenant.Type == "pool" {
+		tenantNamespace = "shared"
+	} else {
+		tenantNamespace = customerName
+	}
+
+	_, err = dc.Resource(tenantGVK).Namespace(tenantNamespace).Create(context.TODO(), tenantDeploy, metav1.CreateOptions{})
 	if err != nil {
 		res := NewResponse(TenantCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)

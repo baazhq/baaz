@@ -14,12 +14,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var (
-	baazPath      = "/api/v1"
-	dataplanePath = "/dataplane"
-	customerPath  = "/customer"
-)
-
 type dpList struct {
 	Name        string   `json:"name"`
 	CloudRegion string   `json:"cloud_region"`
@@ -35,15 +29,15 @@ type action struct {
 }
 
 func makeCreateDeleteDataplaneUrl(customerName string) string {
-	return common.GetBzUrl() + baazPath + customerPath + "/" + customerName + dataplanePath
+	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.DataplanePath
 }
 
 func makeListDataplaneUrl() string {
-	return common.GetBzUrl() + baazPath + dataplanePath
+	return common.GetBzUrl() + common.BaazPath + common.DataplanePath
 }
 
 func makeAddRemoveDataplaneUrl(customerName, dataplaneName string) string {
-	return common.GetBzUrl() + baazPath + customerPath + "/" + customerName + dataplanePath + "/" + dataplaneName
+	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.DataplanePath + "/" + dataplaneName
 }
 
 func GetDataplanes() error {

@@ -19,6 +19,8 @@ import (
 
 	datainfraiov1 "datainfra.io/baaz/api/v1/types"
 	"datainfra.io/baaz/internal/app_controller"
+	dataplane_controller "datainfra.io/baaz/internal/dataplane_controller"
+
 	khota "datainfra.io/baaz/internal/khota_handler"
 	"datainfra.io/baaz/internal/tenant_controller"
 	//+kubebuilder:scaffold:imports
@@ -77,10 +79,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	// if err = (dataplane_controller.NewDataplaneReconciler(mgr)).SetupWithManager(mgr); err != nil {
-	// 	setupLog.Error(err, "unable to create controller", "controller", "Dataplane")
-	// 	os.Exit(1)
-	// }
+	if err = (dataplane_controller.NewDataplaneReconciler(mgr)).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Dataplane")
+		os.Exit(1)
+	}
 
 	if err = (app_controller.NewApplicationReconciler(mgr)).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")

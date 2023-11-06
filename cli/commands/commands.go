@@ -9,6 +9,8 @@ var commonValidArgs = []string{
 	"customer",
 	"dataplanes",
 	"dataplane",
+	"size",
+	"sizes",
 }
 
 var (
