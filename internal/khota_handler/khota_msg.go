@@ -11,34 +11,41 @@ const (
 
 // Customer
 const (
-	CustomerNamespaceExists        CustomMsg = "Customer Namespace EXISTS"
-	CustomerNamespaceDoesNotExists CustomMsg = "Customer Namespace DOESN'T EXISTS"
-	CustomerNamespaceSuccess       CustomMsg = "Customer Namespace CREATE success"
-	CustomerNamespaceGetFail       CustomMsg = "Customer Namespace GET Failed"
-	CustomerNamespaceUpdateSuccess CustomMsg = "Customer Namespace UPDATE success"
-	CustomerNamespaceUpdateFail    CustomMsg = "Customer Namespace UPDATE Failed"
-	CustomerNamespaceCreateFail    CustomMsg = "Customer Namespace CREATE Failed"
-	CustomerNamespaceListEmpty     CustomMsg = "Customer Namespace LIST Empty"
-	CustomerNamespaceList          CustomMsg = "Customer Namespace LIST"
+	CustomerNamespaceExists        CustomMsg = "Customer Namespace exists"
+	CustomerNamespaceDoesNotExists CustomMsg = "Customer Namespace doesn't EXISTS"
+	CustomerNamespaceSuccess       CustomMsg = "Customer Namespace create success"
+	CustomerNamespaceGetFail       CustomMsg = "Customer Namespace get Failed"
+	CustomerNamespaceUpdateSuccess CustomMsg = "Customer Namespace update success"
+	CustomerNamespaceUpdateFail    CustomMsg = "Customer Namespace update Failed"
+	CustomerNamespaceCreateFail    CustomMsg = "Customer Namespace create Failed"
+	CustomerNamespaceListEmpty     CustomMsg = "Customer Namespace list Empty"
+	CustomerNamespaceList          CustomMsg = "Customer Namespace list"
 )
 
 // DataPlane
 const (
-	DataPlaneCreateFail        CustomMsg = "DataPlane CREATE Fail"
-	DataPlaneCreateIntiated    CustomMsg = "DataPlane CREATION Initiated"
-	DataPlaneGetFail           CustomMsg = "DataPlane GET Fail"
-	DataPlaneListFail          CustomMsg = "DataPlane LIST Fail"
-	DataplaneDeletionInitiated CustomMsg = "Dataplane DELETE Initiated"
-	DataplaneAddedSuccess      CustomMsg = "Dataplane ADDED success"
-	DataplaneRemoveSuccess     CustomMsg = "Dataplane REMOVE success"
-	DataplanePatchFail         CustomMsg = "Dataplane PATCH Fail"
+	DataPlaneCreateFail        CustomMsg = "DataPlane create Fail"
+	DataPlaneCreateIntiated    CustomMsg = "DataPlane creation Initiated"
+	DataPlaneGetFail           CustomMsg = "DataPlane get Fail"
+	DataPlaneListFail          CustomMsg = "DataPlane list Fail"
+	DataplaneDeletionInitiated CustomMsg = "Dataplane delete Initiated"
+	DataplaneAddedSuccess      CustomMsg = "Dataplane added success"
+	DataplaneRemoveSuccess     CustomMsg = "Dataplane remove success"
+	DataplanePatchFail         CustomMsg = "Dataplane patch Fail"
 )
 
 // Tenant
 const (
-	TenantCreateFail     CustomMsg = "Tenant Creation Fail"
-	TenantCreateIntiated CustomMsg = "Tenant Creation Initiated"
-	TenantGetFail        CustomMsg = "Tenant GET Fail"
+	TenantCreateFail     CustomMsg = "Tenant creation  Fail"
+	TenantCreateIntiated CustomMsg = "Tenant creation Initiated"
+	TenantGetFail        CustomMsg = "Tenant get Fail"
+)
+
+// TenantSizes
+const (
+	TenantSizeCreateFail    CustomMsg = "Tenant Size Creation Failed"
+	TenantSizeGetFail       CustomMsg = "Tenant Size Get Failed"
+	TenantSizeCreateSuccess CustomMsg = "Tenant Size Creation Success"
 )
 
 // Application

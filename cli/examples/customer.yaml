@@ -4,4 +4,4 @@ customer:
   cloud_type: "aws"
   labels: 
     free: tier
-    cloud: gcp
+    cloud: aws

@@ -20,9 +20,7 @@ type TenantsSpec struct {
 	// Environment ref
 	DataplaneName string `json:"dataplaneName"`
 	// Tenant Config consists of AppType
-	TenantConfig []TenantConfig `json:"config"`
-	// Define Size consists of AppType
-	TenantSizes []TenantSizes `json:"appSizes"`
+	TenantConfig []TenantApplicationConfig `json:"config"`
 	// Isolation
 	Isolation IsolationConfig `json:"isolation,omitempty"`
 }
@@ -41,12 +39,7 @@ type NetworkConfig struct {
 	AllowedNamespaces []string `json:"allowedNamespaces,omitempty"`
 }
 
-type TenantSizes struct {
-	Name string     `json:"name"`
-	Spec []NodeSpec `json:"machine_pool"`
-}
-
-type TenantConfig struct {
+type TenantApplicationConfig struct {
 	AppType ApplicationType `json:"appType"`
 	Size    string          `json:"appSize"`
 }
@@ -55,16 +48,6 @@ type TenantConfig struct {
 type TenantsStatus struct {
 	Phase           TenantPhase       `json:"phase,omitempty"`
 	NodegroupStatus map[string]string `json:"machinePoolStatus,omitempty"`
-}
-
-type NodeSpec struct {
-	Name       string            `json:"name"`
-	NodeLabels map[string]string `json:"labels"`
-	Size       string            `json:"size"`
-	// +kubebuilder:validation:Minimum:=1
-	Min int32 `json:"min"`
-	// +kubebuilder:validation:Minimum:=1
-	Max int32 `json:"max"`
 }
 
 //+kubebuilder:object:root=true

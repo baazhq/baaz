@@ -13,8 +13,8 @@ type HTTPTenantApplication struct {
 }
 
 type HTTPTenantSizes struct {
-	Name  string     `json:"name"`
-	Nodes []NodeSpec `json:"machine_pool"`
+	Name        string        `json:"name"`
+	MachineSpec []MachineSpec `json:"machine_pool"`
 }
 
 type NetworkRules string
@@ -33,6 +33,6 @@ type HTTPTenant struct {
 	TenantName      string                `json:"name"`
 	Type            TenantDeploymentType  `json:"type"`
 	Application     HTTPTenantApplication `json:"application"`
-	Sizes           []HTTPTenantSizes     `json:"app_sizes"`
+	Sizes           []HTTPTenantSizes     `json:"tenant_sizes"`
 	NetworkSecurity NetworkSecurity       `json:"network_security,omitempty"`
 }

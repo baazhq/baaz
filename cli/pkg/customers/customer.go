@@ -54,7 +54,7 @@ func GetCustomers() error {
 			customer.SaaSType,
 			customer.CloudType,
 			customer.Dataplane,
-			createKeyValuePairs(customer.Labels),
+			common.CreateKeyValuePairs(customer.Labels),
 			customer.Status,
 		}
 		table.SetRowLine(true)
@@ -151,12 +151,4 @@ func CreateCustomer(filePath string) (string, error) {
 	}
 
 	return "", nil
-}
-
-func createKeyValuePairs(m map[string]string) string {
-	b := new(bytes.Buffer)
-	for key, value := range m {
-		fmt.Fprintf(b, "%s: %s\n", key, value)
-	}
-	return b.String()
 }
