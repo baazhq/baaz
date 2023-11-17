@@ -1,4 +1,4 @@
-package tenants
+package tenantsize
 
 import (
 	"bytes"
@@ -73,6 +73,7 @@ func GetTenantSizes() error {
 	table.Render()
 	return nil
 }
+
 func listTenantSize() (tenantSizes, error) {
 	response, err := http.Get(makeTenantSizePath())
 	if err != nil {
@@ -90,6 +91,11 @@ func listTenantSize() (tenantSizes, error) {
 	}
 
 	var ts tenantSizes
+
+	if string(body) == "[]" {
+		return tenantSizes{}, nil
+	}
+
 	err = json.Unmarshal(body, &ts)
 	if err != nil {
 		return tenantSizes{}, err

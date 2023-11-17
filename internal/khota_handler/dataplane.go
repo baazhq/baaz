@@ -167,13 +167,10 @@ func AddRemoveDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 
 	}
-
 }
 
 func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
 
-	customerName := vars["customer_name"]
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
@@ -198,11 +195,12 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	dataplaneName := makeDataPlaneName(dp.CloudType, dp.CloudRegion, dp.SaaSType)
+	dpName := makeDataPlaneName(dp.CloudType, dp.CustomerName, dp.CloudRegion)
+	dpNamespace := getNamespace(dp.CustomerName)
 	dataplane := v1.DataPlane{
-		CloudType:   dp.CloudType,
-		SaaSType:    dp.SaaSType,
-		CloudRegion: dp.CloudRegion,
+		CustomerName: dp.CustomerName,
+		CloudType:    dp.CloudType,
+		CloudRegion:  dp.CloudRegion,
 		CloudAuth: v1.CloudAuth{
 			AwsAuth: v1.AwsAuth{
 				AwsAccessKey: dp.CloudAuth.AwsAuth.AwsAccessKey,
@@ -211,7 +209,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		},
 		KubeConfig: v1.KubernetesConfig{
 			EKS: v1.EKSConfig{
-				Name:             dataplaneName,
+				Name:             dpName,
 				SubnetIds:        dp.KubeConfig.EKS.SubnetIds,
 				SecurityGroupIds: dp.KubeConfig.EKS.SecurityGroupIds,
 				Version:          dp.KubeConfig.EKS.Version,
@@ -221,10 +219,9 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 
 	kc, dc := getKubeClientset()
 
-	namespace := getNamespace(customerName, dataplane.SaaSType)
-	dpSecret := getAwsEksSecret(dataplaneName, dataplane)
+	dpSecret := getAwsEksSecret(dpName, dataplane)
 
-	_, err = dc.Resource(secretGVK).Namespace(namespace).Create(context.TODO(), dpSecret, metav1.CreateOptions{})
+	_, err = dc.Resource(secretGVK).Namespace(dpNamespace).Create(context.TODO(), dpSecret, metav1.CreateOptions{})
 	if err != nil {
 		res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
@@ -232,42 +229,46 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		customer, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
-		if getErr != nil {
-			return getErr
-		}
-
-		if customer.GetLabels()["dataplane"] != "unavailable" {
-			return fmt.Errorf("dataplane exists for customer")
-		}
-
-		customer.ObjectMeta.Labels = mergeMaps(customer.Labels, map[string]string{
-			"dataplane": dataplaneName,
-		})
-		_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), customer, metav1.UpdateOptions{})
-		return updateErr
-	},
-	)
-
-	if retryErr != nil {
-		res := NewResponse(DataPlaneCreateFail, internal_error, retryErr, http.StatusInternalServerError)
-		res.SetResponse(&w)
-		res.LogResponse()
-		return
-	}
-
 	labels := map[string]string{
-		"version":                  dataplane.KubeConfig.EKS.Version,
-		"cloud_type":               string(dataplane.CloudType),
-		"cloud_region":             dataplane.CloudRegion,
-		"saas_type":                string(dataplane.SaaSType),
-		"customer_" + customerName: customerName,
+		"version":        dataplane.KubeConfig.EKS.Version,
+		"cloud_type":     string(dataplane.CloudType),
+		"cloud_region":   dataplane.CloudRegion,
+		"dataplane_type": string(getDataplaneType(dp.CustomerName)),
 	}
 
-	dpDeploy := makeAwsEksConfig(dataplaneName, dataplane, labels)
+	if dp.CustomerName != "" {
+		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			customer, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), dp.CustomerName, metav1.GetOptions{})
+			if getErr != nil {
+				return getErr
+			}
 
-	_, err = dc.Resource(dpGVK).Namespace(namespace).Create(context.TODO(), dpDeploy, metav1.CreateOptions{})
+			if customer.GetLabels()["dataplane"] != "unavailable" {
+				return fmt.Errorf("dataplane exists for customer")
+			}
+
+			customer.ObjectMeta.Labels = mergeMaps(customer.Labels, map[string]string{
+				"dataplane": dpName,
+			})
+			_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), customer, metav1.UpdateOptions{})
+			return updateErr
+		},
+		)
+
+		if retryErr != nil {
+			res := NewResponse(DataPlaneCreateFail, internal_error, retryErr, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+		labels = mergeMaps(labels, map[string]string{
+			"customer_" + dataplane.CustomerName: dataplane.CustomerName,
+		})
+	}
+
+	dpDeploy := makeAwsEksConfig(dpName, dataplane, labels)
+
+	_, err = dc.Resource(dpGVK).Namespace(dpNamespace).Create(context.TODO(), dpDeploy, metav1.CreateOptions{})
 	if err != nil {
 		res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
@@ -282,60 +283,52 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 }
 
 func GetDataPlaneStatus(w http.ResponseWriter, req *http.Request) {
+
 	vars := mux.Vars(req)
+	_, dc := getKubeClientset()
 
-	customerName := vars["customer_name"]
+	type dataplaneResp struct {
+		Name          string `json:"name"`
+		CloudRegion   string `json:"cloud_region"`
+		CloudType     string `json:"cloud_type"`
+		DataplaneType string `json:"dataplane_type"`
+		Version       string `json:"version"`
+		Status        string `json:"status"`
+	}
 
-	kc, dc := getKubeClientset()
-
-	namespace, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
-	if getErr != nil {
-		res := NewResponse(DataPlaneGetFail, internal_error, getErr, http.StatusInternalServerError)
+	dpObjList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
 
-	type dataplaneResp struct {
-		Name        string `json:"name"`
-		CloudRegion string `json:"cloud_region"`
-		CloudType   string `json:"cloud_type"`
-		SaaSType    string `json:"saas_type"`
-		Version     string `json:"version"`
-		Status      string `json:"status"`
+	for _, dpObj := range dpObjList.Items {
+		if dpObj.GetName() == vars["dataplane_name"] {
+			status, _, _ := unstructured.NestedString(dpObj.Object, "status", "phase")
+
+			newdataplaneResp := dataplaneResp{
+				Name:          vars["dataplane_name"],
+				CloudRegion:   dpObj.GetLabels()["cloud_region"],
+				DataplaneType: dpObj.GetLabels()["dataplane_type"],
+				CloudType:     dpObj.GetLabels()["cloud_type"],
+				Version:       dpObj.GetLabels()["version"],
+				Status:        status,
+			}
+
+			dpResp, err := json.Marshal(newdataplaneResp)
+			if err != nil {
+				res := NewResponse(DataPlaneGetFail, string(JsonMarshallError), err, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+				return
+			}
+			sendJsonResponse(dpResp, http.StatusOK, &w)
+		} else {
+			sendJsonResponse([]byte("[]"), http.StatusOK, &w)
+		}
 	}
-
-	if namespace.Labels["saas_type"] == string(v1.SharedSaaS) {
-		dpName := namespace.Labels["dataplane"]
-		dpObj, err := dc.Resource(dpGVK).Namespace("shared").Get(context.TODO(), dpName, metav1.GetOptions{})
-		if err != nil {
-			res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
-			res.SetResponse(&w)
-			res.LogResponse()
-			return
-		}
-
-		status, _, _ := unstructured.NestedString(dpObj.Object, "status", "phase")
-
-		newdataplaneResp := dataplaneResp{
-			Name:        dpName,
-			CloudRegion: dpObj.GetLabels()["cloud_region"],
-			SaaSType:    dpObj.GetLabels()["saas_type"],
-			CloudType:   dpObj.GetLabels()["cloud_type"],
-			Version:     dpObj.GetLabels()["version"],
-			Status:      status,
-		}
-
-		dpResp, err := json.Marshal(newdataplaneResp)
-		if err != nil {
-			res := NewResponse(DataPlaneGetFail, string(JsonMarshallError), err, http.StatusInternalServerError)
-			res.SetResponse(&w)
-			res.LogResponse()
-			return
-		}
-		sendJsonResponse(dpResp, http.StatusOK, &w)
-	}
-
 }
 
 func ListDataPlane(w http.ResponseWriter, req *http.Request) {
@@ -350,13 +343,13 @@ func ListDataPlane(w http.ResponseWriter, req *http.Request) {
 	}
 
 	type dataplaneListResp struct {
-		Name        string   `json:"name"`
-		CloudRegion string   `json:"cloud_region"`
-		CloudType   string   `json:"cloud_type"`
-		Customers   []string `json:"customers"`
-		SaaSType    string   `json:"saas_type"`
-		Version     string   `json:"version"`
-		Status      string   `json:"status"`
+		Name          string   `json:"name"`
+		CloudRegion   string   `json:"cloud_region"`
+		CloudType     string   `json:"cloud_type"`
+		Customers     []string `json:"customers"`
+		DataplaneType string   `json:"dataplane_type"`
+		Version       string   `json:"version"`
+		Status        string   `json:"status"`
 	}
 
 	var dpListResp []dataplaneListResp
@@ -365,13 +358,13 @@ func ListDataPlane(w http.ResponseWriter, req *http.Request) {
 		phase, _, _ := unstructured.NestedString(dp.Object, "status", "phase")
 
 		newDpList := dataplaneListResp{
-			Name:        dp.GetName(),
-			CloudRegion: dp.GetLabels()["cloud_region"],
-			CloudType:   dp.GetLabels()["cloud_type"],
-			Customers:   labels2Slice(dp.GetLabels()),
-			SaaSType:    dp.GetLabels()["saas_type"],
-			Version:     dp.GetLabels()["version"],
-			Status:      phase,
+			Name:          dp.GetName(),
+			CloudRegion:   dp.GetLabels()["cloud_region"],
+			CloudType:     dp.GetLabels()["cloud_type"],
+			Customers:     labels2Slice(dp.GetLabels()),
+			DataplaneType: dp.GetLabels()["dataplane_type"],
+			Version:       dp.GetLabels()["version"],
+			Status:        phase,
 		}
 		dpListResp = append(dpListResp, newDpList)
 	}
@@ -384,42 +377,35 @@ func ListDataPlane(w http.ResponseWriter, req *http.Request) {
 func DeleteDataPlane(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	customerName := vars["customer_name"]
+	_, dc := getKubeClientset()
 
-	kc, dc := getKubeClientset()
-
-	namespace, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
-	if getErr != nil {
-		res := NewResponse(DataPlaneGetFail, internal_error, getErr, http.StatusInternalServerError)
+	dpObjList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
 
-	if namespace.Labels["saas_type"] == string(v1.SharedSaaS) {
-		dp := namespace.Labels["dataplane"]
-		err := dc.Resource(dpGVK).Namespace("shared").Delete(context.TODO(), dp, metav1.DeleteOptions{})
-		if err != nil {
-			res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
+	for _, dpObj := range dpObjList.Items {
+		if dpObj.GetName() == vars["dataplane_name"] {
+			exists := checkStringInMap("customer_", dpObj.GetLabels())
+			if exists {
+				res := NewResponse(DataplaneDeletionFailedCustomerExists, internal_error, err, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+				return
+			}
+			err = dc.Resource(dpGVK).Namespace(dpObj.GetNamespace()).Delete(context.TODO(), dpObj.GetName(), metav1.DeleteOptions{})
+			if err != nil {
+				res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+				return
+			}
+			res := NewResponse("", string(DataplaneDeletionInitiated), nil, http.StatusOK)
 			res.SetResponse(&w)
-			res.LogResponse()
-			return
 		}
-
-		res := NewResponse("", string(DataplaneDeletionInitiated), nil, http.StatusOK)
-		res.SetResponse(&w)
-	} else if namespace.Labels["saas_type"] == string(v1.DedicatedSaaS) {
-		dp := namespace.Labels["dataplane"]
-		err := dc.Resource(dpGVK).Namespace(customerName).Delete(context.TODO(), dp, metav1.DeleteOptions{})
-		if err != nil {
-			res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
-			res.SetResponse(&w)
-			res.LogResponse()
-			return
-		}
-
-		res := NewResponse("", string(DataplaneDeletionInitiated), nil, http.StatusOK)
-		res.SetResponse(&w)
 	}
 
 }

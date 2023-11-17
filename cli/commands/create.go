@@ -3,7 +3,7 @@ package commands
 import (
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
-	"bz/pkg/tenants"
+	"bz/pkg/tenantsize"
 
 	"fmt"
 
@@ -30,12 +30,13 @@ var (
 			case "dataplane", "dataplanes":
 				resp, err := dataplanes.CreateDataplane(file)
 				if err != nil {
+					fmt.Println(err)
 					return err
 				}
 				fmt.Println(resp)
 			case "tenant", "tenants":
 				if args[1] == "size" || args[1] == "sizes" {
-					resp, err := tenants.CreateTenantSize(file)
+					resp, err := tenantsize.CreateTenantSize(file)
 					if err != nil {
 						return err
 					}

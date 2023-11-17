@@ -63,17 +63,40 @@ func mergeMaps(m1 map[string]string, m2 map[string]string) map[string]string {
 	return merged
 }
 
-func getNamespace(customerName string, saasType v1.SaaSTypes) string {
-	if saasType == v1.SharedSaaS {
+func getNamespace(customerName string) string {
+	if customerName == "" {
 		return shared_namespace
-	} else if saasType == v1.DedicatedSaaS {
+	} else if customerName != "" {
 		return customerName
 	}
 	return ""
 }
 
-func makeDataPlaneName(cloudType v1.CloudType, region string, saas_type v1.SaaSTypes) string {
-	s := string(saas_type) + "-" + string(cloudType) + "-" + region
+func getDataplaneType(customerName string) v1.SaaSTypes {
+	if customerName == "" {
+		return v1.SharedSaaS
+	} else if customerName != "" {
+		return v1.DedicatedSaaS
+	}
+	return ""
+}
+
+func makeDataPlaneName(cloudType v1.CloudType, customerName, region string) string {
+	var dpName string
+	// here we assume, its a shared saas
+	if customerName == "" {
+		dpName = string(cloudType) + "-" + region + "-" + String(4)
+		return dpName
+	} else if customerName != "" {
+		dpName = customerName
+		return dpName
+
+	}
+	return ""
+}
+
+func makeTenantName(deploymentType v1.TenantDeploymentType, appName, appSize string) string {
+	s := string(deploymentType) + "-" + appName + "-" + appSize
 	return strings.ToLower(s) + "-" + String(4)
 }
 
@@ -111,6 +134,16 @@ func labels2Slice(labels map[string]string) []string {
 		}
 	}
 	return sliceString
+}
+
+func checkStringInMap(matchString string, labels map[string]string) bool {
+
+	for k, _ := range labels {
+		if strings.Contains(k, matchString) {
+			return true
+		}
+	}
+	return false
 }
 
 // patchValue specifies a patch operation.
