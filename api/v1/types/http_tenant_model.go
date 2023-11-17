@@ -30,9 +30,7 @@ type NetworkSecurity struct {
 }
 
 type HTTPTenant struct {
-	TenantName      string                `json:"name"`
 	Type            TenantDeploymentType  `json:"type"`
 	Application     HTTPTenantApplication `json:"application"`
-	Sizes           []HTTPTenantSizes     `json:"tenant_sizes"`
 	NetworkSecurity NetworkSecurity       `json:"network_security,omitempty"`
 }

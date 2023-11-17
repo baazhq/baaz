@@ -24,14 +24,16 @@ const (
 
 // DataPlane
 const (
-	DataPlaneCreateFail        CustomMsg = "DataPlane create Fail"
-	DataPlaneCreateIntiated    CustomMsg = "DataPlane creation Initiated"
-	DataPlaneGetFail           CustomMsg = "DataPlane get Fail"
-	DataPlaneListFail          CustomMsg = "DataPlane list Fail"
-	DataplaneDeletionInitiated CustomMsg = "Dataplane delete Initiated"
-	DataplaneAddedSuccess      CustomMsg = "Dataplane added success"
-	DataplaneRemoveSuccess     CustomMsg = "Dataplane remove success"
-	DataplanePatchFail         CustomMsg = "Dataplane patch Fail"
+	DataPlaneCreateFail                   CustomMsg = "DataPlane create fail"
+	DataPlaneCreateIntiated               CustomMsg = "DataPlane creation initiated"
+	DataPlaneGetFail                      CustomMsg = "DataPlane get fail"
+	DataPlaneListFail                     CustomMsg = "DataPlane list fail"
+	DataplaneDeletionInitiated            CustomMsg = "Dataplane delete intiated"
+	DataplaneDeletionFailed               CustomMsg = "Dataplane delete failed"
+	DataplaneDeletionFailedCustomerExists CustomMsg = "Dataplane delete failed, customer exists on dataplane"
+	DataplaneAddedSuccess                 CustomMsg = "Dataplane added success"
+	DataplaneRemoveSuccess                CustomMsg = "Dataplane remove success"
+	DataplanePatchFail                    CustomMsg = "Dataplane patch fail"
 )
 
 // Tenant

@@ -92,12 +92,8 @@ spec:
                 - eks
                 - region
                 type: object
-              saasType:
-                description: SaaSType can be dev, stage, prod DataPlanes
-                type: string
             required:
             - cloudInfra
-            - saasType
             type: object
           status:
             description: DataPlaneStatus defines the observed state of DataPlane

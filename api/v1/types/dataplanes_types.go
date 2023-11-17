@@ -7,8 +7,6 @@ import (
 
 // DataPlaneSpec defines the desired state of DataPlane
 type DataPlaneSpec struct {
-	// SaaSType can be dev, stage, prod DataPlanes
-	SaasStype string `json:"saasType"`
 	// Cloud can be any pubic name ie aws, gcp, azure.
 	CloudInfra CloudInfraConfig `json:"cloudInfra"`
 }
@@ -16,9 +14,9 @@ type DataPlaneSpec struct {
 type CloudType string
 
 const (
-	AWS   string = "aws"
-	GCP   string = "gcp"
-	AZURE string = "azure"
+	AWS   CloudType = "aws"
+	GCP   CloudType = "gcp"
+	AZURE CloudType = "azure"
 )
 
 type CloudInfraConfig struct {

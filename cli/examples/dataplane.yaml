@@ -1,5 +1,4 @@
 dataplane:
-  customer_name: onecard
   cloud_type: aws
   cloud_region: us-east-1
   saas_type: shared

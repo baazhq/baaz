@@ -15,21 +15,21 @@ import (
 )
 
 type dpList struct {
-	Name        string   `json:"name"`
-	CloudRegion string   `json:"cloud_region"`
-	CloudType   string   `json:"cloud_type"`
-	Customers   []string `json:"customers"`
-	SaaSType    string   `json:"saas_type"`
-	Version     string   `json:"version"`
-	Status      string   `json:"status"`
+	Name          string   `json:"name"`
+	CloudRegion   string   `json:"cloud_region"`
+	CloudType     string   `json:"cloud_type"`
+	Customers     []string `json:"customers"`
+	DataplaneType string   `json:"dataplane_type"`
+	Version       string   `json:"version"`
+	Status        string   `json:"status"`
 }
 
 type action struct {
 	Action string `json:"action"`
 }
 
-func makeCreateDeleteDataplaneUrl(customerName string) string {
-	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.DataplanePath
+func makeDataplaneUrl() string {
+	return common.GetBzUrl() + common.BaazPath + common.DataplanePath
 }
 
 func makeListDataplaneUrl() string {
@@ -52,7 +52,7 @@ func GetDataplanes() error {
 		"Cloud_Region",
 		"Cloud_Type",
 		"Customers",
-		"SaaS_Type",
+		"Dataplane_Type",
 		"Version",
 		"Status",
 	},
@@ -64,7 +64,7 @@ func GetDataplanes() error {
 			dp.CloudRegion,
 			dp.CloudType,
 			strings.Join(dp.Customers, "\n"),
-			dp.SaaSType,
+			dp.DataplaneType,
 			dp.Version,
 			dp.Status,
 		}
@@ -118,7 +118,7 @@ func DeleteDataplane(customerName string) (string, error) {
 
 	req, err := http.NewRequest(
 		http.MethodDelete,
-		makeCreateDeleteDataplaneUrl(customerName),
+		makeDataplaneUrl(),
 		nil,
 	)
 	if err != nil {
@@ -243,7 +243,6 @@ func CreateDataplane(filePath string) (string, error) {
 	}
 
 	type createDataPlane struct {
-		SaaSType         string                 `json:"saas_type"`
 		CloudType        string                 `json:"cloud_type"`
 		CloudRegion      string                 `json:"cloud_region"`
 		CloudAuth        map[string]interface{} `json:"cloud_auth"`
@@ -251,7 +250,6 @@ func CreateDataplane(filePath string) (string, error) {
 	}
 
 	newCreateDataplane := createDataPlane{
-		SaaSType:         viper.GetString("dataplane.saas_type"),
 		CloudType:        viper.GetString("dataplane.cloud_type"),
 		CloudRegion:      viper.GetString("dataplane.cloud_region"),
 		CloudAuth:        viper.GetStringMap("dataplane.cloud_auth"),
@@ -264,7 +262,7 @@ func CreateDataplane(filePath string) (string, error) {
 	}
 
 	resp, err := http.Post(
-		makeCreateDeleteDataplaneUrl(viper.GetString("dataplane.customer_name")),
+		makeDataplaneUrl(),
 		"application/json",
 		bytes.NewBuffer(ccByte),
 	)

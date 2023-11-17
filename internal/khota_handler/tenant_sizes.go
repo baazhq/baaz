@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -14,10 +16,10 @@ func GetTenantSizes(w http.ResponseWriter, req *http.Request) {
 
 	cm, err := kc.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "tenant-sizes", metav1.GetOptions{})
 	if err != nil {
-		res := NewResponse(TenantSizeGetFail, req_error, err, http.StatusInternalServerError)
-		res.SetResponse(&w)
-		res.LogResponse()
-		return
+		if apierrors.IsNotFound(err) {
+			sendJsonResponse([]byte("[]"), http.StatusOK, &w)
+			return
+		}
 	}
 
 	sizeJson := cm.Data["size.json"]

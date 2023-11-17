@@ -74,32 +74,31 @@ var routes = Routes{
 	},
 	// -------------------------------------- DATAPLANE ROUTES ---------------------------------------//
 	// {
-	// 	"cloud_type":"AWS",
-	// 	"cloud_region":"us-east-1",
-	// 	"saas_type": "SHARED",
-	// 	"cloud_auth":{
-	// 	  "awsAuth": {
-	// 		  "awsAccessKey": "tuniboldaterayaarbolda",
-	// 		  "awsSecretKey": "sohneyenargazitani"
-	// 	  }
+	// 	"cloud_type": "aws",
+	// 	"cloud_region": "us-east-1",
+	// 	"cloud_auth": {
+	// 		"aws_auth": {
+	// 			"aws_access_key": "gandasa",
+	// 			"aws_secret_key": "tunibolditerayaarbolda"
+	// 		}
 	// 	},
-	// 	"kubernetes_config":{
-	// 	"eks":{
-	// 		"subnet_ids":[
-	// 			"subnet-01cbca574f0d8b8d8",
-	// 			"subnet-0a4d9c31739a9ac87"
-	// 		],
-	// 		"security_group_ids":[
-	// 			"sg-0da08285aacbdea70"
-	// 		],
-	// 		"version":"1.25"
-	// 	}
+	// 	"kubernetes_config": {
+	// 		"eks": {
+	// 			"security_group_ids": [
+	// 				"sg-0da08285aacbdea70"
+	// 			],
+	// 			"subnet_ids": [
+	// 				"subnet-01cbca574f0d8b8d8",
+	// 				"subnet-0a4d9c31739a9ac87"
+	// 			],
+	// 			"version": "1.27"
+	// 		}
 	// 	}
 	// }
 	Route{
 		"CREATE DATA PLANE",
 		"POST",
-		"/api/v1/customer/{customer_name}/dataplane",
+		"/api/v1/dataplane",
 		CreateDataPlane,
 	},
 	Route{
@@ -111,13 +110,13 @@ var routes = Routes{
 	Route{
 		"GET DATA PLANE STATUS",
 		"GET",
-		"/api/v1/customer/{customer_name}/dataplane",
+		"/api/v1/dataplane/{dataplane_name}",
 		GetDataPlaneStatus,
 	},
 	Route{
 		"DELETE DATA PLANE",
 		"DELETE",
-		"/api/v1/customer/{customer_name}/dataplane",
+		"/api/v1/dataplane/{dataplane_name}",
 		DeleteDataPlane,
 	},
 	Route{

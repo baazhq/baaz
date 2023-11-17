@@ -50,15 +50,8 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var sizes []v1.HTTPTenantSizes
-
-	for _, size := range tenant.Sizes {
-		sizes = append(sizes, size)
-	}
-
 	tenantNew := v1.HTTPTenant{
-		TenantName: tenant.TenantName,
-		Type:       tenant.Type,
+		Type: tenant.Type,
 		Application: v1.HTTPTenantApplication{
 			Name: tenant.Application.Name,
 			Size: tenant.Application.Size,
@@ -67,7 +60,6 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 			InterNamespaceTraffic: tenant.NetworkSecurity.InterNamespaceTraffic,
 			AllowedNamespaces:     tenant.NetworkSecurity.AllowedNamespaces,
 		},
-		Sizes: sizes,
 	}
 
 	_, dc := getKubeClientset()
@@ -80,7 +72,9 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		"size":                     tenant.Application.Size,
 	}
 
-	tenantDeploy := makeTenantConfig(tenantNew, dataplaneName, labels)
+	tenantName := makeTenantName(tenant.Type, tenant.Application.Name, tenant.Application.Size)
+
+	tenantDeploy := makeTenantConfig(tenantName, tenantNew, dataplaneName, labels)
 
 	dpList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "customer_" + customerName + "=" + customerName,
@@ -92,7 +86,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 	for _, dp := range dpList.Items {
 
 		dpLabels := mergeMaps(dp.GetLabels(), map[string]string{
-			"tenant_" + tenant.TenantName: tenant.TenantName,
+			"tenant_" + tenantName: tenantName,
 		})
 		patchBytes := NewPatchValue("replace", "/metadata/labels", dpLabels)
 

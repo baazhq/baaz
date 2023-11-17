@@ -48,7 +48,6 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 				"labels": labels,
 			},
 			"spec": map[string]interface{}{
-				"saasType": dataplane.SaaSType,
 				"cloudInfra": map[string]interface{}{
 					"cloudType": dataplane.CloudType,
 					"region":    dataplane.CloudRegion,
@@ -69,7 +68,11 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 	}
 }
 
-func makeTenantConfig(tenant v1.HTTPTenant, dataplaneName string, labels map[string]string) *unstructured.Unstructured {
+func makeTenantConfig(
+	tenantName string,
+	tenant v1.HTTPTenant,
+	dataplaneName string,
+	labels map[string]string) *unstructured.Unstructured {
 	var isolationEnabled, networkSecurityEnabled bool
 	var allowedNamespaces []string
 
@@ -93,7 +96,7 @@ func makeTenantConfig(tenant v1.HTTPTenant, dataplaneName string, labels map[str
 			"apiVersion": "datainfra.io/v1",
 			"kind":       "Tenants",
 			"metadata": map[string]interface{}{
-				"name":   tenant.TenantName,
+				"name":   makeTenantName(tenant.Type, tenant.Application.Name, tenant.Application.Size),
 				"labels": labels,
 			},
 			"spec": map[string]interface{}{
@@ -113,7 +116,6 @@ func makeTenantConfig(tenant v1.HTTPTenant, dataplaneName string, labels map[str
 						"appSize": tenant.Application.Size,
 					},
 				},
-				"appSizes": tenant.Sizes,
 			},
 		},
 	}
