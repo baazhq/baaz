@@ -35,4 +35,13 @@ resources:
   kind: Tenant
   path: datainfra.io/baaz/api/v1
   version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: datainfra.io
+  group: datainfra.io
+  kind: Tenantinfra
+  path: datainfra.io/baaz/api/v1
+  version: v1
 version: "3"

@@ -24,8 +24,10 @@ var tenantGVK = schema.GroupVersionResource{
 func CreateTenant(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	customerName := vars["customer_name"]
 	dataplaneName := vars["dataplane_name"]
+	tenantName := vars["tenant_name"]
+	customerName := vars["customer_name"]
+
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
@@ -51,7 +53,8 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 	}
 
 	tenantNew := v1.HTTPTenant{
-		Type: tenant.Type,
+		TenantName:   tenant.TenantName,
+		CustomerName: tenant.CustomerName,
 		Application: v1.HTTPTenantApplication{
 			Name: tenant.Application.Name,
 			Size: tenant.Application.Size,
@@ -64,55 +67,41 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 
 	_, dc := getKubeClientset()
 
-	labels := map[string]string{
-		"tenant_type":              string(tenant.Type),
+	tenant_labels := map[string]string{
 		"dataplane":                dataplaneName,
 		"customer_" + customerName: customerName,
 		"application":              tenant.Application.Name,
 		"size":                     tenant.Application.Size,
 	}
 
-	tenantName := makeTenantName(tenant.Type, tenant.Application.Name, tenant.Application.Size)
+	tenantDeploy := makeTenantConfig(tenantName, tenantNew, dataplaneName, tenant_labels)
 
-	tenantDeploy := makeTenantConfig(tenantName, tenantNew, dataplaneName, labels)
-
-	dpList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{
-		LabelSelector: "customer_" + customerName + "=" + customerName,
-	})
+	dataplane, err := dc.Resource(dpGVK).Namespace("shared").Get(context.TODO(), dataplaneName, metav1.GetOptions{})
 	if err != nil {
 		return
 	}
 
-	for _, dp := range dpList.Items {
+	dpLabels := mergeMaps(dataplane.GetLabels(), map[string]string{
+		"tenant_" + tenantName: tenantName,
+	})
 
-		dpLabels := mergeMaps(dp.GetLabels(), map[string]string{
-			"tenant_" + tenantName: tenantName,
-		})
-		patchBytes := NewPatchValue("replace", "/metadata/labels", dpLabels)
+	patchBytes := NewPatchValue("replace", "/metadata/labels", dpLabels)
 
-		_, patchErr := dc.Resource(dpGVK).Namespace(dp.GetNamespace()).Patch(
-			context.TODO(),
-			dp.GetName(),
-			types.JSONPatchType,
-			patchBytes,
-			metav1.PatchOptions{},
-		)
-		if err != nil {
-			res := NewResponse(DataplanePatchFail, internal_error, patchErr, http.StatusInternalServerError)
-			res.SetResponse(&w)
-			res.LogResponse()
-			return
-		}
+	_, patchErr := dc.Resource(dpGVK).Namespace(dataplane.GetNamespace()).Patch(
+		context.TODO(),
+		dataplane.GetName(),
+		types.JSONPatchType,
+		patchBytes,
+		metav1.PatchOptions{},
+	)
+	if err != nil {
+		res := NewResponse(DataplanePatchFail, internal_error, patchErr, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
 	}
 
-	var tenantNamespace string
-	if tenant.Type == "pool" {
-		tenantNamespace = "shared"
-	} else {
-		tenantNamespace = customerName
-	}
-
-	_, err = dc.Resource(tenantGVK).Namespace(tenantNamespace).Create(context.TODO(), tenantDeploy, metav1.CreateOptions{})
+	_, err = dc.Resource(tenantGVK).Namespace(dataplane.GetNamespace()).Create(context.TODO(), tenantDeploy, metav1.CreateOptions{})
 	if err != nil {
 		res := NewResponse(TenantCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)

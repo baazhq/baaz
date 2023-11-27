@@ -2,8 +2,6 @@ package khota_handler
 
 import (
 	v1 "datainfra.io/baaz/api/v1/types"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -73,14 +71,8 @@ func makeTenantConfig(
 	tenant v1.HTTPTenant,
 	dataplaneName string,
 	labels map[string]string) *unstructured.Unstructured {
-	var isolationEnabled, networkSecurityEnabled bool
+	var networkSecurityEnabled bool
 	var allowedNamespaces []string
-
-	if tenant.Type == v1.Siloed {
-		isolationEnabled = true
-	} else if tenant.Type == v1.Pool {
-		isolationEnabled = false
-	}
 
 	if tenant.NetworkSecurity.InterNamespaceTraffic == v1.Deny {
 		networkSecurityEnabled = true
@@ -96,14 +88,14 @@ func makeTenantConfig(
 			"apiVersion": "datainfra.io/v1",
 			"kind":       "Tenants",
 			"metadata": map[string]interface{}{
-				"name":   makeTenantName(tenant.Type, tenant.Application.Name, tenant.Application.Size),
+				"name":   tenantName,
 				"labels": labels,
 			},
 			"spec": map[string]interface{}{
 				"dataplaneName": dataplaneName,
 				"isolation": map[string]interface{}{
 					"machine": map[string]interface{}{
-						"enabled": isolationEnabled,
+						"enabled": false,
 					},
 					"network": map[string]interface{}{
 						"enabled":           networkSecurityEnabled,
@@ -156,18 +148,23 @@ func makeApplicationConfig(app v1.HTTPApplication, dataplaneName, applicationNam
 	}
 }
 
-func makeTenantSizeCm(sizeJson string) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "tenant-sizes",
-			Namespace: "kube-system",
-		},
-		Data: map[string]string{
-			"size.json": sizeJson,
+func makeTenantsInfra(dataplaneName string, tenantSizes *v1.HTTPTenantSizes) *unstructured.Unstructured {
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "datainfra.io/v1",
+			"kind":       "TenantsInfra",
+			"metadata": map[string]interface{}{
+				"name": dataplaneName + "-" + tenantSizes.Name,
+			},
+			"spec": map[string]interface{}{
+				"dataplane": dataplaneName,
+				"tenantSizes": []map[string]interface{}{
+					{
+						"name":        tenantSizes.Name,
+						"machinePool": tenantSizes.MachineSpec,
+					},
+				},
+			},
 		},
 	}
 }

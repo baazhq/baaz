@@ -20,9 +20,10 @@ import (
 	datainfraiov1 "datainfra.io/baaz/api/v1/types"
 	"datainfra.io/baaz/internal/app_controller"
 	dataplane_controller "datainfra.io/baaz/internal/dataplane_controller"
+	tenant_controller "datainfra.io/baaz/internal/tenant_controller"
+	tenantinfra_controller "datainfra.io/baaz/internal/tenantinfra_controller"
 
 	khota "datainfra.io/baaz/internal/khota_handler"
-	"datainfra.io/baaz/internal/tenant_controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -68,8 +69,6 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "72b9bc85.datainfra.io",
@@ -86,6 +85,11 @@ func main() {
 
 	if err = (app_controller.NewApplicationReconciler(mgr)).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Application")
+		os.Exit(1)
+	}
+
+	if err = (tenantinfra_controller.NewTenantsInfraReconciler(mgr)).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "TenantInfra")
 		os.Exit(1)
 	}
 

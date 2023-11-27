@@ -95,8 +95,8 @@ func makeDataPlaneName(cloudType v1.CloudType, customerName, region string) stri
 	return ""
 }
 
-func makeTenantName(deploymentType v1.TenantDeploymentType, appName, appSize string) string {
-	s := string(deploymentType) + "-" + appName + "-" + appSize
+func makeTenantName(appName, appSize string) string {
+	s := appName + "-" + appSize
 	return strings.ToLower(s) + "-" + String(4)
 }
 

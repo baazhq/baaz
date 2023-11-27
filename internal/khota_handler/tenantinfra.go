@@ -2,31 +2,28 @@ package khota_handler
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
+	v1 "datainfra.io/baaz/api/v1/types"
+	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
-func GetTenantSizes(w http.ResponseWriter, req *http.Request) {
-	kc, _ := getKubeClientset()
-
-	cm, err := kc.CoreV1().ConfigMaps("kube-system").Get(context.TODO(), "tenant-sizes", metav1.GetOptions{})
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			sendJsonResponse([]byte("[]"), http.StatusOK, &w)
-			return
-		}
-	}
-
-	sizeJson := cm.Data["size.json"]
-	sendJsonResponse([]byte(sizeJson), http.StatusOK, &w)
+var tenantInfraGVK = schema.GroupVersionResource{
+	Group:    "datainfra.io",
+	Version:  "v1",
+	Resource: "tenantsinfras",
 }
 
-func CreateTenantSizes(w http.ResponseWriter, req *http.Request) {
+func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
+
+	vars := mux.Vars(req)
+
+	dataplaneName := vars["dataplane_name"]
 
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -43,9 +40,18 @@ func CreateTenantSizes(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	kc, _ := getKubeClientset()
+	var tenantsInfra []v1.HTTPTenantSizes
 
-	_, err = kc.CoreV1().ConfigMaps("kube-system").Create(context.TODO(), makeTenantSizeCm(string(body)), metav1.CreateOptions{})
+	if err := json.Unmarshal(body, &tenantsInfra); err != nil {
+		res := NewResponse(JsonMarshallError, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	_, dc := getKubeClientset()
+
+	_, err = dc.Resource(tenantInfraGVK).Namespace("shared").Create(context.TODO(), makeTenantsInfra(dataplaneName, &tenantsInfra), metav1.CreateOptions{})
 	if err != nil {
 		res := NewResponse(TenantSizeCreateFail, req_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)

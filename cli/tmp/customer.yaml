@@ -1,0 +1,7 @@
+customer:
+  name: onecard
+  saas_type: "shared"
+  cloud_type: "aws"
+  labels: 
+    free: "tier"
+    poc:  "true"
