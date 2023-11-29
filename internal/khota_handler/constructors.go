@@ -19,8 +19,8 @@ const (
 //
 // stringData:
 //
-//	accessKey: AKIAWLZK4B6ACNA3H43S
-//	secretKey: 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
+//	accessKey: kjbdsfkjbsdf
+//	secretKey: lknasflbnafslkbnaflkbadf
 func getAwsEksSecret(dataPlaneName string, dataplane v1.DataPlane) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -148,22 +148,26 @@ func makeApplicationConfig(app v1.HTTPApplication, dataplaneName, applicationNam
 	}
 }
 
-func makeTenantsInfra(dataplaneName string, tenantSizes *v1.HTTPTenantSizes) *unstructured.Unstructured {
+func makeTenantsInfra(dataplaneName string, tenantSizes *[]v1.HTTPTenantSizes) *unstructured.Unstructured {
+
+	var allTenantSizes []map[string]interface{}
+	for _, tenantSize := range *tenantSizes {
+		allTenantSizes = append(allTenantSizes, map[string]interface{}{
+			"name":        tenantSize.Name,
+			"machinePool": tenantSize.MachineSpec,
+		})
+	}
+
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "datainfra.io/v1",
 			"kind":       "TenantsInfra",
 			"metadata": map[string]interface{}{
-				"name": dataplaneName + "-" + tenantSizes.Name,
+				"name": dataplaneName + "-" + "tenant-sizes",
 			},
 			"spec": map[string]interface{}{
-				"dataplane": dataplaneName,
-				"tenantSizes": []map[string]interface{}{
-					{
-						"name":        tenantSizes.Name,
-						"machinePool": tenantSizes.MachineSpec,
-					},
-				},
+				"dataplane":   dataplaneName,
+				"tenantSizes": allTenantSizes,
 			},
 		},
 	}
