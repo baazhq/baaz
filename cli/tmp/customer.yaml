@@ -1,7 +1,7 @@
 customer:
-  name: onecard
+  name: foo
   saas_type: "shared"
   cloud_type: "aws"
   labels: 
-    free: "tier"
+    tier: "free"
     poc:  "true"

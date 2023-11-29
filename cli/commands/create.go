@@ -3,7 +3,7 @@ package commands
 import (
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
-	"bz/pkg/tenantsize"
+	"bz/pkg/tenantsinfra"
 
 	"fmt"
 
@@ -11,8 +11,8 @@ import (
 )
 
 var (
-	file string
-	size string
+	file           string
+	dataplane_name string
 )
 
 var (
@@ -34,14 +34,12 @@ var (
 					return err
 				}
 				fmt.Println(resp)
-			case "tenant", "tenants":
-				if args[1] == "size" || args[1] == "sizes" {
-					resp, err := tenantsize.CreateTenantSize(file)
-					if err != nil {
-						return err
-					}
-					fmt.Println(resp)
+			case "tenantinfra", "tenantsinfra":
+				resp, err := tenantsinfra.CreateTenantsInfra(file, dataplane_name)
+				if err != nil {
+					return err
 				}
+				fmt.Println(resp)
 			default:
 				return NotValidArgs(commonValidArgs)
 			}
@@ -53,4 +51,6 @@ var (
 func init() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVarP(&file, "file", "f", "", ".yaml file speficifying entity to be created")
+	createCmd.Flags().StringVarP(&dataplane_name, "dataplane_name", "", "", "dataplane name")
+
 }
