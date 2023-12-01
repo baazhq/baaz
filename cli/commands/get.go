@@ -3,6 +3,8 @@ package commands
 import (
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
+	"bz/pkg/tenantsinfra"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -18,18 +20,19 @@ var (
 				return customers.GetCustomers()
 			case "dataplanes":
 				return dataplanes.GetDataplanes()
-			case "tenant", "tenants":
-				if args[1] == "size" || args[1] == "sizes" {
-					//	return tenantsinfra.GetTenantSizes()
+			case "tenantinfra", "tenantsinfra":
+				if dataplane_name == "" {
+					return fmt.Errorf("Dataplane named cannot be nil")
 				}
+				return tenantsinfra.GetTenantsInfra(dataplane_name)
 			default:
 				return NotValidArgs(commonValidArgs)
 			}
-			return nil
 		},
 	}
 )
 
 func init() {
 	rootCmd.AddCommand(getCmd)
+	getCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
 }

@@ -43,11 +43,11 @@ const (
 	TenantGetFail        CustomMsg = "Tenant get Fail"
 )
 
-// TenantSizes
+// TenantsInfra
 const (
-	TenantSizeCreateFail    CustomMsg = "Tenant Size Creation Failed"
-	TenantSizeGetFail       CustomMsg = "Tenant Size Get Failed"
-	TenantSizeCreateSuccess CustomMsg = "Tenant Size Creation Success"
+	TenantsInfraCreateFail    CustomMsg = "TenantsInfra Creation Failed"
+	TenantsInfraGetFail       CustomMsg = "TenantsInfra Get Failed"
+	TenantsInfraCreateSuccess CustomMsg = "TenantsInfra Creation Success"
 )
 
 // Application

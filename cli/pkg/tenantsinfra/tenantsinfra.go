@@ -7,8 +7,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"os"
+	"strconv"
 
+	"github.com/olekukonko/tablewriter"
 	"gopkg.in/yaml.v3"
 )
 
@@ -32,76 +36,103 @@ type Ti struct {
 	} `yaml:"tenantsInfra"`
 }
 
-// func GetTenantSizes() error {
-// 	ts, err := listTenantSize()
-// 	if err != nil {
-// 		return err
-// 	}
+type tiResp struct {
+	Name              string            `json:"name"`
+	Dataplane         string            `json:"dataplane"`
+	MachinePoolStatus map[string]string `json:"machine_pool_status"`
+	TenantSizes       []struct {
+		MachinePool []struct {
+			Labels map[string]string `json:"labels"`
+			Max    int               `json:"max"`
+			Min    int               `json:"min"`
+			Name   string            `json:"name"`
+			Size   string            `json:"size"`
+		} `json:"machinePool"`
+		Name string `json:"name"`
+	} `json:"tenant_sizes"`
+	Status string `json:"status"`
+}
 
-// 	table := tablewriter.NewWriter(os.Stdout)
-// 	table.SetHeader([]string{
-// 		"Name",
-// 		"Machine_Pool",
-// 	},
-// 	)
+func GetTenantsInfra(dataplane string) error {
+	ts, err := getTenantsInfra(dataplane)
+	if err != nil {
+		return err
+	}
 
-// 	table.SetRowLine(true)
-// 	table.Append([]string{"", "Name", "Size", "Min", "Max", "Labels"})
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{
+		"Name",
+		"Machine_Pool",
+	},
+	)
 
-// 	for _, ts := range ts.TenantSizes {
-// 		var row []string
-// 		for _, mp := range ts.MachinePool {
-// 			row = []string{
-// 				ts.Name,
-// 				mp.Name,
-// 				mp.Size,
-// 				strconv.Itoa(mp.Min),
-// 				strconv.Itoa(mp.Max),
-// 				common.CreateKeyValuePairs(mp.Labels),
-// 			}
-// 			table.SetRowLine(true)
-// 			table.Append(row)
-// 			table.SetAutoMergeCellsByColumnIndex([]int{0})
+	table.SetRowLine(true)
+	table.Append([]string{
+		"",
+		"Name",
+		"Size",
+		"Min",
+		"Max",
+		"Labels",
+		"Status",
+	})
 
-// 			table.SetAlignment(1)
-// 		}
+	for _, tenantSize := range ts.TenantSizes {
+		var row []string
+		for _, mp := range tenantSize.MachinePool {
+			row = []string{
+				tenantSize.Name,
+				mp.Name,
+				mp.Size,
+				strconv.Itoa(mp.Min),
+				strconv.Itoa(mp.Max),
+				common.CreateKeyValuePairs(mp.Labels),
+				ts.MachinePoolStatus[tenantSize.Name+"-"+mp.Name],
+			}
+			table.SetRowLine(true)
+			table.Append(row)
+			table.SetAutoMergeCellsByColumnIndex([]int{0})
 
-// 	}
-// 	table.SetAlignment(1)
+			table.SetAlignment(1)
+		}
 
-// 	table.Render()
-// 	return nil
-// }
+	}
+	table.SetAlignment(1)
 
-// func listTenantSize() (tenantInfra, error) {
-// 	response, err := http.Get(makeTenantSizePath())
-// 	if err != nil {
-// 		return tenantSizes{}, err
-// 	}
+	table.Render()
+	return nil
+}
 
-// 	defer response.Body.Close()
+func getTenantsInfra(dataplane string) (tiResp, error) {
+	response, err := http.Get(makeTenantInfraPath(dataplane))
+	if err != nil {
+		return tiResp{}, err
+	}
 
-// 	body, err := io.ReadAll(response.Body)
-// 	if response.StatusCode > 299 {
-// 		log.Fatalf("Response failed with status code: %d and\nbody: %s\n", response.StatusCode, body)
-// 	}
-// 	if err != nil {
-// 		return tenantSizes{}, err
-// 	}
+	defer response.Body.Close()
 
-// 	var ts tenantSizes
+	body, err := io.ReadAll(response.Body)
+	if response.StatusCode > 299 {
+		log.Fatalf("Response failed with status code: %d and\nbody: %s\n", response.StatusCode, body)
+	}
+	if err != nil {
+		return tiResp{}, err
+	}
 
-// 	if string(body) == "[]" {
-// 		return tenantSizes{}, nil
-// 	}
+	var ti tiResp
 
-// 	err = json.Unmarshal(body, &ts)
-// 	if err != nil {
-// 		return tenantSizes{}, err
-// 	}
+	if string(body) == "[]" {
+		return tiResp{}, nil
+	}
 
-//		return ts, nil
-//	}
+	err = json.Unmarshal(body, &ti)
+	if err != nil {
+		return tiResp{}, err
+	}
+
+	return ti, nil
+}
+
 func CreateTenantsInfra(filePath string, dataplane string) (string, error) {
 
 	yamlFile, err := ioutil.ReadFile(filePath)
@@ -130,11 +161,9 @@ func CreateTenantsInfra(filePath string, dataplane string) (string, error) {
 		return "", err
 	}
 
-	fmt.Println(string(tiByte))
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
-	fmt.Print(resp.Status)
 	if resp.StatusCode > 299 {
 		return "", fmt.Errorf("%s", string(body))
 	}

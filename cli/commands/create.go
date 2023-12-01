@@ -18,7 +18,7 @@ var (
 var (
 	createCmd = &cobra.Command{
 		Use:   "create",
-		Short: "bz create - create entites [customers, dataplane, tenants, applications] in baaz control plane",
+		Short: "bz create - create entites [customers, dataplane, tenantinfra, tenants, applications] in baaz control plane",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch args[0] {
 			case "customer", "customers":
@@ -35,6 +35,9 @@ var (
 				}
 				fmt.Println(resp)
 			case "tenantinfra", "tenantsinfra":
+				if dataplane_name == "" {
+					return fmt.Errorf("Dataplane named cannot be nil")
+				}
 				resp, err := tenantsinfra.CreateTenantsInfra(file, dataplane_name)
 				if err != nil {
 					return err
@@ -51,6 +54,6 @@ var (
 func init() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVarP(&file, "file", "f", "", ".yaml file speficifying entity to be created")
-	createCmd.Flags().StringVarP(&dataplane_name, "dataplane_name", "", "", "dataplane name")
+	createCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
 
 }

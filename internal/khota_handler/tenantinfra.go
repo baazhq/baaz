@@ -10,6 +10,7 @@ import (
 	v1 "datainfra.io/baaz/api/v1/types"
 	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -53,15 +54,54 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 
 	_, err = dc.Resource(tenantInfraGVK).Namespace("shared").Create(context.TODO(), makeTenantsInfra(dataplaneName, &tenantsInfra), metav1.CreateOptions{})
 	if err != nil {
-		res := NewResponse(TenantSizeCreateFail, req_error, err, http.StatusInternalServerError)
+		res := NewResponse(TenantsInfraCreateFail, req_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
 
-	res := NewResponse(TenantSizeCreateSuccess, success, nil, http.StatusOK)
+	res := NewResponse(TenantsInfraCreateSuccess, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 	res.LogResponse()
 	return
+
+}
+
+func GetTenantInfra(w http.ResponseWriter, req *http.Request) {
+	_, dc := getKubeClientset()
+
+	dataplane := mux.Vars(req)["dataplane_name"]
+
+	tenantInfra, err := dc.Resource(tenantInfraGVK).Namespace("shared").Get(context.TODO(), dataplane+"-tenantinfra", metav1.GetOptions{})
+	if err != nil {
+		res := NewResponse(TenantsInfraGetFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	type tenantInfraResp struct {
+		Name              string            `json:"name"`
+		DataplaneName     string            `json:"dataplane"`
+		MachinePoolStatus map[string]string `json:"machine_pool_status"`
+		TenantSizes       interface{}       `json:"tenant_sizes"`
+		Status            string            `json:"status"`
+	}
+
+	status, _, _ := unstructured.NestedString(tenantInfra.Object, "status", "phase")
+
+	machinePoolStatus, _, _ := unstructured.NestedStringMap(tenantInfra.Object, "status", "machinePoolStatus")
+
+	tenantSizes, _, _ := unstructured.NestedSlice(tenantInfra.Object, "spec", "tenantSizes")
+
+	resp := tenantInfraResp{
+		Name:              tenantInfra.GetName(),
+		DataplaneName:     tenantInfra.GetLabels()["dataplane_name"],
+		MachinePoolStatus: machinePoolStatus,
+		TenantSizes:       tenantSizes,
+		Status:            status,
+	}
+	bytes, _ := json.Marshal(resp)
+	sendJsonResponse(bytes, http.StatusOK, &w)
 
 }
