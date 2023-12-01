@@ -148,15 +148,15 @@ var routes = Routes{
 	Route{
 		"CREATE TENANT INFRA",
 		"POST",
-		"/api/v1/dataplane/{dataplane_name}/tenantinfra",
+		"/api/v1/dataplane/{dataplane_name}/tenantsinfra",
 		CreateTenantInfra,
 	},
-	// Route{
-	// 	"GET TENANT SIZES",
-	// 	"GET",
-	// 	"/api/v1/tenant/sizes",
-	// 	GetTenantSizes,
-	// },
+	Route{
+		"GET TENANT SIZES",
+		"GET",
+		"/api/v1/dataplane/{dataplane_name}/tenantsinfra",
+		GetTenantInfra,
+	},
 	// -------------------------------------- APPLICATIONS ROUTES ---------------------------------------//
 	Route{
 		"CREATE APPLICATION",

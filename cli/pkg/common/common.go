@@ -11,7 +11,7 @@ var (
 	DataplanePath   = "/dataplane"
 	CustomerPath    = "/customer"
 	TenantPath      = "/tenant"
-	TenantInfraPath = "/tenantinfra"
+	TenantInfraPath = "/tenantsinfra"
 	TenantSizesPath = "/sizes"
 )
 

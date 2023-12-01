@@ -163,7 +163,10 @@ func makeTenantsInfra(dataplaneName string, tenantSizes *[]v1.HTTPTenantSizes) *
 			"apiVersion": "datainfra.io/v1",
 			"kind":       "TenantsInfra",
 			"metadata": map[string]interface{}{
-				"name": dataplaneName + "-" + "tenant-sizes",
+				"name": dataplaneName + "-" + "tenantinfra",
+				"labels": map[string]string{
+					"dataplane_name": dataplaneName,
+				},
 			},
 			"spec": map[string]interface{}{
 				"dataplane":   dataplaneName,
