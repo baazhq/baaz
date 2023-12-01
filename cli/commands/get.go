@@ -3,7 +3,6 @@ package commands
 import (
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
-	"bz/pkg/tenantsize"
 
 	"github.com/spf13/cobra"
 )
@@ -21,7 +20,7 @@ var (
 				return dataplanes.GetDataplanes()
 			case "tenant", "tenants":
 				if args[1] == "size" || args[1] == "sizes" {
-					return tenantsize.GetTenantSizes()
+					//	return tenantsinfra.GetTenantSizes()
 				}
 			default:
 				return NotValidArgs(commonValidArgs)

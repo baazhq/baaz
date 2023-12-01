@@ -104,7 +104,7 @@ var routes = Routes{
 	Route{
 		"ADD DATA PLANE",
 		"PUT",
-		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}",
+		"/api/v1/dataplane/{dataplane_name}/customer/{customer_name}",
 		AddRemoveDataPlane,
 	},
 	Route{
@@ -126,56 +126,10 @@ var routes = Routes{
 		ListDataPlane,
 	},
 	// -------------------------------------- TENANT ROUTES ---------------------------------------//
-	//
-	// {
-	// 	"name": "free-tier-tenant",
-	// 	"type": "pool",
-	// 	"network_security": {
-	// 		"inter_namespace_traffic": "Deny",
-	// 		"allowed_namespaces": ["nginx"]
-	// 	},
-	// 	"application":
-	// 	{
-	// 			"name": "appone",
-	// 			"app_size": "appone-small"
-	// 	},
-	// 	"app_sizes": [
-	// 		{
-	// 			"name": "appone-small",
-	// 			"machine_pool": [
-	// 				{
-	// 					"name": "appone-server",
-	// 					"size": "t2.nano",
-	// 					"min": 1,
-	// 					"max": 3,
-	// 					"labels": {
-	// 						"app": "appone",
-	// 						"size": "small"
-	// 					}
-	// 				}
-	// 			]
-	// 		},
-	// 		{
-	// 			"name": "appone-medium",
-	// 			"machine_pool": [
-	// 				{
-	// 					"name": "appone-server",
-	// 					"size": "t2.small",
-	// 					"min": 1,
-	// 					"max": 3,
-	// 					"labels": {
-	// 						"app": "appone",
-	// 						"size": "medium"
-	// 					}
-	// 				}
-	// 			]
-	// 		}
-	// 	]
-	// }
 	Route{
 		"CREATE TENANT",
 		"POST",
-		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant",
+		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant/{tenant_name}",
 		CreateTenant,
 	},
 	Route{
@@ -190,19 +144,19 @@ var routes = Routes{
 		"/api/v1/tenant",
 		GetTenantStatus,
 	},
-	// --------------------------------------- TENANT SIZES ---------------------------------------------//
+	// --------------------------------------- TENANT INFRA ---------------------------------------------//
 	Route{
-		"CREATE TENANT SIZES",
+		"CREATE TENANT INFRA",
 		"POST",
-		"/api/v1/tenant/sizes",
-		CreateTenantSizes,
+		"/api/v1/dataplane/{dataplane_name}/tenantinfra",
+		CreateTenantInfra,
 	},
-	Route{
-		"GET TENANT SIZES",
-		"GET",
-		"/api/v1/tenant/sizes",
-		GetTenantSizes,
-	},
+	// Route{
+	// 	"GET TENANT SIZES",
+	// 	"GET",
+	// 	"/api/v1/tenant/sizes",
+	// 	GetTenantSizes,
+	// },
 	// -------------------------------------- APPLICATIONS ROUTES ---------------------------------------//
 	Route{
 		"CREATE APPLICATION",

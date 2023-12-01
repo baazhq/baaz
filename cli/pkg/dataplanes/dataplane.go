@@ -37,7 +37,7 @@ func makeListDataplaneUrl() string {
 }
 
 func makeAddRemoveDataplaneUrl(customerName, dataplaneName string) string {
-	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.DataplanePath + "/" + dataplaneName
+	return common.GetBzUrl() + common.BaazPath + common.DataplanePath + "/" + dataplaneName + common.CustomerPath + "/" + customerName
 }
 
 func GetDataplanes() error {
