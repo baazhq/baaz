@@ -45,9 +45,10 @@ const (
 
 // TenantsInfra
 const (
-	TenantsInfraCreateFail    CustomMsg = "TenantsInfra Creation Failed"
-	TenantsInfraGetFail       CustomMsg = "TenantsInfra Get Failed"
-	TenantsInfraCreateSuccess CustomMsg = "TenantsInfra Creation Success"
+	TenantsInfraCreateFail                  CustomMsg = "TenantsInfra Creation Failed"
+	TenantsInfraGetFail                     CustomMsg = "TenantsInfra Get Failed"
+	TenantsInfraCreateSuccess               CustomMsg = "TenantsInfra Creation Success"
+	TenantInfraCreateFailDataplaneNotActive CustomMsg = "TenantsInfra Creation Failed, Dataplane is not Active"
 )
 
 // Application
@@ -62,4 +63,19 @@ const (
 // Json
 const (
 	JsonMarshallError CustomMsg = "Json Marshall Error"
+)
+
+// constants
+const (
+	req_error             string = "request_error"
+	internal_error        string = "internal_error"
+	dataplane_not_active  string = "dataplane not active"
+	duplicate_entry       string = "entry already exists"
+	entry_not_exists      string = "entry doesn't exist"
+	success               string = "success"
+	shared_namespace      string = "shared"
+	dedicated_namespace   string = "dedicated"
+	active                string = "active"
+	dataplane_unavailable string = "unavailable"
+	label_prefix          string = "b_"
 )

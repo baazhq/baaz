@@ -69,7 +69,15 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 			} else if dpType == string(v1.DedicatedSaaS) {
 				namespace = matchStringInMap("customer_", dp.GetLabels())
 			}
-		}
+
+			phase, _, _ := unstructured.NestedString(dp.Object, "status", "phase")
+			if phase != string(v1.ActiveD) {
+				res := NewResponse(TenantInfraCreateFailDataplaneNotActive, req_error, nil, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+				return
+			}
+		 }
 	}
 
 	_, err = dc.Resource(tenantInfraGVK).Namespace(namespace).Create(context.TODO(), makeTenantsInfra(dataplaneName, &tenantsInfra), metav1.CreateOptions{})
