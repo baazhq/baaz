@@ -133,17 +133,17 @@ var routes = Routes{
 		CreateTenant,
 	},
 	Route{
-		"GET TENANT STATUS",
+		"GET TENANTS",
 		"GET",
-		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant/{tenant_name}",
-		GetTenantStatus,
+		"/api/v1/customer/{customer_name}/tenant",
+		GetAllTenantInCustomer,
 	},
-	Route{
-		"LIST TENANT",
-		"GET",
-		"/api/v1/tenant",
-		GetTenantStatus,
-	},
+	// Route{
+	// 	"LIST TENANT",
+	// 	"GET",
+	// 	"/api/v1/tenant",
+	// 	GetTenantStatus,
+	// },
 	// --------------------------------------- TENANT INFRA ---------------------------------------------//
 	Route{
 		"CREATE TENANT INFRA",

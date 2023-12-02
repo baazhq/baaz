@@ -77,7 +77,7 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 				res.LogResponse()
 				return
 			}
-		 }
+		}
 	}
 
 	_, err = dc.Resource(tenantInfraGVK).Namespace(namespace).Create(context.TODO(), makeTenantsInfra(dataplaneName, &tenantsInfra), metav1.CreateOptions{})

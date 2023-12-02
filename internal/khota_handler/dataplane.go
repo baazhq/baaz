@@ -389,7 +389,7 @@ func DeleteDataPlane(w http.ResponseWriter, req *http.Request) {
 
 	for _, dpObj := range dpObjList.Items {
 		if dpObj.GetName() == vars["dataplane_name"] {
-			exists := checkStringInMap("customer_", dpObj.GetLabels())
+			exists := checkKeyInMap("customer_", dpObj.GetLabels())
 			if exists {
 				res := NewResponse(DataplaneDeletionFailedCustomerExists, internal_error, err, http.StatusInternalServerError)
 				res.SetResponse(&w)
