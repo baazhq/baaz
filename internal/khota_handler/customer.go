@@ -17,20 +17,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const (
-	req_error                   string = "request_error"
-	internal_error              string = "internal_error"
-	duplicate_entry             string = "entry already exists"
-	entry_not_exists            string = "entry doesn't exist"
-	success                     string = "success"
-	shared_namespace            string = "shared"
-	dedicated_namespace         string = "dedicated"
-	dataplane_creation_initated string = "dataplane creation intiated"
-	active                      string = "active"
-	dataplane_unavailable       string = "unavailable"
-	label_prefix                string = "b_"
-)
-
 type CustomerListResponse struct {
 	Name      string            `json:"name"`
 	SaaSType  string            `json:"saas_type"`
