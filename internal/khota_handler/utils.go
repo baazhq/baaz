@@ -136,10 +136,20 @@ func labels2Slice(labels map[string]string) []string {
 	return sliceString
 }
 
-func checkStringInMap(matchString string, labels map[string]string) bool {
+func checkKeyInMap(matchString string, labels map[string]string) bool {
 
 	for k, _ := range labels {
 		if strings.Contains(k, matchString) {
+			return true
+		}
+	}
+	return false
+}
+
+func checkValueInMap(matchString string, labels map[string]string) bool {
+
+	for _, v := range labels {
+		if strings.Contains(v, matchString) {
 			return true
 		}
 	}

@@ -76,7 +76,43 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 
 	tenantDeploy := makeTenantConfig(tenantName, tenantNew, dataplaneName, tenant_labels)
 
-	dataplane, err := dc.Resource(dpGVK).Namespace("shared").Get(context.TODO(), dataplaneName, metav1.GetOptions{})
+	dpList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		res := NewResponse(DataPlaneListFail, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	var dpNamespace string
+	for _, dp := range dpList.Items {
+		if dp.GetName() == dataplaneName {
+			dpType := dp.GetLabels()["dataplane_type"]
+			if dpType == string(v1.SharedSaaS) {
+				dpNamespace = string(v1.SharedSaaS)
+			} else if dpType == string(v1.DedicatedSaaS) {
+				dpNamespace = matchStringInMap("customer_", dp.GetLabels())
+			}
+
+			phase, _, _ := unstructured.NestedString(dp.Object, "status", "phase")
+			if phase != string(v1.ActiveD) {
+				res := NewResponse(TenantInfraCreateFailDataplaneNotActive, req_error, nil, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+				return
+			}
+
+			if !checkValueInMap(customerName, dp.GetLabels()) {
+				res := NewResponse(CustomerNotExistInDataplane, req_error, nil, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+				return
+			}
+
+		}
+	}
+
+	dataplane, err := dc.Resource(dpGVK).Namespace(dpNamespace).Get(context.TODO(), dataplaneName, metav1.GetOptions{})
 	if err != nil {
 		return
 	}
@@ -101,7 +137,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	_, err = dc.Resource(tenantGVK).Namespace(dataplane.GetNamespace()).Create(context.TODO(), tenantDeploy, metav1.CreateOptions{})
+	_, err = dc.Resource(tenantGVK).Namespace(customerName).Create(context.TODO(), tenantDeploy, metav1.CreateOptions{})
 	if err != nil {
 		res := NewResponse(TenantCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
@@ -114,25 +150,39 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 
 }
 
-func GetTenantStatus(w http.ResponseWriter, req *http.Request) {
+type tenantListResp struct {
+	CustomerName  string `json:"customer"`
+	DataplaneName string `json:"dataplane"`
+	Application   string `json:"application"`
+	Size          string `json:"size"`
+}
+
+func GetAllTenantInCustomer(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
 	customerName := vars["customer_name"]
-	_ = vars["dataplane_name"]
-	tenantName := vars["tenant_name"]
 
 	_, dc := getKubeClientset()
 
-	tenant, err := dc.Resource(tenantGVK).Namespace(customerName).Get(context.TODO(), tenantName, metav1.GetOptions{})
+	tenantList, err := dc.Resource(tenantGVK).Namespace(customerName).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		res := NewResponse(TenantGetFail, internal_error, err, http.StatusInternalServerError)
+		res := NewResponse(TenantListFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
 
-	status, _, _ := unstructured.NestedString(tenant.Object, "status", "phase")
-	res := NewResponse("", status, nil, http.StatusOK)
-	res.SetResponse(&w)
+	var tenantResp []tenantListResp
+	for _, tenant := range tenantList.Items {
+		newTenantResp := tenantListResp{
+			CustomerName:  customerName,
+			DataplaneName: tenant.GetLabels()["dataplane"],
+			Size:          tenant.GetLabels()["size"],
+			Application:   tenant.GetLabels()["application"],
+		}
+		tenantResp = append(tenantResp, newTenantResp)
+	}
 
+	bytes, _ := json.Marshal(tenantResp)
+	sendJsonResponse(bytes, http.StatusOK, &w)
 }

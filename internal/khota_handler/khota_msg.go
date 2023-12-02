@@ -20,6 +20,7 @@ const (
 	CustomerNamespaceCreateFail    CustomMsg = "Customer Namespace create Failed"
 	CustomerNamespaceListEmpty     CustomMsg = "Customer Namespace list Empty"
 	CustomerNamespaceList          CustomMsg = "Customer Namespace list"
+	CustomerNotExistInDataplane    CustomMsg = "Customer not exist in dataplane"
 )
 
 // DataPlane
@@ -38,26 +39,28 @@ const (
 
 // Tenant
 const (
-	TenantCreateFail     CustomMsg = "Tenant creation  Fail"
-	TenantCreateIntiated CustomMsg = "Tenant creation Initiated"
-	TenantGetFail        CustomMsg = "Tenant get Fail"
+	TenantCreateFail                   CustomMsg = "Tenant creation  fail"
+	TenantCreateIntiated               CustomMsg = "Tenant creation success"
+	TenantCreateFailDataplaneNotActive CustomMsg = "Tenant creation failed, Dataplane is not Active"
+	TenantGetFail                      CustomMsg = "Tenant get fail"
+	TenantListFail                     CustomMsg = "Tenant list fail"
 )
 
 // TenantsInfra
 const (
-	TenantsInfraCreateFail                  CustomMsg = "TenantsInfra Creation Failed"
-	TenantsInfraGetFail                     CustomMsg = "TenantsInfra Get Failed"
-	TenantsInfraCreateSuccess               CustomMsg = "TenantsInfra Creation Success"
-	TenantInfraCreateFailDataplaneNotActive CustomMsg = "TenantsInfra Creation Failed, Dataplane is not Active"
+	TenantsInfraCreateFail                  CustomMsg = "TenantsInfra creation Failed"
+	TenantsInfraGetFail                     CustomMsg = "TenantsInfra get Failed"
+	TenantsInfraCreateSuccess               CustomMsg = "TenantsInfra creation Success"
+	TenantInfraCreateFailDataplaneNotActive CustomMsg = "TenantsInfra creation Failed, Dataplane is not Active"
 )
 
 // Application
 const (
-	ApplicationCreateFail     CustomMsg = "Application Creation Fail"
-	ApplicationCreateIntiated CustomMsg = "Application Creation Initiated"
-	ApplicationGetFail        CustomMsg = "Application GET Fail"
-	ApplicationDeleteFail     CustomMsg = "Application Delete Fail"
-	ApplicationDeleteIntiated CustomMsg = "Application Delete Initiated"
+	ApplicationCreateFail     CustomMsg = "Application creation fail"
+	ApplicationCreateIntiated CustomMsg = "Application creation initiated"
+	ApplicationGetFail        CustomMsg = "Application get fail"
+	ApplicationDeleteFail     CustomMsg = "Application delete fail"
+	ApplicationDeleteIntiated CustomMsg = "Application delete initiated"
 )
 
 // Json
