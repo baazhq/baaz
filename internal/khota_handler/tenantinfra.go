@@ -52,7 +52,27 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 
 	_, dc := getKubeClientset()
 
-	_, err = dc.Resource(tenantInfraGVK).Namespace("shared").Create(context.TODO(), makeTenantsInfra(dataplaneName, &tenantsInfra), metav1.CreateOptions{})
+	dpList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		res := NewResponse(DataPlaneListFail, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	var namespace string
+	for _, dp := range dpList.Items {
+		if dp.GetName() == dataplaneName {
+			dpType := dp.GetLabels()["dataplane_type"]
+			if dpType == string(v1.SharedSaaS) {
+				namespace = string(v1.SharedSaaS)
+			} else if dpType == string(v1.DedicatedSaaS) {
+				namespace = matchStringInMap("customer_", dp.GetLabels())
+			}
+		}
+	}
+
+	_, err = dc.Resource(tenantInfraGVK).Namespace(namespace).Create(context.TODO(), makeTenantsInfra(dataplaneName, &tenantsInfra), metav1.CreateOptions{})
 	if err != nil {
 		res := NewResponse(TenantsInfraCreateFail, req_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
