@@ -146,6 +146,16 @@ func checkStringInMap(matchString string, labels map[string]string) bool {
 	return false
 }
 
+func matchStringInMap(matchString string, labels map[string]string) string {
+
+	for k, v := range labels {
+		if strings.Contains(k, matchString) {
+			return v
+		}
+	}
+	return ""
+}
+
 // patchValue specifies a patch operation.
 type patchValue struct {
 	Op    string      `json:"op"`
