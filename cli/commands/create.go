@@ -14,6 +14,8 @@ import (
 var (
 	file           string
 	dataplane_name string
+	customer_name  string
+	tenant_name    string
 )
 
 var (
@@ -45,10 +47,15 @@ var (
 				}
 				fmt.Println(resp)
 			case "tenants", "tenant":
-				if dataplane_name == "" {
-					return fmt.Errorf("Dataplane named cannot be nil")
+				if dataplane_name == "" || tenant_name == "" || customer_name == "" {
+					return fmt.Errorf("Dataplane, Tenant and Customer name is required")
 				}
-				resp, err := tenants.CreateTenant(file, customerName, dataplane_name, dataplane_name)
+				resp, err := tenants.CreateTenant(
+					file,
+					customer_name,
+					dataplane_name,
+					tenant_name,
+				)
 				if err != nil {
 					return err
 				}
@@ -65,5 +72,7 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVarP(&file, "file", "f", "", ".yaml file speficifying entity to be created")
 	createCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
+	createCmd.Flags().StringVarP(&customer_name, "customer", "", "", "dataplane name")
+	createCmd.Flags().StringVarP(&tenant_name, "tenant", "", "", "dataplane name")
 
 }

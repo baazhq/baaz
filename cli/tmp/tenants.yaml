@@ -1,7 +1,7 @@
 tenants:
   networkSecurity: 
-    interNamespaceTraffic": "Deny",
-    allowedNamespaces": ["nginx"]
-  application":
-    name": "parseable",
-    appSize": "parseable-small"
+    interNamespaceTraffic: "Deny"
+    allowedNamespaces: ["nginx"]
+  application:
+    name: "parseable"
+    appSize: "parseable-small"
