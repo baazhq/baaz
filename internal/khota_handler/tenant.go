@@ -53,8 +53,6 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 	}
 
 	tenantNew := v1.HTTPTenant{
-		TenantName:   tenant.TenantName,
-		CustomerName: tenant.CustomerName,
 		Application: v1.HTTPTenantApplication{
 			Name: tenant.Application.Name,
 			Size: tenant.Application.Size,
@@ -151,6 +149,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 }
 
 type tenantListResp struct {
+	TenantName    string `json:"tenant"`
 	CustomerName  string `json:"customer"`
 	DataplaneName string `json:"dataplane"`
 	Application   string `json:"application"`
@@ -175,6 +174,7 @@ func GetAllTenantInCustomer(w http.ResponseWriter, req *http.Request) {
 	var tenantResp []tenantListResp
 	for _, tenant := range tenantList.Items {
 		newTenantResp := tenantListResp{
+			TenantName:    tenant.GetName(),
 			CustomerName:  customerName,
 			DataplaneName: tenant.GetLabels()["dataplane"],
 			Size:          tenant.GetLabels()["size"],

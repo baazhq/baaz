@@ -25,8 +25,6 @@ type NetworkSecurity struct {
 }
 
 type HTTPTenant struct {
-	TenantName      string                `json:"tenant_name"`
-	CustomerName    string                `json:"customer_name"`
 	Application     HTTPTenantApplication `json:"application"`
 	NetworkSecurity NetworkSecurity       `json:"network_security,omitempty"`
 }

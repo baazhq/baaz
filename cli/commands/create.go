@@ -3,6 +3,7 @@ package commands
 import (
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
+	"bz/pkg/tenants"
 	"bz/pkg/tenantsinfra"
 
 	"fmt"
@@ -13,6 +14,8 @@ import (
 var (
 	file           string
 	dataplane_name string
+	customer_name  string
+	tenant_name    string
 )
 
 var (
@@ -43,6 +46,20 @@ var (
 					return err
 				}
 				fmt.Println(resp)
+			case "tenants", "tenant":
+				if dataplane_name == "" || tenant_name == "" || customer_name == "" {
+					return fmt.Errorf("Dataplane, Tenant and Customer name is required")
+				}
+				resp, err := tenants.CreateTenant(
+					file,
+					customer_name,
+					dataplane_name,
+					tenant_name,
+				)
+				if err != nil {
+					return err
+				}
+				fmt.Println(resp)
 			default:
 				return NotValidArgs(commonValidArgs)
 			}
@@ -55,5 +72,7 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVarP(&file, "file", "f", "", ".yaml file speficifying entity to be created")
 	createCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
+	createCmd.Flags().StringVarP(&customer_name, "customer", "", "", "dataplane name")
+	createCmd.Flags().StringVarP(&tenant_name, "tenant", "", "", "dataplane name")
 
 }
