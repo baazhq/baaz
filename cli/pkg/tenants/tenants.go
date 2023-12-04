@@ -12,11 +12,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func makeTenantPath() string {
-	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + "customerName" + common.DataplanePath
+func makeTenantPath(customerName, dataplaneName, tenantName string) string {
+	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.DataplanePath + "/" + dataplaneName + common.TenantPath + "/" + tenantName
 }
 
-func CreateTenant(filePath string) (string, error) {
+func CreateTenant(filePath, customerName, dataplaneName, tenantName string) (string, error) {
 	yamlByte, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return "", err
@@ -29,14 +29,15 @@ func CreateTenant(filePath string) (string, error) {
 		return "", err
 	}
 
-	tsByte, err := json.Marshal(body)
+	tenantByte, err := json.Marshal(body)
 	if err != nil {
 		return "", err
 	}
+
 	resp, err := http.Post(
-		"makeTenantSizePath()",
+		makeTenantPath(customerName, dataplaneName, tenantName),
 		"application/json",
-		bytes.NewBuffer(tsByte),
+		bytes.NewBuffer(tenantByte),
 	)
 	if err != nil {
 		return "", err
@@ -53,7 +54,7 @@ func CreateTenant(filePath string) (string, error) {
 		return "", err
 	}
 	if resp.StatusCode == http.StatusOK {
-		return "Tenant Sizes Created Successfully", nil
+		return "Tenant Created Successfully", nil
 	}
 
 	return "", nil

@@ -3,6 +3,7 @@ package commands
 import (
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
+	"bz/pkg/tenants"
 	"bz/pkg/tenantsinfra"
 
 	"fmt"
@@ -39,6 +40,15 @@ var (
 					return fmt.Errorf("Dataplane named cannot be nil")
 				}
 				resp, err := tenantsinfra.CreateTenantsInfra(file, dataplane_name)
+				if err != nil {
+					return err
+				}
+				fmt.Println(resp)
+			case "tenants", "tenant":
+				if dataplane_name == "" {
+					return fmt.Errorf("Dataplane named cannot be nil")
+				}
+				resp, err := tenants.CreateTenant(file, customerName, dataplane_name, dataplane_name)
 				if err != nil {
 					return err
 				}
