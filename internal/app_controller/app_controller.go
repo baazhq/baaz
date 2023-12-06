@@ -3,12 +3,10 @@ package app_controller
 import (
 	"context"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -56,24 +54,23 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return ctrl.Result{}, err
 	}
 
-	dpObj := &v1.DataPlanes{}
-	var namespace string
-
-	if strings.Contains(applicationObj.Spec.EnvRef, "shared") {
-		namespace = "shared"
-	} else {
-		namespace = applicationObj.Namespace
-	}
-
-	err = r.Get(ctx, types.NamespacedName{Name: applicationObj.Spec.EnvRef, Namespace: namespace}, dpObj)
+	dpObj := &v1.DataPlanesList{}
+	err = r.List(ctx, dpObj, &client.ListOptions{})
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+
+	var dataplane v1.DataPlanes
+	for _, dp := range dpObj.Items {
+		if dp.GetName() == applicationObj.Spec.Dataplane {
+			dataplane = dp
+		}
 	}
 
 	// check for deletion time stamp
 	if applicationObj.DeletionTimestamp != nil {
 		// object is going to be deleted
-		return r.reconcileDelete(ctx, applicationObj, dpObj)
+		return r.reconcileDelete(ctx, applicationObj, &dataplane)
 	}
 
 	// if it is normal reconcile, then add finalizer if not already
@@ -95,7 +92,7 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		}
 	}
 
-	if err := r.do(ctx, applicationObj, dpObj); err != nil {
+	if err := r.do(ctx, applicationObj, &dataplane); err != nil {
 		klog.Errorf("failed to reconcile application: reason: %s", err.Error())
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else {

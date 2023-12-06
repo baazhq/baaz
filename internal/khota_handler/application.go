@@ -24,8 +24,8 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
 	customerName := vars["customer_name"]
-	dataplaneName := vars["dataplane_name"]
-	applicationName := vars["application_name"]
+	tenantName := vars["tenant_name"]
+	applicationName := customerName + "-" + tenantName + "-" + "apps"
 
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -42,27 +42,27 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var application v1.HTTPApplication
+	var applications []v1.HTTPApplication
 
-	if err := json.Unmarshal(body, &application); err != nil {
+	if err := json.Unmarshal(body, &applications); err != nil {
 		res := NewResponse(ServerUnmarshallError, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
 
-	appNew := v1.HTTPApplication{
-		Scope:      application.Scope,
-		TenantName: application.TenantName,
-		ChartName:  application.ChartName,
-		RepoName:   application.RepoName,
-		RepoURL:    application.RepoURL,
-		Version:    application.Version,
+	kc, dc := getKubeClientset()
+
+	customer, err := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
+	if err != nil {
+		res := NewResponse(CustomerNamespaceGetFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
 	}
 
-	_, dc := getKubeClientset()
-
-	appDeploy := makeApplicationConfig(appNew, dataplaneName, applicationName)
+	dataplaneName := customer.GetLabels()["dataplane"]
+	appDeploy := makeApplicationConfig(applications, dataplaneName, tenantName, applicationName)
 
 	_, err = dc.Resource(applicationGVK).Namespace(customerName).Create(context.TODO(), appDeploy, metav1.CreateOptions{})
 	if err != nil {

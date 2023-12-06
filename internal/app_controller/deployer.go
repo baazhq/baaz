@@ -42,14 +42,8 @@ func NewApplication(
 func (a *Application) ReconcileApplicationDeployer() error {
 
 	for _, app := range a.App.Spec.Applications {
-		var namespace string
-		if app.Scope == v1.EnvironmentScope {
-			namespace = app.Name
-		} else if app.Scope == v1.TenantScope {
-			namespace = app.Tenant
-		}
 
-		helm := helm.NewHelm(app.Name, namespace, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
+		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
 
 		restConfig, err := a.EksIC.GetRestConfig()
 		if err != nil {
@@ -57,6 +51,7 @@ func (a *Application) ReconcileApplicationDeployer() error {
 		}
 
 		result, exists := helm.List(restConfig)
+
 		if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
 			in := obj.(*v1.Applications)
 			in.Status.Phase = v1.ApplicationPhase(result)
@@ -72,7 +67,7 @@ func (a *Application) ReconcileApplicationDeployer() error {
 				if err != nil {
 					return err
 				}
-				return nil
+				return err
 			}()
 
 			return nil
@@ -86,14 +81,8 @@ func (a *Application) ReconcileApplicationDeployer() error {
 func (a *Application) UninstallApplications() error {
 
 	for _, app := range a.App.Spec.Applications {
-		var namespace string
-		if app.Scope == v1.EnvironmentScope {
-			namespace = app.Name
-		} else if app.Scope == v1.TenantScope {
-			namespace = app.Tenant
-		}
 
-		helm := helm.NewHelm(app.Name, namespace, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
+		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
 
 		restConfig, err := a.EksIC.GetRestConfig()
 		if err != nil {
