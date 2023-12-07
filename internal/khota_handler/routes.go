@@ -161,7 +161,7 @@ var routes = Routes{
 	Route{
 		"CREATE APPLICATION",
 		"POST",
-		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
+		"/api/v1/customer/{customer_name}/tenant/{tenant_name}/application",
 		CreateApplication,
 	},
 	Route{

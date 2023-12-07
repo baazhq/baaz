@@ -72,7 +72,7 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVarP(&file, "file", "f", "", ".yaml file speficifying entity to be created")
 	createCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
-	createCmd.Flags().StringVarP(&customer_name, "customer", "", "", "dataplane name")
-	createCmd.Flags().StringVarP(&tenant_name, "tenant", "", "", "dataplane name")
+	createCmd.Flags().StringVarP(&customer_name, "customer", "", "", "customer name")
+	createCmd.Flags().StringVarP(&tenant_name, "tenant", "", "", "tenant name")
 
 }

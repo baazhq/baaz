@@ -141,10 +141,10 @@ func (h *Helm) Apply(rest *rest.Config) error {
 		return err
 	}
 
-	err = h.RepoUpdate()
-	if err != nil {
-		return err
-	}
+	// err = h.RepoUpdate()
+	// if err != nil {
+	// 	return err
+	// }
 
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
@@ -209,8 +209,6 @@ func (helm *Helm) RepoUpdate() error {
 			if _, err := re.DownloadIndexFile(); err != nil {
 				klog.Error("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
 				return
-			} else {
-				klog.Info("...Successfully got an update from the %q chart repository\n", re.Config.Name)
 			}
 		}(re)
 	}
