@@ -40,6 +40,8 @@ spec:
                   properties:
                     name:
                       type: string
+                    namespace:
+                      type: string
                     spec:
                       properties:
                         chartName:
@@ -83,6 +85,8 @@ spec:
                     items:
                       properties:
                         name:
+                          type: string
+                        namespace:
                           type: string
                         spec:
                           properties:

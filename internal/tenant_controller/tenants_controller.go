@@ -3,12 +3,10 @@ package tenant_controller
 import (
 	"context"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -57,18 +55,17 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	dpObj := &v1.DataPlanes{}
-	var namespace string
-
-	if strings.Contains(tenantObj.Spec.DataplaneName, "shared") {
-		namespace = "shared"
-	} else {
-		namespace = tenantObj.Namespace
+	dpObj := &v1.DataPlanesList{}
+	err = r.List(ctx, dpObj, &client.ListOptions{})
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
-	err = r.Get(ctx, types.NamespacedName{Name: tenantObj.Spec.DataplaneName, Namespace: namespace}, dpObj)
-	if err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+	var dataplane v1.DataPlanes
+	for _, dp := range dpObj.Items {
+		if dp.GetName() == tenantObj.Spec.DataplaneName {
+			dataplane = dp
+		}
 	}
 
 	klog.Infof("Reconciling Tenants: %s/%s", tenantObj.Namespace, tenantObj.Name)
@@ -77,9 +74,9 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		// object is going to be deleted
 		awsEnv := awsEnv{
 			ctx:    ctx,
-			dp:     dpObj,
+			dp:     &dataplane,
 			tenant: tenantObj,
-			eksIC:  eks.NewEks(ctx, dpObj),
+			eksIC:  eks.NewEks(ctx, &dataplane),
 			client: r.Client,
 			store:  r.NgStore,
 		}
@@ -104,7 +101,7 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	if err := r.do(ctx, tenantObj, dpObj); err != nil {
+	if err := r.do(ctx, tenantObj, &dataplane); err != nil {
 		if _, _, patchErr := utils.PatchStatus(ctx, r.Client, tenantObj, func(obj client.Object) client.Object {
 			in := obj.(*v1.Tenants)
 			in.Status.Phase = v1.FailedT

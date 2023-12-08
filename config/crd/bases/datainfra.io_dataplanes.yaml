@@ -42,6 +42,38 @@ spec:
           spec:
             description: DataPlaneSpec defines the desired state of DataPlane
             properties:
+              applications:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    spec:
+                      properties:
+                        chartName:
+                          type: string
+                        repoName:
+                          type: string
+                        repoUrl:
+                          type: string
+                        values:
+                          items:
+                            type: string
+                          type: array
+                        version:
+                          type: string
+                      required:
+                      - chartName
+                      - repoName
+                      - repoUrl
+                      - version
+                      type: object
+                  required:
+                  - name
+                  - spec
+                  type: object
+                type: array
               cloudInfra:
                 description: Cloud can be any pubic name ie aws, gcp, azure.
                 properties:
@@ -93,6 +125,7 @@ spec:
                 - region
                 type: object
             required:
+            - applications
             - cloudInfra
             type: object
           status:

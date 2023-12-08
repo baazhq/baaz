@@ -141,10 +141,10 @@ func (h *Helm) Apply(rest *rest.Config) error {
 		return err
 	}
 
-	// err = h.RepoUpdate()
-	// if err != nil {
-	// 	return err
-	// }
+	err = h.RepoUpdate()
+	if err != nil {
+		return err
+	}
 
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
@@ -158,7 +158,7 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	client.Timeout = 120 * time.Second
 
 	client.WaitForJobs = true
-	client.IncludeCRDs = true
+	//client.IncludeCRDs = true
 
 	values := values.Options{
 		Values: h.Values,
@@ -200,7 +200,6 @@ func (helm *Helm) RepoUpdate() error {
 		repos = append(repos, r)
 	}
 
-	klog.Info("Hang tight while we grab the latest from your chart repositories...\n")
 	var wg sync.WaitGroup
 	for _, re := range repos {
 		wg.Add(1)
@@ -213,7 +212,6 @@ func (helm *Helm) RepoUpdate() error {
 		}(re)
 	}
 	wg.Wait()
-	klog.Info("Update Complete. ⎈ Happy Helming!⎈\n")
 
 	return nil
 }

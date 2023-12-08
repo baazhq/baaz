@@ -6,13 +6,44 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
+
+type Dataplane struct {
+	Dataplane struct {
+		CloudType   string `yaml:"cloudType" json:"cloud_type"`
+		CloudRegion string `yaml:"cloudRegion" json:"cloud_region"`
+		SaasType    string `yaml:"saasType" json:"saas_type"`
+		CloudAuth   struct {
+			AwsAuth struct {
+				AwsAccessKey string `yaml:"awsAccessKey" json:"aws_access_key"`
+				AwsSecretKey string `yaml:"awsSecretKey" json:"aws_secret_key"`
+			} `yaml:"awsAuth" json:"aws_auth"`
+		} `yaml:"cloudAuth" json:"cloud_auth"`
+		KubernetesConfig struct {
+			Eks struct {
+				SubnetIds        []string `yaml:"subnetIds" json:"subnet_ids"`
+				SecurityGroupIds []string `yaml:"securityGroupIds" json:"security_group_ids"`
+				Version          string   `yaml:"version" json:"version"`
+			} `yaml:"eks"`
+		} `yaml:"kubernetesConfig" json:"kubernetes_config"`
+		ApplicationConfig []struct {
+			Name      string   `yaml:"name" json:"name"`
+			Namespace string   `yaml:"namespace" json:"namespace"`
+			ChartName string   `yaml:"chartName" json:"chart_name"`
+			RepoName  string   `yaml:"repoName" json:"repo_name"`
+			RepoURL   string   `yaml:"repoUrl" json:"repo_url"`
+			Version   string   `yaml:"version" json:"version"`
+			Values    []string `yaml:"values,omitempty" json:"values,omitempty"`
+		} `yaml:"applicationConfig" json:"application_config"`
+	} `yaml:"dataplane" json:"dataplane"`
+}
 
 type dpList struct {
 	Name          string   `json:"name"`
@@ -234,29 +265,19 @@ func RemoveDataplane(dataplaneName, customerName string) (string, error) {
 
 func CreateDataplane(filePath string) (string, error) {
 
-	viper.SetConfigFile(filePath)
-	viper.SetConfigType("yaml")
-
-	err := viper.ReadInConfig()
+	yamlByte, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return "", err
 	}
 
-	type createDataPlane struct {
-		CloudType        string                 `json:"cloud_type"`
-		CloudRegion      string                 `json:"cloud_region"`
-		CloudAuth        map[string]interface{} `json:"cloud_auth"`
-		KubernetesConfig map[string]interface{} `json:"kubernetes_config"`
+	var dataplane Dataplane
+
+	err = yaml.Unmarshal(yamlByte, &dataplane)
+	if err != nil {
+		return "", err
 	}
 
-	newCreateDataplane := createDataPlane{
-		CloudType:        viper.GetString("dataplane.cloud_type"),
-		CloudRegion:      viper.GetString("dataplane.cloud_region"),
-		CloudAuth:        viper.GetStringMap("dataplane.cloud_auth"),
-		KubernetesConfig: viper.GetStringMap("dataplane.kubernetes_config"),
-	}
-
-	ccByte, err := json.Marshal(newCreateDataplane)
+	dataplaneByte, err := json.Marshal(dataplane.Dataplane)
 	if err != nil {
 		return "", err
 	}
@@ -264,7 +285,7 @@ func CreateDataplane(filePath string) (string, error) {
 	resp, err := http.Post(
 		makeDataplaneUrl(),
 		"application/json",
-		bytes.NewBuffer(ccByte),
+		bytes.NewBuffer(dataplaneByte),
 	)
 	if err != nil {
 		return "", err
@@ -272,16 +293,16 @@ func CreateDataplane(filePath string) (string, error) {
 
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
+	respBody, err := io.ReadAll(resp.Body)
 	if resp.StatusCode > 299 {
-		return "", fmt.Errorf("%s", string(body))
+		return "", fmt.Errorf("%s", string(respBody))
 	}
 
 	if err != nil {
 		return "", err
 	}
 	if resp.StatusCode == http.StatusOK {
-		return "Dataplane Creation Initiated Successfully", nil
+		return "Dataplane Created Successfully", nil
 	}
 
 	return "", nil
