@@ -34,12 +34,13 @@ type Dataplane struct {
 			} `yaml:"eks"`
 		} `yaml:"kubernetesConfig" json:"kubernetes_config"`
 		ApplicationConfig []struct {
-			Name      string `yaml:"name" json:"name"`
-			Namespace string `yaml:"namespace" json:"namespace"`
-			ChartName string `yaml:"chartName" json:"chart_name"`
-			RepoName  string `yaml:"repoName" json:"repo_name"`
-			RepoURL   string `yaml:"repoUrl" json:"repo_url"`
-			Version   string `yaml:"version" json:"version"`
+			Name      string   `yaml:"name" json:"name"`
+			Namespace string   `yaml:"namespace" json:"namespace"`
+			ChartName string   `yaml:"chartName" json:"chart_name"`
+			RepoName  string   `yaml:"repoName" json:"repo_name"`
+			RepoURL   string   `yaml:"repoUrl" json:"repo_url"`
+			Version   string   `yaml:"version" json:"version"`
+			Values    []string `yaml:"values,omitempty" json:"values,omitempty"`
 		} `yaml:"applicationConfig" json:"application_config"`
 	} `yaml:"dataplane" json:"dataplane"`
 }
@@ -305,49 +306,4 @@ func CreateDataplane(filePath string) (string, error) {
 	}
 
 	return "", nil
-
-	// viper.SetConfigFile(filePath)
-	// viper.SetConfigType("yaml")
-
-	// err := viper.ReadInConfig()
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// type createDataPlane struct {
-	// 	CloudType        string                 `json:"cloud_type"`
-	// 	CloudRegion      string                 `json:"cloud_region"`
-	// 	CloudAuth        map[string]interface{} `json:"cloud_auth"`
-	// 	KubernetesConfig map[string]interface{} `json:"kubernetes_config"`
-	// }
-
-	// newCreateDataplane := createDataPlane{
-	// 	CloudType:        viper.GetString("dataplane.cloudType"),
-	// 	CloudRegion:      viper.GetString("dataplane.cloudRegion"),
-	// 	CloudAuth:        viper.GetStringMap("dataplane.cloudAuth"),
-	// 	KubernetesConfig: viper.GetStringMap("dataplane.kubernetesConfig"),
-	// }
-
-	// ccByte, err := json.Marshal(newCreateDataplane)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// fmt.Println(string(ccByte))
-
-	// defer resp.Body.Close()
-
-	// body, err := io.ReadAll(resp.Body)
-	// if resp.StatusCode > 299 {
-	// 	return "", fmt.Errorf("%s", string(body))
-	// }
-
-	// if err != nil {
-	// 	return "", err
-	// }
-	// if resp.StatusCode == http.StatusOK {
-	// 	return "Dataplane Creation Initiated Successfully", nil
-	// }
-
-	// return "", nil
 }
