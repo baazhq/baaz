@@ -37,6 +37,22 @@ func getAwsEksSecret(dataPlaneName string, dataplane v1.DataPlane) *unstructured
 }
 
 func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[string]string) *unstructured.Unstructured {
+
+	var allApplications []map[string]interface{}
+	for _, app := range dataplane.ApplicationConfig {
+		allApplications = append(allApplications, map[string]interface{}{
+			"name":      app.ApplicationName,
+			"namespace": app.Namespace,
+			"spec": map[string]interface{}{
+				"chartName": app.ChartName,
+				"repoName":  app.RepoName,
+				"repoUrl":   app.RepoURL,
+				"version":   app.Version,
+				"values":    app.Values,
+			},
+		})
+	}
+
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "datainfra.io/v1",
@@ -61,6 +77,7 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 						"version":          dataplane.KubeConfig.EKS.Version,
 					},
 				},
+				"applications": allApplications,
 			},
 		},
 	}

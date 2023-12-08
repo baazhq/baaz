@@ -197,6 +197,20 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 
 	dpName := makeDataPlaneName(dp.CloudType, dp.CustomerName, dp.CloudRegion)
 	dpNamespace := getNamespace(dp.CustomerName)
+
+	var appConfig []v1.HTTPApplication
+
+	for _, app := range dp.ApplicationConfig {
+		appConfig = append(appConfig, v1.HTTPApplication{
+			ApplicationName: app.ApplicationName,
+			Namespace:       app.Namespace,
+			ChartName:       app.ChartName,
+			RepoName:        app.RepoName,
+			RepoURL:         app.RepoURL,
+			Version:         app.Version,
+		})
+	}
+
 	dataplane := v1.DataPlane{
 		CustomerName: dp.CustomerName,
 		CloudType:    dp.CloudType,
@@ -215,6 +229,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 				Version:          dp.KubeConfig.EKS.Version,
 			},
 		},
+		ApplicationConfig: appConfig,
 	}
 
 	kc, dc := getKubeClientset()

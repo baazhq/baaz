@@ -21,8 +21,9 @@ type ApplicationSpec struct {
 }
 
 type AppSpec struct {
-	Name string    `json:"name"`
-	Spec ChartSpec `json:"spec"`
+	Name      string    `json:"name"`
+	Namespace string    `json:"namespace,omitempty"`
+	Spec      ChartSpec `json:"spec"`
 }
 
 type ChartSpec struct {

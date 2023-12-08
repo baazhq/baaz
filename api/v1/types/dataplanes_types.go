@@ -8,7 +8,8 @@ import (
 // DataPlaneSpec defines the desired state of DataPlane
 type DataPlaneSpec struct {
 	// Cloud can be any pubic name ie aws, gcp, azure.
-	CloudInfra CloudInfraConfig `json:"cloudInfra"`
+	CloudInfra   CloudInfraConfig `json:"cloudInfra"`
+	Applications []AppSpec        `json:"applications"`
 }
 
 type CloudType string
