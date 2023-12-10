@@ -208,6 +208,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 			RepoName:        app.RepoName,
 			RepoURL:         app.RepoURL,
 			Version:         app.Version,
+			Values:          app.Values,
 		})
 	}
 
