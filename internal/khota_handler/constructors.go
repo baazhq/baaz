@@ -1,8 +1,6 @@
 package khota_handler
 
 import (
-	"fmt"
-
 	v1 "datainfra.io/baaz/api/v1/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -43,7 +41,6 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 	var allApplications []map[string]interface{}
 
 	for _, app := range dataplane.ApplicationConfig {
-		fmt.Println(app.Values)
 		allApplications = append(allApplications, map[string]interface{}{
 			"name":      app.ApplicationName,
 			"namespace": app.Namespace,
