@@ -39,6 +39,7 @@ func getAwsEksSecret(dataPlaneName string, dataplane v1.DataPlane) *unstructured
 func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[string]string) *unstructured.Unstructured {
 
 	var allApplications []map[string]interface{}
+
 	for _, app := range dataplane.ApplicationConfig {
 		allApplications = append(allApplications, map[string]interface{}{
 			"name":      app.ApplicationName,
