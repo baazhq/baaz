@@ -3,7 +3,8 @@ package commands
 import (
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
-	"bz/pkg/tenantsize"
+	"bz/pkg/tenants"
+	"bz/pkg/tenantsinfra"
 
 	"fmt"
 
@@ -11,14 +12,16 @@ import (
 )
 
 var (
-	file string
-	size string
+	file           string
+	dataplane_name string
+	customer_name  string
+	tenant_name    string
 )
 
 var (
 	createCmd = &cobra.Command{
 		Use:   "create",
-		Short: "bz create - create entites [customers, dataplane, tenants, applications] in baaz control plane",
+		Short: "bz create - create entites [customers, dataplane, tenantinfra, tenants, applications] in baaz control plane",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch args[0] {
 			case "customer", "customers":
@@ -34,14 +37,29 @@ var (
 					return err
 				}
 				fmt.Println(resp)
-			case "tenant", "tenants":
-				if args[1] == "size" || args[1] == "sizes" {
-					resp, err := tenantsize.CreateTenantSize(file)
-					if err != nil {
-						return err
-					}
-					fmt.Println(resp)
+			case "tenantinfra", "tenantsinfra":
+				if dataplane_name == "" {
+					return fmt.Errorf("Dataplane named cannot be nil")
 				}
+				resp, err := tenantsinfra.CreateTenantsInfra(file, dataplane_name)
+				if err != nil {
+					return err
+				}
+				fmt.Println(resp)
+			case "tenants", "tenant":
+				if dataplane_name == "" || tenant_name == "" || customer_name == "" {
+					return fmt.Errorf("Dataplane, Tenant and Customer name is required")
+				}
+				resp, err := tenants.CreateTenant(
+					file,
+					customer_name,
+					dataplane_name,
+					tenant_name,
+				)
+				if err != nil {
+					return err
+				}
+				fmt.Println(resp)
 			default:
 				return NotValidArgs(commonValidArgs)
 			}
@@ -53,4 +71,8 @@ var (
 func init() {
 	rootCmd.AddCommand(createCmd)
 	createCmd.Flags().StringVarP(&file, "file", "f", "", ".yaml file speficifying entity to be created")
+	createCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
+	createCmd.Flags().StringVarP(&customer_name, "customer", "", "", "customer name")
+	createCmd.Flags().StringVarP(&tenant_name, "tenant", "", "", "tenant name")
+
 }

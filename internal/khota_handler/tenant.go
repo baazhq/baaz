@@ -24,8 +24,10 @@ var tenantGVK = schema.GroupVersionResource{
 func CreateTenant(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	customerName := vars["customer_name"]
 	dataplaneName := vars["dataplane_name"]
+	tenantName := vars["tenant_name"]
+	customerName := vars["customer_name"]
+
 	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
@@ -51,7 +53,6 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 	}
 
 	tenantNew := v1.HTTPTenant{
-		Type: tenant.Type,
 		Application: v1.HTTPTenantApplication{
 			Name: tenant.Application.Name,
 			Size: tenant.Application.Size,
@@ -64,55 +65,77 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 
 	_, dc := getKubeClientset()
 
-	labels := map[string]string{
-		"tenant_type":              string(tenant.Type),
+	tenant_labels := map[string]string{
 		"dataplane":                dataplaneName,
 		"customer_" + customerName: customerName,
 		"application":              tenant.Application.Name,
 		"size":                     tenant.Application.Size,
 	}
 
-	tenantName := makeTenantName(tenant.Type, tenant.Application.Name, tenant.Application.Size)
+	tenantDeploy := makeTenantConfig(tenantName, tenantNew, dataplaneName, tenant_labels)
 
-	tenantDeploy := makeTenantConfig(tenantName, tenantNew, dataplaneName, labels)
+	dpList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		res := NewResponse(DataPlaneListFail, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
 
-	dpList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{
-		LabelSelector: "customer_" + customerName + "=" + customerName,
-	})
+	var dpNamespace string
+	for _, dp := range dpList.Items {
+		if dp.GetName() == dataplaneName {
+			dpType := dp.GetLabels()["dataplane_type"]
+			if dpType == string(v1.SharedSaaS) {
+				dpNamespace = string(v1.SharedSaaS)
+			} else if dpType == string(v1.DedicatedSaaS) {
+				dpNamespace = matchStringInMap("customer_", dp.GetLabels())
+			}
+
+			phase, _, _ := unstructured.NestedString(dp.Object, "status", "phase")
+			if phase != string(v1.ActiveD) {
+				res := NewResponse(TenantInfraCreateFailDataplaneNotActive, req_error, nil, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+				return
+			}
+
+			if !checkValueInMap(customerName, dp.GetLabels()) {
+				res := NewResponse(CustomerNotExistInDataplane, req_error, nil, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+				return
+			}
+
+		}
+	}
+
+	dataplane, err := dc.Resource(dpGVK).Namespace(dpNamespace).Get(context.TODO(), dataplaneName, metav1.GetOptions{})
 	if err != nil {
 		return
 	}
 
-	for _, dp := range dpList.Items {
+	dpLabels := mergeMaps(dataplane.GetLabels(), map[string]string{
+		"tenant_" + tenantName: tenantName,
+	})
 
-		dpLabels := mergeMaps(dp.GetLabels(), map[string]string{
-			"tenant_" + tenantName: tenantName,
-		})
-		patchBytes := NewPatchValue("replace", "/metadata/labels", dpLabels)
+	patchBytes := NewPatchValue("replace", "/metadata/labels", dpLabels)
 
-		_, patchErr := dc.Resource(dpGVK).Namespace(dp.GetNamespace()).Patch(
-			context.TODO(),
-			dp.GetName(),
-			types.JSONPatchType,
-			patchBytes,
-			metav1.PatchOptions{},
-		)
-		if err != nil {
-			res := NewResponse(DataplanePatchFail, internal_error, patchErr, http.StatusInternalServerError)
-			res.SetResponse(&w)
-			res.LogResponse()
-			return
-		}
+	_, patchErr := dc.Resource(dpGVK).Namespace(dataplane.GetNamespace()).Patch(
+		context.TODO(),
+		dataplane.GetName(),
+		types.JSONPatchType,
+		patchBytes,
+		metav1.PatchOptions{},
+	)
+	if err != nil {
+		res := NewResponse(DataplanePatchFail, internal_error, patchErr, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
 	}
 
-	var tenantNamespace string
-	if tenant.Type == "pool" {
-		tenantNamespace = "shared"
-	} else {
-		tenantNamespace = customerName
-	}
-
-	_, err = dc.Resource(tenantGVK).Namespace(tenantNamespace).Create(context.TODO(), tenantDeploy, metav1.CreateOptions{})
+	_, err = dc.Resource(tenantGVK).Namespace(customerName).Create(context.TODO(), tenantDeploy, metav1.CreateOptions{})
 	if err != nil {
 		res := NewResponse(TenantCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
@@ -125,25 +148,41 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 
 }
 
-func GetTenantStatus(w http.ResponseWriter, req *http.Request) {
+type tenantListResp struct {
+	TenantName    string `json:"tenant"`
+	CustomerName  string `json:"customer"`
+	DataplaneName string `json:"dataplane"`
+	Application   string `json:"application"`
+	Size          string `json:"size"`
+}
+
+func GetAllTenantInCustomer(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
 	customerName := vars["customer_name"]
-	_ = vars["dataplane_name"]
-	tenantName := vars["tenant_name"]
 
 	_, dc := getKubeClientset()
 
-	tenant, err := dc.Resource(tenantGVK).Namespace(customerName).Get(context.TODO(), tenantName, metav1.GetOptions{})
+	tenantList, err := dc.Resource(tenantGVK).Namespace(customerName).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
-		res := NewResponse(TenantGetFail, internal_error, err, http.StatusInternalServerError)
+		res := NewResponse(TenantListFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
 	}
 
-	status, _, _ := unstructured.NestedString(tenant.Object, "status", "phase")
-	res := NewResponse("", status, nil, http.StatusOK)
-	res.SetResponse(&w)
+	var tenantResp []tenantListResp
+	for _, tenant := range tenantList.Items {
+		newTenantResp := tenantListResp{
+			TenantName:    tenant.GetName(),
+			CustomerName:  customerName,
+			DataplaneName: tenant.GetLabels()["dataplane"],
+			Size:          tenant.GetLabels()["size"],
+			Application:   tenant.GetLabels()["application"],
+		}
+		tenantResp = append(tenantResp, newTenantResp)
+	}
 
+	bytes, _ := json.Marshal(tenantResp)
+	sendJsonResponse(bytes, http.StatusOK, &w)
 }

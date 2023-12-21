@@ -20,6 +20,7 @@ const (
 	CustomerNamespaceCreateFail    CustomMsg = "Customer Namespace create Failed"
 	CustomerNamespaceListEmpty     CustomMsg = "Customer Namespace list Empty"
 	CustomerNamespaceList          CustomMsg = "Customer Namespace list"
+	CustomerNotExistInDataplane    CustomMsg = "Customer not exist in dataplane"
 )
 
 // DataPlane
@@ -38,28 +39,46 @@ const (
 
 // Tenant
 const (
-	TenantCreateFail     CustomMsg = "Tenant creation  Fail"
-	TenantCreateIntiated CustomMsg = "Tenant creation Initiated"
-	TenantGetFail        CustomMsg = "Tenant get Fail"
+	TenantCreateFail                   CustomMsg = "Tenant creation  fail"
+	TenantCreateIntiated               CustomMsg = "Tenant creation success"
+	TenantCreateFailDataplaneNotActive CustomMsg = "Tenant creation failed, Dataplane is not Active"
+	TenantGetFail                      CustomMsg = "Tenant get fail"
+	TenantListFail                     CustomMsg = "Tenant list fail"
 )
 
-// TenantSizes
+// TenantsInfra
 const (
-	TenantSizeCreateFail    CustomMsg = "Tenant Size Creation Failed"
-	TenantSizeGetFail       CustomMsg = "Tenant Size Get Failed"
-	TenantSizeCreateSuccess CustomMsg = "Tenant Size Creation Success"
+	TenantsInfraCreateFail                  CustomMsg = "TenantsInfra creation Failed"
+	TenantsInfraGetFail                     CustomMsg = "TenantsInfra get Failed"
+	TenantsInfraCreateSuccess               CustomMsg = "TenantsInfra creation Success"
+	TenantInfraCreateFailDataplaneNotActive CustomMsg = "TenantsInfra creation Failed, Dataplane is not Active"
 )
 
 // Application
 const (
-	ApplicationCreateFail     CustomMsg = "Application Creation Fail"
-	ApplicationCreateIntiated CustomMsg = "Application Creation Initiated"
-	ApplicationGetFail        CustomMsg = "Application GET Fail"
-	ApplicationDeleteFail     CustomMsg = "Application Delete Fail"
-	ApplicationDeleteIntiated CustomMsg = "Application Delete Initiated"
+	ApplicationCreateFail     CustomMsg = "Application creation fail"
+	ApplicationCreateIntiated CustomMsg = "Application creation initiated"
+	ApplicationGetFail        CustomMsg = "Application get fail"
+	ApplicationDeleteFail     CustomMsg = "Application delete fail"
+	ApplicationDeleteIntiated CustomMsg = "Application delete initiated"
 )
 
 // Json
 const (
 	JsonMarshallError CustomMsg = "Json Marshall Error"
+)
+
+// constants
+const (
+	req_error             string = "request_error"
+	internal_error        string = "internal_error"
+	dataplane_not_active  string = "dataplane not active"
+	duplicate_entry       string = "entry already exists"
+	entry_not_exists      string = "entry doesn't exist"
+	success               string = "success"
+	shared_namespace      string = "shared"
+	dedicated_namespace   string = "dedicated"
+	active                string = "active"
+	dataplane_unavailable string = "unavailable"
+	label_prefix          string = "b_"
 )

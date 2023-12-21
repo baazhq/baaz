@@ -9,6 +9,7 @@ import (
 
 	v1 "datainfra.io/baaz/api/v1/types"
 	"datainfra.io/baaz/pkg/aws/eks"
+	"datainfra.io/baaz/pkg/helm"
 	"datainfra.io/baaz/pkg/store"
 	"datainfra.io/baaz/pkg/utils"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
@@ -39,6 +40,11 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 	}
 
 	if err := awsEnv.reconcileAwsEks(); err != nil {
+		return err
+	}
+
+	// bootstrap dataplane with apps
+	if err := awsEnv.reconcileAwsApplications(); err != nil {
 		return err
 	}
 
@@ -188,6 +194,59 @@ func (ae *awsEnv) reconcileAwsEks() error {
 	return nil
 
 }
+
+// bootstrap applications for aws eks dataplanes
+// check if system nodepool is active
+// once its active install applications
+func (ae *awsEnv) reconcileAwsApplications() error {
+
+	if ae.dp.Status.NodegroupStatus[ae.dp.Spec.CloudInfra.Eks.Name+"-system"] == string(types.NodegroupStatusActive) {
+
+		for _, app := range ae.dp.Spec.Applications {
+
+			helm := helm.NewHelm(
+				app.Name,
+				app.Namespace,
+				app.Spec.ChartName,
+				app.Spec.RepoName,
+				app.Spec.RepoUrl,
+				app.Spec.Values,
+			)
+
+			restConfig, err := ae.eksIC.GetRestConfig()
+			if err != nil {
+				return err
+			}
+
+			_, exists := helm.List(restConfig)
+
+			// if _, _, err := utils.PatchStatus(
+			// 	ae.ctx, ae.client, ae.App, func(obj client.Object) client.Object {
+			// 	in := obj.(*v1.Applications)
+			// 	in.Status.Phase = v1.ApplicationPhase(result)
+			// 	in.Status.ApplicationCurrentSpec = a.App.Spec
+			// 	return in
+			// }); err != nil {
+			// 	return err
+			// }
+
+			if exists == false {
+				go func() error {
+					err = helm.Apply(restConfig)
+					if err != nil {
+						fmt.Println(err)
+						return err
+					}
+					return nil
+				}()
+				return err
+			}
+
+		}
+	}
+	return nil
+}
+
 func (ae *awsEnv) reconcileOIDCProvider(clusterOutput *awseks.DescribeClusterOutput) (*awsiam.CreateOpenIDConnectProviderOutput, error) {
 	if clusterOutput == nil || clusterOutput.Cluster == nil ||
 		clusterOutput.Cluster.Identity == nil || clusterOutput.Cluster.Identity.Oidc == nil {

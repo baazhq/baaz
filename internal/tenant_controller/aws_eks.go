@@ -2,9 +2,6 @@ package tenant_controller
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -17,10 +14,6 @@ import (
 	"datainfra.io/baaz/pkg/resources"
 	"datainfra.io/baaz/pkg/store"
 	"datainfra.io/baaz/pkg/utils"
-	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
-	"github.com/aws/aws-sdk-go-v2/service/eks/types"
-	"github.com/aws/aws-sdk-go/aws"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,183 +36,22 @@ type awsEnv struct {
 }
 
 func (ae *awsEnv) ReconcileTenants() error {
-	klog.Info("Reconciling node groups")
+	klog.Info("Reconciling tenants")
 
-	var nodeName string
-	for _, tenantConfig := range ae.tenant.Spec.TenantConfig {
-
-		ngNameNgSpec, err := ae.getNodeSpecForTenantSize(tenantConfig)
-		if err != nil {
-			return err
-		}
-
-		for _, nodeSpec := range *ngNameNgSpec {
-			nodeName = makeNodeName(nodeSpec.Name, string(tenantConfig.AppType), tenantConfig.Size)
-
-			if ae.dp.Status.NodegroupStatus[string(nodeSpec.Name)] != "DELETING" {
-
-				describeNodegroupOutput, found, _ := ae.eksIC.DescribeNodegroup(nodeName)
-				if !found {
-					nodeRole, err := ae.eksIC.CreateNodeIamRole(nodeName)
-					if err != nil {
-						return err
-					}
-					if nodeRole.Role == nil {
-						return errors.New("node role is nil")
-					}
-
-					createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(ae.getNodegroupInput(nodeName, *nodeRole.Role.Arn, &nodeSpec))
-					if err != nil {
-						return err
-					}
-					if createNodeGroupOutput != nil && createNodeGroupOutput.Nodegroup != nil {
-						klog.Infof("Initated NodeGroup Launch [%s]", *createNodeGroupOutput.Nodegroup.ClusterName)
-						if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, string(createNodeGroupOutput.Nodegroup.Status)); err != nil {
-							return err
-						}
-					}
-				}
-
-				if describeNodegroupOutput != nil && describeNodegroupOutput.Nodegroup != nil {
-					if err := ae.patchStatus(*describeNodegroupOutput.Nodegroup.NodegroupName, string(describeNodegroupOutput.Nodegroup.Status)); err != nil {
-						return err
-					}
-
-					if describeNodegroupOutput.Nodegroup.Status == types.NodegroupStatusActive {
-						clientset, err := ae.eksIC.GetEksClientSet()
-						if err != nil {
-							return err
-						}
-
-						if err := ae.createNamespace(clientset); err != nil {
-							return err
-						}
-
-						if err := ae.createOrUpdateNetworkPolicy(clientset); err != nil {
-							return err
-						}
-
-						if err := ae.tenantExpansion(nodeSpec.Size); err != nil {
-							return err
-						}
-					}
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func makeNodeName(nodeName, appType, size string) string {
-	return nodeName + "-" + appType + "-" + size
-}
-
-func (ae *awsEnv) tenantExpansion(desiredSize string) error {
-	currentTenantObj := &v1.Tenants{}
-	err := ae.client.Get(ae.ctx, k8stypes.NamespacedName{
-		Namespace: ae.tenant.Namespace,
-		Name:      ae.tenant.Name,
-	}, currentTenantObj)
+	clientset, err := ae.eksIC.GetEksClientSet()
 	if err != nil {
 		return err
 	}
 
-	for _, tenantConfig := range currentTenantObj.Spec.TenantConfig {
-		nodeSpecs, err := ae.getNodeSpecForTenantSize(tenantConfig)
-		if err != nil {
-			return err
-		}
+	if err := ae.createNamespace(clientset); err != nil {
+		return err
+	}
 
-		for _, nodeSpec := range *nodeSpecs {
-
-			if nodeSpec.Size != desiredSize {
-				klog.Infof(
-					"Tenant Expansion: Tenant [%s], Node Name [%s], Current Size [%s], Desired Size [%s]",
-					currentTenantObj.Name,
-					currentTenantObj.Name,
-					nodeSpec.Size,
-					desiredSize,
-				)
-			}
-		}
+	if err := ae.createOrUpdateNetworkPolicy(clientset); err != nil {
+		return err
 	}
 
 	return nil
-}
-
-func (ae *awsEnv) getNodeSpecForTenantSize(tenantConfig v1.TenantApplicationConfig) (*[]v1.MachineSpec, error) {
-
-	cm := corev1.ConfigMap{}
-	if err := ae.client.Get(
-		ae.ctx,
-		k8stypes.NamespacedName{Name: "tenant-sizes", Namespace: "kube-system"},
-		&cm,
-	); err != nil {
-		return nil, err
-	}
-	sizeJson := cm.Data["size.json"]
-
-	var appSize v1.TenantAppSize
-
-	err := json.Unmarshal([]byte(sizeJson), &appSize)
-
-	if err != nil {
-		return nil, err
-	}
-	for _, size := range appSize.AppSizes {
-		if size.Name == tenantConfig.Size {
-			return &size.MachineSpec, nil
-		}
-	}
-	return nil, fmt.Errorf("no NodegroupSpec for app %s & size %s", tenantConfig.AppType, tenantConfig.Size)
-}
-
-func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, machineSpec *v1.MachineSpec) (input *awseks.CreateNodegroupInput) {
-
-	var taints = &[]types.Taint{}
-
-	if ae.tenant.Spec.Isolation.Machine.Enabled {
-		taints = makeTaints(nodeName)
-	}
-
-	return &awseks.CreateNodegroupInput{
-		ClusterName:        aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
-		NodeRole:           aws.String(roleArn),
-		NodegroupName:      aws.String(nodeName),
-		Subnets:            ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
-		AmiType:            "",
-		CapacityType:       "",
-		ClientRequestToken: nil,
-		DiskSize:           nil,
-		InstanceTypes:      []string{machineSpec.Size},
-		Labels:             machineSpec.NodeLabels,
-		LaunchTemplate:     nil,
-		ReleaseVersion:     nil,
-		RemoteAccess:       nil,
-		ScalingConfig: &types.NodegroupScalingConfig{
-			DesiredSize: aws.Int32(machineSpec.Min),
-			MaxSize:     aws.Int32(machineSpec.Max),
-			MinSize:     aws.Int32(machineSpec.Min),
-		},
-		Tags: map[string]string{
-			fmt.Sprintf("kubernetes.io/cluster/%s", ae.dp.Spec.CloudInfra.Eks.Name): "owned",
-		},
-		Taints:       *taints,
-		UpdateConfig: nil,
-		Version:      nil,
-	}
-
-}
-
-func makeTaints(value string) *[]types.Taint {
-	return &[]types.Taint{
-		{
-			Effect: types.TaintEffectNoSchedule,
-			Key:    aws.String("application"),
-			Value:  aws.String(value),
-		},
-	}
 }
 
 func (ae *awsEnv) patchStatus(name, status string) error {

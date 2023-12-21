@@ -15,11 +15,12 @@ type Customer struct {
 }
 
 type DataPlane struct {
-	CustomerName string           `json:"customer_name,omitempty"`
-	CloudType    CloudType        `json:"cloud_type"`
-	CloudRegion  string           `json:"cloud_region"`
-	CloudAuth    CloudAuth        `json:"cloud_auth"`
-	KubeConfig   KubernetesConfig `json:"kubernetes_config"`
+	CustomerName      string            `json:"customer_name,omitempty"`
+	CloudType         CloudType         `json:"cloud_type"`
+	CloudRegion       string            `json:"cloud_region"`
+	CloudAuth         CloudAuth         `json:"cloud_auth"`
+	KubeConfig        KubernetesConfig  `json:"kubernetes_config"`
+	ApplicationConfig []HTTPApplication `json:"application_config,omitempty"`
 }
 
 type CloudAuth struct {

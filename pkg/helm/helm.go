@@ -20,7 +20,7 @@ import (
 
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart/loader"
 	"helm.sh/helm/v3/pkg/cli"
@@ -158,7 +158,7 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	client.Timeout = 120 * time.Second
 
 	client.WaitForJobs = true
-	client.IncludeCRDs = true
+	//client.IncludeCRDs = true
 
 	values := values.Options{
 		Values: h.Values,
@@ -200,7 +200,6 @@ func (helm *Helm) RepoUpdate() error {
 		repos = append(repos, r)
 	}
 
-	klog.Info("Hang tight while we grab the latest from your chart repositories...\n")
 	var wg sync.WaitGroup
 	for _, re := range repos {
 		wg.Add(1)
@@ -209,13 +208,10 @@ func (helm *Helm) RepoUpdate() error {
 			if _, err := re.DownloadIndexFile(); err != nil {
 				klog.Error("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
 				return
-			} else {
-				klog.Info("...Successfully got an update from the %q chart repository\n", re.Config.Name)
 			}
 		}(re)
 	}
 	wg.Wait()
-	klog.Info("Update Complete. ⎈ Happy Helming!⎈\n")
 
 	return nil
 }

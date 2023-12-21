@@ -2,8 +2,6 @@ package khota_handler
 
 import (
 	v1 "datainfra.io/baaz/api/v1/types"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -21,8 +19,8 @@ const (
 //
 // stringData:
 //
-//	accessKey: AKIAWLZK4B6ACNA3H43S
-//	secretKey: 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
+//	accessKey: kjbdsfkjbsdf
+//	secretKey: lknasflbnafslkbnaflkbadf
 func getAwsEksSecret(dataPlaneName string, dataplane v1.DataPlane) *unstructured.Unstructured {
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -39,6 +37,23 @@ func getAwsEksSecret(dataPlaneName string, dataplane v1.DataPlane) *unstructured
 }
 
 func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[string]string) *unstructured.Unstructured {
+
+	var allApplications []map[string]interface{}
+
+	for _, app := range dataplane.ApplicationConfig {
+		allApplications = append(allApplications, map[string]interface{}{
+			"name":      app.ApplicationName,
+			"namespace": app.Namespace,
+			"spec": map[string]interface{}{
+				"chartName": app.ChartName,
+				"repoName":  app.RepoName,
+				"repoUrl":   app.RepoURL,
+				"version":   app.Version,
+				"values":    app.Values,
+			},
+		})
+	}
+
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "datainfra.io/v1",
@@ -63,6 +78,7 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 						"version":          dataplane.KubeConfig.EKS.Version,
 					},
 				},
+				"applications": allApplications,
 			},
 		},
 	}
@@ -73,14 +89,8 @@ func makeTenantConfig(
 	tenant v1.HTTPTenant,
 	dataplaneName string,
 	labels map[string]string) *unstructured.Unstructured {
-	var isolationEnabled, networkSecurityEnabled bool
+	var networkSecurityEnabled bool
 	var allowedNamespaces []string
-
-	if tenant.Type == v1.Siloed {
-		isolationEnabled = true
-	} else if tenant.Type == v1.Pool {
-		isolationEnabled = false
-	}
 
 	if tenant.NetworkSecurity.InterNamespaceTraffic == v1.Deny {
 		networkSecurityEnabled = true
@@ -96,14 +106,14 @@ func makeTenantConfig(
 			"apiVersion": "datainfra.io/v1",
 			"kind":       "Tenants",
 			"metadata": map[string]interface{}{
-				"name":   makeTenantName(tenant.Type, tenant.Application.Name, tenant.Application.Size),
+				"name":   tenantName,
 				"labels": labels,
 			},
 			"spec": map[string]interface{}{
 				"dataplaneName": dataplaneName,
 				"isolation": map[string]interface{}{
 					"machine": map[string]interface{}{
-						"enabled": isolationEnabled,
+						"enabled": false,
 					},
 					"network": map[string]interface{}{
 						"enabled":           networkSecurityEnabled,
@@ -121,12 +131,20 @@ func makeTenantConfig(
 	}
 }
 
-func makeApplicationConfig(app v1.HTTPApplication, dataplaneName, applicationName string) *unstructured.Unstructured {
+func makeApplicationConfig(apps []v1.HTTPApplication, dataplaneName, tenantName, appCRName string) *unstructured.Unstructured {
 
-	var values []string
-
-	if app.Values != nil {
-		values = app.Values
+	var allApplications []map[string]interface{}
+	for _, app := range apps {
+		allApplications = append(allApplications, map[string]interface{}{
+			"name": app.ApplicationName,
+			"spec": map[string]interface{}{
+				"chartName": app.ChartName,
+				"repoName":  app.RepoName,
+				"repoUrl":   app.RepoURL,
+				"version":   app.Version,
+				"values":    app.Values,
+			},
+		})
 	}
 
 	return &unstructured.Unstructured{
@@ -134,40 +152,41 @@ func makeApplicationConfig(app v1.HTTPApplication, dataplaneName, applicationNam
 			"apiVersion": "datainfra.io/v1",
 			"kind":       "Applications",
 			"metadata": map[string]interface{}{
-				"name": applicationName,
+				"name": appCRName,
 			},
 			"spec": map[string]interface{}{
-				"envRef": dataplaneName,
-				"applications": []map[string]interface{}{
-					{
-						"name":  applicationName,
-						"scope": app.Scope,
-						"spec": map[string]interface{}{
-							"chartName": app.ChartName,
-							"repoName":  app.RepoName,
-							"repoUrl":   app.RepoURL,
-							"version":   app.Version,
-							"values":    values,
-						},
-					},
-				},
+				"dataplane":    dataplaneName,
+				"tenant":       tenantName,
+				"applications": allApplications,
 			},
 		},
 	}
 }
 
-func makeTenantSizeCm(sizeJson string) *corev1.ConfigMap {
-	return &corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ConfigMap",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "tenant-sizes",
-			Namespace: "kube-system",
-		},
-		Data: map[string]string{
-			"size.json": sizeJson,
+func makeTenantsInfra(dataplaneName string, tenantSizes *[]v1.HTTPTenantSizes) *unstructured.Unstructured {
+
+	var allTenantSizes []map[string]interface{}
+	for _, tenantSize := range *tenantSizes {
+		allTenantSizes = append(allTenantSizes, map[string]interface{}{
+			"name":        tenantSize.Name,
+			"machinePool": tenantSize.MachineSpec,
+		})
+	}
+
+	return &unstructured.Unstructured{
+		Object: map[string]interface{}{
+			"apiVersion": "datainfra.io/v1",
+			"kind":       "TenantsInfra",
+			"metadata": map[string]interface{}{
+				"name": dataplaneName + "-" + "tenantinfra",
+				"labels": map[string]string{
+					"dataplane_name": dataplaneName,
+				},
+			},
+			"spec": map[string]interface{}{
+				"dataplane":   dataplaneName,
+				"tenantSizes": allTenantSizes,
+			},
 		},
 	}
 }

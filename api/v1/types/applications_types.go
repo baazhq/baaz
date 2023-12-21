@@ -4,13 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type AppScope string
-
-const (
-	EnvironmentScope AppScope = "environment"
-	TenantScope      AppScope = "tenant"
-)
-
 type ApplicationPhase string
 
 const (
@@ -22,15 +15,15 @@ type ApplicationType string
 
 // ApplicationSpec defines the desired state of Application
 type ApplicationSpec struct {
-	EnvRef       string    `json:"envRef"`
+	Dataplane    string    `json:"dataplane"`
+	Tenant       string    `json:"tenant"`
 	Applications []AppSpec `json:"applications"`
 }
 
 type AppSpec struct {
-	Name   string    `json:"name"`
-	Scope  AppScope  `json:"scope"`
-	Tenant string    `json:"tenant,omitempty"`
-	Spec   ChartSpec `json:"spec"`
+	Name      string    `json:"name"`
+	Namespace string    `json:"namespace,omitempty"`
+	Spec      ChartSpec `json:"spec"`
 }
 
 type ChartSpec struct {

@@ -1,7 +1,7 @@
 customer:
-  name: parseable
+  name: onecard
   saas_type: "shared"
   cloud_type: "aws"
   labels: 
-    free: tier
-    cloud: aws
+    tier: "free"
+    region:  "us-east-1"

@@ -1,4 +1,4 @@
-package tenant_controller
+package tenantinfra_controller
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,10 +20,10 @@ import (
 	"datainfra.io/baaz/pkg/utils"
 )
 
-var tenantsFinalizer = "tenants.datainfra.io/finalizer"
+var tenantsFinalizer = "tenantsinfra.datainfra.io/finalizer"
 
-// TenantsReconciler reconciles a Tenants object
-type TenantsReconciler struct {
+// TenantsInfraReconciler reconciles a Tenants object
+type TenantsInfraReconciler struct {
 	client.Client
 	Log    logr.Logger
 	Scheme *runtime.Scheme
@@ -32,68 +33,63 @@ type TenantsReconciler struct {
 	NgStore       store.Store
 }
 
-func NewTenantsReconciler(mgr ctrl.Manager) *TenantsReconciler {
-	initLogger := ctrl.Log.WithName("controllers").WithName("tenant")
-	return &TenantsReconciler{
+func NewTenantsInfraReconciler(mgr ctrl.Manager) *TenantsInfraReconciler {
+	initLogger := ctrl.Log.WithName("controllers").WithName("tenant_infra")
+	return &TenantsInfraReconciler{
 		Client:        mgr.GetClient(),
 		Log:           initLogger,
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
-		Recorder:      mgr.GetEventRecorderFor("tenant-controller"),
+		Recorder:      mgr.GetEventRecorderFor("tenantinfra-controller"),
 		NgStore:       store.NewInternalStore(),
 	}
 }
 
-//+kubebuilder:rbac:groups=datainfra.io,resources=tenants,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=datainfra.io,resources=tenants/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=datainfra.io,resources=tenants/finalizers,verbs=update
+//+kubebuilder:rbac:groups=datainfra.io,resources=tenantsinfra,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=datainfra.io,resources=tenantsinfra/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=datainfra.io,resources=tenantsinfra/finalizers,verbs=update
 
-func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	tenantObj := &v1.Tenants{}
-	err := r.Get(ctx, req.NamespacedName, tenantObj)
+func (r *TenantsInfraReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+
+	tenantInfraObj := &v1.TenantsInfra{}
+	err := r.Get(ctx, req.NamespacedName, tenantInfraObj)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	dpObj := &v1.DataPlanesList{}
-	err = r.List(ctx, dpObj, &client.ListOptions{})
+	dataplane := &v1.DataPlanes{}
+	err = r.Get(ctx, k8stypes.NamespacedName{Name: tenantInfraObj.Spec.Dataplane, Namespace: req.Namespace}, dataplane)
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	var dataplane v1.DataPlanes
-	for _, dp := range dpObj.Items {
-		if dp.GetName() == tenantObj.Spec.DataplaneName {
-			dataplane = dp
-		}
-	}
+	klog.Infof("Reconciling Tenants Infra Objects: %s/%s", tenantInfraObj.Namespace, tenantInfraObj.Name)
 
-	klog.Infof("Reconciling Tenants: %s/%s", tenantObj.Namespace, tenantObj.Name)
-
-	if tenantObj.DeletionTimestamp != nil {
+	if tenantInfraObj.DeletionTimestamp != nil {
 		// object is going to be deleted
 		awsEnv := awsEnv{
-			ctx:    ctx,
-			dp:     &dataplane,
-			tenant: tenantObj,
-			eksIC:  eks.NewEks(ctx, &dataplane),
-			client: r.Client,
-			store:  r.NgStore,
+			ctx:          ctx,
+			dp:           dataplane,
+			tenantsInfra: tenantInfraObj,
+			eksIC:        eks.NewEks(ctx, dataplane),
+			client:       r.Client,
+			store:        r.NgStore,
 		}
 
 		return r.reconcileDelete(&awsEnv)
 	}
+
 	// if it is normal reconcile, then add finalizer if not already
-	if !controllerutil.ContainsFinalizer(tenantObj, tenantsFinalizer) {
-		controllerutil.AddFinalizer(tenantObj, tenantsFinalizer)
-		if err := r.Update(ctx, tenantObj); err != nil {
+	if !controllerutil.ContainsFinalizer(tenantInfraObj, tenantsFinalizer) {
+		controllerutil.AddFinalizer(tenantInfraObj, tenantsFinalizer)
+		if err := r.Update(ctx, tenantInfraObj); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 	// If first time reconciling set status to pending
-	if tenantObj.Status.Phase == "" {
-		if _, _, err := utils.PatchStatus(ctx, r.Client, tenantObj, func(obj client.Object) client.Object {
-			in := obj.(*v1.Tenants)
+	if tenantInfraObj.Status.Phase == "" {
+		if _, _, err := utils.PatchStatus(ctx, r.Client, tenantInfraObj, func(obj client.Object) client.Object {
+			in := obj.(*v1.TenantsInfra)
 			in.Status.Phase = v1.PendingT
 			return in
 		}); err != nil {
@@ -101,9 +97,9 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	if err := r.do(ctx, tenantObj, &dataplane); err != nil {
-		if _, _, patchErr := utils.PatchStatus(ctx, r.Client, tenantObj, func(obj client.Object) client.Object {
-			in := obj.(*v1.Tenants)
+	if err := r.do(ctx, tenantInfraObj, dataplane); err != nil {
+		if _, _, patchErr := utils.PatchStatus(ctx, r.Client, tenantInfraObj, func(obj client.Object) client.Object {
+			in := obj.(*v1.TenantsInfra)
 			in.Status.Phase = v1.FailedT
 			return in
 		}); patchErr != nil {
@@ -118,9 +114,9 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *TenantsReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *TenantsInfraReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.Tenants{}).
+		For(&v1.TenantsInfra{}).
 		Complete(r)
 }
 
@@ -139,10 +135,10 @@ func lookupReconcileTime(log logr.Logger) time.Duration {
 	}
 }
 
-func (r *TenantsReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
+func (r *TenantsInfraReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	// update phase to terminating
-	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.tenant, func(obj client.Object) client.Object {
-		in := obj.(*v1.Tenants)
+	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.tenantsInfra, func(obj client.Object) client.Object {
+		in := obj.(*v1.TenantsInfra)
 		in.Status.Phase = v1.TerminatingT
 		return in
 	})
@@ -150,7 +146,7 @@ func (r *TenantsReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	for ng, ngStatus := range ae.tenant.Status.NodegroupStatus {
+	for ng, ngStatus := range ae.tenantsInfra.Status.NodegroupStatus {
 
 		if ngStatus != "DELETING" {
 			_, err := ae.eksIC.DeleteNodeGroup(ng)
@@ -158,8 +154,8 @@ func (r *TenantsReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 				return ctrl.Result{}, err
 			}
 			// update status with current nodegroup status
-			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.tenant, func(obj client.Object) client.Object {
-				in := obj.(*v1.Tenants)
+			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.tenantsInfra, func(obj client.Object) client.Object {
+				in := obj.(*v1.TenantsInfra)
 				if in.Status.NodegroupStatus == nil {
 					in.Status.NodegroupStatus = make(map[string]string)
 				}
@@ -182,9 +178,9 @@ func (r *TenantsReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	}
 
 	// remove our finalizer from the list and update it.
-	controllerutil.RemoveFinalizer(ae.tenant, tenantsFinalizer)
-	klog.Infof("Deleted Tenant [%s]", ae.tenant.GetName())
-	if err := ae.client.Update(ae.ctx, ae.tenant.DeepCopyObject().(*v1.Tenants)); err != nil {
+	controllerutil.RemoveFinalizer(ae.tenantsInfra, tenantsFinalizer)
+	klog.Infof("Deleted Tenant Infra [%s]", ae.tenantsInfra.GetName())
+	if err := ae.client.Update(ae.ctx, ae.tenantsInfra.DeepCopyObject().(*v1.TenantsInfra)); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil

@@ -40,7 +40,7 @@ spec:
                   properties:
                     name:
                       type: string
-                    scope:
+                    namespace:
                       type: string
                     spec:
                       properties:
@@ -62,19 +62,19 @@ spec:
                       - repoUrl
                       - version
                       type: object
-                    tenant:
-                      type: string
                   required:
                   - name
-                  - scope
                   - spec
                   type: object
                 type: array
-              envRef:
+              dataplane:
+                type: string
+              tenant:
                 type: string
             required:
             - applications
-            - envRef
+            - dataplane
+            - tenant
             type: object
           status:
             properties:
@@ -86,7 +86,7 @@ spec:
                       properties:
                         name:
                           type: string
-                        scope:
+                        namespace:
                           type: string
                         spec:
                           properties:
@@ -108,19 +108,19 @@ spec:
                           - repoUrl
                           - version
                           type: object
-                        tenant:
-                          type: string
                       required:
                       - name
-                      - scope
                       - spec
                       type: object
                     type: array
-                  envRef:
+                  dataplane:
+                    type: string
+                  tenant:
                     type: string
                 required:
                 - applications
-                - envRef
+                - dataplane
+                - tenant
                 type: object
               phase:
                 type: string

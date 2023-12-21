@@ -95,8 +95,8 @@ func makeDataPlaneName(cloudType v1.CloudType, customerName, region string) stri
 	return ""
 }
 
-func makeTenantName(deploymentType v1.TenantDeploymentType, appName, appSize string) string {
-	s := string(deploymentType) + "-" + appName + "-" + appSize
+func makeTenantName(appName, appSize string) string {
+	s := appName + "-" + appSize
 	return strings.ToLower(s) + "-" + String(4)
 }
 
@@ -136,7 +136,7 @@ func labels2Slice(labels map[string]string) []string {
 	return sliceString
 }
 
-func checkStringInMap(matchString string, labels map[string]string) bool {
+func checkKeyInMap(matchString string, labels map[string]string) bool {
 
 	for k, _ := range labels {
 		if strings.Contains(k, matchString) {
@@ -144,6 +144,26 @@ func checkStringInMap(matchString string, labels map[string]string) bool {
 		}
 	}
 	return false
+}
+
+func checkValueInMap(matchString string, labels map[string]string) bool {
+
+	for _, v := range labels {
+		if strings.Contains(v, matchString) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchStringInMap(matchString string, labels map[string]string) string {
+
+	for k, v := range labels {
+		if strings.Contains(k, matchString) {
+			return v
+		}
+	}
+	return ""
 }
 
 // patchValue specifies a patch operation.

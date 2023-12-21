@@ -12,11 +12,6 @@ type HTTPTenantApplication struct {
 	Size string `json:"app_size"`
 }
 
-type HTTPTenantSizes struct {
-	Name        string        `json:"name"`
-	MachineSpec []MachineSpec `json:"machine_pool"`
-}
-
 type NetworkRules string
 
 const (
@@ -30,7 +25,6 @@ type NetworkSecurity struct {
 }
 
 type HTTPTenant struct {
-	Type            TenantDeploymentType  `json:"type"`
 	Application     HTTPTenantApplication `json:"application"`
 	NetworkSecurity NetworkSecurity       `json:"network_security,omitempty"`
 }

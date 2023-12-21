@@ -31,3 +31,29 @@ rules:
   - get
   - patch
   - update
+- apiGroups:
+  - datainfra.io
+  resources:
+  - tenantsinfra
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - datainfra.io
+  resources:
+  - tenantsinfra/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - datainfra.io
+  resources:
+  - tenantsinfra/status
+  verbs:
+  - get
+  - patch
+  - update
