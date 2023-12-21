@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	klog "k8s.io/klog/v2"
 	"net/http"
 	"strings"
 
@@ -143,7 +144,45 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			},
 		}, metav1.CreateOptions{})
 		if err != nil {
-			res := NewResponse(CustomerNamespaceGetFail, internal_error, err, http.StatusInternalServerError)
+			res := NewResponse(CustomerNamespaceCreateFail, internal_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+		customer_secret, err := Base62Random(50)
+		if err != nil {
+			klog.Errorf("ErrMsg: Base62 encoder not able to generate UUID ", err)
+			return
+		}
+		// create secret for customer
+		_, err = client.CoreV1().Secrets(customerName).Create(context.TODO(), &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      customerName,
+				Namespace: customerName,
+			},
+			StringData: map[string]string{
+				"token": customer_secret,
+			},
+			Type: corev1.SecretTypeOpaque,
+		}, metav1.CreateOptions{})
+
+		if err != nil {
+			// remove namespace if secret token creation fails
+			namespace_deletion_policy := metav1.DeletePropagationBackground
+			var grace_period int64 = 0
+			ns_err := client.CoreV1().Namespaces().Delete(context.TODO(), customerName, metav1.DeleteOptions{
+				PropagationPolicy:  &namespace_deletion_policy,
+				GracePeriodSeconds: &grace_period,
+			})
+			// returns error if namespace cleanup fails
+			if ns_err != nil {
+				res := NewResponse(CustomerNamespaceCreateFail, internal_error, ns_err, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+				return
+			}
+			// returns error if secret token creation fails
+			res := NewResponse(CustomerNamespaceCreateFail, internal_error, err, http.StatusInternalServerError)
 			res.SetResponse(&w)
 			res.LogResponse()
 			return
@@ -159,6 +198,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 		res.SetResponse(&w)
 		res.LogResponse()
 	}
+
 }
 func UpdateCustomer(w http.ResponseWriter, req *http.Request) {
 
