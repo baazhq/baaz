@@ -51,3 +51,10 @@ func MakeKubeClientSet(restConfig rest.Config) (*kubernetes.Clientset, error) {
 	}
 	return clientset, nil
 }
+
+type EnvVars struct {
+}
+
+func SetEnvVars() *EnvVars {
+	return &EnvVars{}
+}

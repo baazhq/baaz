@@ -12,8 +12,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	v1 "datainfra.io/baaz/api/v1/types"
+	"datainfra.io/baaz/internal/predicates"
 	"datainfra.io/baaz/pkg/aws/eks"
 	"datainfra.io/baaz/pkg/utils"
 )
@@ -29,16 +31,20 @@ type ApplicationReconciler struct {
 	Scheme *runtime.Scheme
 	// reconcile time duration, defaults to 10s
 	ReconcileWait time.Duration
+	Predicates    predicate.Predicate
 	Recorder      record.EventRecorder
+	CustomerName  string
+	EnablePrivate bool
 }
 
-func NewApplicationReconciler(mgr ctrl.Manager) *ApplicationReconciler {
+func NewApplicationReconciler(mgr ctrl.Manager, enablePrivate bool, customerName string) *ApplicationReconciler {
 	initLogger := ctrl.Log.WithName("controllers").WithName("application")
 	return &ApplicationReconciler{
 		Client:        mgr.GetClient(),
 		Log:           initLogger,
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
+		Predicates:    predicates.GetPredicates(enablePrivate, customerName),
 		Recorder:      mgr.GetEventRecorderFor("applications-controller"),
 	}
 }
