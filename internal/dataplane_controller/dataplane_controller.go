@@ -5,10 +5,12 @@ import (
 	"os"
 	"time"
 
+	"datainfra.io/baaz/internal/predicates"
 	"datainfra.io/baaz/pkg/aws/eks"
 	"datainfra.io/baaz/pkg/store"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/go-logr/logr"
 	"k8s.io/klog/v2"
@@ -34,19 +36,25 @@ type DataPlaneReconciler struct {
 	// reconcile time duration, defaults to 10s
 	ReconcileWait time.Duration
 	Recorder      record.EventRecorder
+	Predicates    predicate.Predicate
 	NgStore       store.Store
+	CustomerName  string
+	EnablePrivate bool
 }
 
-func NewDataplaneReconciler(mgr ctrl.Manager) *DataPlaneReconciler {
+func NewDataplaneReconciler(mgr ctrl.Manager, enablePrivate bool, customerName string) *DataPlaneReconciler {
 	initLogger := ctrl.Log.WithName("controllers").WithName("dataplane")
+
 	return &DataPlaneReconciler{
 		Client:        mgr.GetClient(),
 		Log:           initLogger,
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
 		Recorder:      mgr.GetEventRecorderFor("dataplane-controller"),
+		Predicates:    predicates.GetPredicates(enablePrivate, customerName),
 		NgStore:       store.NewInternalStore(),
 	}
+
 }
 
 // +kubebuilder:rbac:groups=datainfra.io,resources=dataplanes,verbs=get;list;watch;create;update;patch;delete
@@ -83,15 +91,13 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	// If first time reconciling set status to pending
-	if desiredObj.Status.Phase == "" {
-		if _, _, err := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
-			in := obj.(*v1.DataPlanes)
-			in.Status.Phase = v1.PendingD
-			return in
-		}); err != nil {
-			return ctrl.Result{}, err
-		}
+	// If first time recoe == "" {
+	if _, _, err := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
+		in := obj.(*v1.DataPlanes)
+		in.Status.Phase = v1.PendingD
+		return in
+	}); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	if err := r.do(ctx, desiredObj); err != nil {
@@ -169,6 +175,7 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 func (r *DataPlaneReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.DataPlanes{}).
+		WithEventFilter(r.Predicates).
 		Complete(r)
 }
 
