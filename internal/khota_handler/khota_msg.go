@@ -4,23 +4,24 @@ type CustomMsg string
 
 // Server
 const (
-	ServerUnmarshallError CustomMsg = "Server Json Unmarshal Error"
-	ServerBodyCloseError  CustomMsg = "Server Body Close Error"
-	ServerReqSizeExceed   CustomMsg = "Server Req Size Exceed Error"
+	ServerUnmarshallError CustomMsg = "Server json unmarshal error"
+	ServerBodyCloseError  CustomMsg = "Server body close error"
+	ServerReqSizeExceed   CustomMsg = "Server req size exceed error"
 )
 
 // Customer
 const (
-	CustomerNamespaceExists        CustomMsg = "Customer Namespace exists"
-	CustomerNamespaceDoesNotExists CustomMsg = "Customer Namespace doesn't EXISTS"
-	CustomerNamespaceSuccess       CustomMsg = "Customer Namespace create success"
-	CustomerNamespaceGetFail       CustomMsg = "Customer Namespace get Failed"
-	CustomerNamespaceUpdateSuccess CustomMsg = "Customer Namespace update success"
-	CustomerNamespaceUpdateFail    CustomMsg = "Customer Namespace update Failed"
-	CustomerNamespaceCreateFail    CustomMsg = "Customer Namespace create Failed"
-	CustomerNamespaceListEmpty     CustomMsg = "Customer Namespace list Empty"
-	CustomerNamespaceList          CustomMsg = "Customer Namespace list"
-	CustomerNotExistInDataplane    CustomMsg = "Customer not exist in dataplane"
+	CustomerNamespaceExists          CustomMsg = "Customer namespace exists"
+	CustomerNamespaceDoesNotExists   CustomMsg = "Customer namespace doesn't exist"
+	CustomerNamespaceSuccess         CustomMsg = "Customer namespace create success"
+	CustomerNamespaceGetFail         CustomMsg = "Customer namespace get fail"
+	CustomerNamespaceUpdateSuccess   CustomMsg = "Customer namespace update success"
+	CustomerNamespaceUpdateFail      CustomMsg = "Customer namespace update failed"
+	CustomerNamespaceCreateFail      CustomMsg = "Customer namespace create failed"
+	CustomerNamespaceListEmpty       CustomMsg = "Customer namespace list empty"
+	CustomerNamespaceList            CustomMsg = "Customer namespace list"
+	CustomerServiceAccountCreateFail CustomMsg = "Customer service account creation failed."
+	CustomerNotExistInDataplane      CustomMsg = "Customer not exist in dataplane"
 )
 
 // DataPlane
@@ -81,4 +82,9 @@ const (
 	active                string = "active"
 	dataplane_unavailable string = "unavailable"
 	label_prefix          string = "b_"
+)
+
+// config
+const (
+	ConfigGetFail string = "Config get failed for customer"
 )

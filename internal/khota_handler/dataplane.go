@@ -5,11 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	v1 "datainfra.io/baaz/api/v1/types"
 	"github.com/gorilla/mux"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,7 +36,7 @@ func AddRemoveDataPlane(w http.ResponseWriter, req *http.Request) {
 
 	kc, dc := getKubeClientset()
 
-	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
 		res.SetResponse(&w)
@@ -171,7 +171,7 @@ func AddRemoveDataPlane(w http.ResponseWriter, req *http.Request) {
 
 func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 
-	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
 		res.SetResponse(&w)
@@ -246,17 +246,17 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 	}
 
 	labels := map[string]string{
-		"version":        dataplane.KubeConfig.EKS.Version,
-		"cloud_type":     string(dataplane.CloudType),
-		"cloud_region":   dataplane.CloudRegion,
-		"dataplane_type": string(getDataplaneType(dp.CustomerName)),
+		"version":      dataplane.KubeConfig.EKS.Version,
+		"cloud_type":   string(dataplane.CloudType),
+		"cloud_region": dataplane.CloudRegion,
 	}
 
 	if dp.CustomerName != "" {
+		var customer *corev1.Namespace
 		retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			customer, getErr := kc.CoreV1().Namespaces().Get(context.TODO(), dp.CustomerName, metav1.GetOptions{})
-			if getErr != nil {
-				return getErr
+			customer, err = kc.CoreV1().Namespaces().Get(context.TODO(), dp.CustomerName, metav1.GetOptions{})
+			if err != nil {
+				return err
 			}
 
 			if customer.GetLabels()["dataplane"] != "unavailable" {
@@ -279,6 +279,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		}
 		labels = mergeMaps(labels, map[string]string{
 			"customer_" + dataplane.CustomerName: dataplane.CustomerName,
+			"dataplane_type":                     customer.GetLabels()["saas_type"],
 		})
 	}
 

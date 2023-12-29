@@ -1,6 +1,6 @@
 customer:
-  name: onecard
-  saas_type: "shared"
+  name: test
+  saas_type: "private"
   cloud_type: "aws"
   labels: 
     tier: "free"

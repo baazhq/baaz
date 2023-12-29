@@ -1,8 +1,14 @@
 package khota_handler
 
 import (
+	"context"
+
 	v1 "datainfra.io/baaz/api/v1/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/kubernetes"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -189,4 +195,37 @@ func makeTenantsInfra(dataplaneName string, tenantSizes *[]v1.HTTPTenantSizes) *
 			},
 		},
 	}
+}
+
+func createSaToken(
+	clientSet *kubernetes.Clientset,
+	customerName string,
+) error {
+	sa, err := clientSet.CoreV1().ServiceAccounts(customerName).Create(context.TODO(), &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      customerName,
+			Namespace: customerName,
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	_, err = clientSet.CoreV1().Secrets(customerName).Create(
+		context.TODO(),
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      sa.GetName(),
+				Namespace: sa.GetNamespace(),
+				Annotations: map[string]string{
+					"kubernetes.io/service-account.name": sa.GetName(),
+				},
+			},
+			Type: corev1.SecretTypeServiceAccountToken,
+		}, metav1.CreateOptions{})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

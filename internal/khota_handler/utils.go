@@ -72,15 +72,6 @@ func getNamespace(customerName string) string {
 	return ""
 }
 
-func getDataplaneType(customerName string) v1.SaaSTypes {
-	if customerName == "" {
-		return v1.SharedSaaS
-	} else if customerName != "" {
-		return v1.DedicatedSaaS
-	}
-	return ""
-}
-
 func makeDataPlaneName(cloudType v1.CloudType, customerName, region string) string {
 	var dpName string
 	// here we assume, its a shared saas
@@ -138,7 +129,7 @@ func labels2Slice(labels map[string]string) []string {
 
 func checkKeyInMap(matchString string, labels map[string]string) bool {
 
-	for k, _ := range labels {
+	for k := range labels {
 		if strings.Contains(k, matchString) {
 			return true
 		}
@@ -183,4 +174,8 @@ func NewPatchValue(op, path string, value interface{}) []byte {
 
 	bytes, _ := json.Marshal(patchPayload)
 	return bytes
+}
+
+func Ptr[T any](v T) *T {
+	return &v
 }

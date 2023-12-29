@@ -8,5 +8,5 @@ func GetPredicates(enablePrivate bool, customerName string) predicate.Predicate 
 	if enablePrivate {
 		return PrivateSaaSPredicates{CustomerName: customerName}
 	}
-	return predicate.GenerationChangedPredicate{}
+	return GenericSaaSPredicates{}
 }
