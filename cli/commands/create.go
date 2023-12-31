@@ -12,13 +12,6 @@ import (
 )
 
 var (
-	file           string
-	dataplane_name string
-	customer_name  string
-	tenant_name    string
-)
-
-var (
 	createCmd = &cobra.Command{
 		Use:   "create",
 		Short: "bz create - create entites [customers, dataplane, tenantinfra, tenants, applications] in baaz control plane",

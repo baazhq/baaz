@@ -38,7 +38,7 @@ var (
 
 func init() {
 	rootCmd.AddCommand(getCmd)
-	getCmd.Flags().StringVarP(&customer_name, "customer", "", "", "dataplane name")
+	getCmd.Flags().StringVarP(&customer_name, "customer", "", "", "customer name")
 	getCmd.Flags().StringVarP(&tenant_name, "tenant", "", "", "dataplane name")
 	getCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
 }

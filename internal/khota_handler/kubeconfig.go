@@ -11,12 +11,12 @@ import (
 )
 
 type KubeConfig struct {
-	CurrentContext string
-	Customer       string
-	Namespace      string
-	ClusterCA      string
-	ClusterServer  string
-	UserTokenValue string
+	CurrentContext string `json:"current_context"`
+	Customer       string `json:"customer"`
+	Namespace      string `json:"namespace"`
+	ClusterCA      string `json:"cluster_ca"`
+	ClusterServer  string `json:"cluster_server"`
+	UserTokenValue string `json:"user_token_value"`
 }
 
 func NewKubeConfig(
