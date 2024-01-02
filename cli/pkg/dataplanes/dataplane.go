@@ -17,10 +17,11 @@ import (
 
 type Dataplane struct {
 	Dataplane struct {
-		CloudType   string `yaml:"cloudType" json:"cloud_type"`
-		CloudRegion string `yaml:"cloudRegion" json:"cloud_region"`
-		SaasType    string `yaml:"saasType" json:"saas_type"`
-		CloudAuth   struct {
+		CloudType    string `yaml:"cloudType" json:"cloud_type"`
+		CloudRegion  string `yaml:"cloudRegion" json:"cloud_region"`
+		CustomerName string `yaml:"customerName" json:"customer_name"`
+		SaasType     string `yaml:"saasType" json:"saas_type"`
+		CloudAuth    struct {
 			AwsAuth struct {
 				AwsAccessKey string `yaml:"awsAccessKey" json:"aws_access_key"`
 				AwsSecretKey string `yaml:"awsSecretKey" json:"aws_secret_key"`

@@ -40,6 +40,9 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+// saas initalizer configures ports so that local development
+// in a single host machine does not conflict for shared, dedciated
+// and private saas.
 type saasInitalizer struct {
 	CustomerName     string
 	HttpServerPort   string

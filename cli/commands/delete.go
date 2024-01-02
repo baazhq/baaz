@@ -11,8 +11,6 @@ var deleteValidArgs = []string{
 	"dataplane",
 }
 
-var customerName string
-
 var (
 	deleteCmd = &cobra.Command{
 		Use:   "delete",
@@ -23,7 +21,7 @@ var (
 			case "customer":
 				return nil
 			case "dataplane":
-				resp, err := dataplanes.DeleteDataplane(customerName)
+				resp, err := dataplanes.DeleteDataplane(customer_name)
 				if err != nil {
 					return err
 				}
@@ -38,5 +36,5 @@ var (
 
 func init() {
 	rootCmd.AddCommand(deleteCmd)
-	deleteCmd.Flags().StringVar(&customerName, "customer", "", "name of the entity to be deleted")
+	deleteCmd.Flags().StringVar(&customer_name, "customer", "", "name of the entity to be deleted")
 }

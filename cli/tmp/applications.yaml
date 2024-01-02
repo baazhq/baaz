@@ -1,0 +1,12 @@
+application:
+  - name: parseable-cr
+    chartName: parseable
+    repoName: datainfra
+    repoUrl: https://charts.datainfra.io
+    version: 0.0.1
+    values:
+    - nodeSelector.size=nano
+    - tolerations[0].key=application
+    - tolerations[0].operator=Equal
+    - tolerations[0].value=parseable-small-parseable-server
+    - tolerations[0].effect=NoSchedule

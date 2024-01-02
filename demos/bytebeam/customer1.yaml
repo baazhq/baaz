@@ -1,0 +1,7 @@
+customer:
+  name: customer1
+  saas_type: "shared"
+  cloud_type: "aws"
+  labels: 
+    tier: "free"
+    region:  "us-east-1"

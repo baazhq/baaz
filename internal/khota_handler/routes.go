@@ -176,4 +176,11 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
 		DeleteApplicationStatus,
 	},
+	// Get Kubeconfig for a Private SaaS customer
+	Route{
+		"GET KUBECONFIG FOR PRIVATE SAAS CUSTOMER",
+		"GET",
+		"/api/v1/customer/{customer_name}/config",
+		GetKubeConfig,
+	},
 }

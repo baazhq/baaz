@@ -13,6 +13,7 @@ var (
 	TenantPath      = "/tenant"
 	TenantInfraPath = "/tenantsinfra"
 	TenantSizesPath = "/sizes"
+	KubeConfigPath  = "/config"
 )
 
 func GetBzUrl() string {

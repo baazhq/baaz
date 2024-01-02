@@ -1,0 +1,12 @@
+application:
+  - name: bytebeam-app1
+    chartName: parseable
+    repoName: datainfra
+    repoUrl: https://charts.datainfra.io
+    version: 0.0.1
+    values:
+    - nodeSelector.size=medium
+    - tolerations[0].key=application
+    - tolerations[0].operator=Equal
+    - tolerations[0].value=bytebeam-small-bytebeam-app1
+    - tolerations[0].effect=NoSchedule

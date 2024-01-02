@@ -33,7 +33,7 @@ func (GenericSaaSPredicates) Delete(e event.DeleteEvent) bool {
 func IgnorePrivateSaaSCustomer(obj client.Object) bool {
 
 	if obj.GetLabels()["saas_type"] != string(v1.PrivateSaaS) {
-		msg := fmt.Sprintf("baaz controllers will not renconcile %s", obj.GetNamespace())
+		msg := fmt.Sprintf("baaz controllers will not renconcile private saas %s", obj.GetNamespace())
 		klog.Info(msg)
 		return false
 	}
