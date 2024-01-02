@@ -19,7 +19,7 @@ var customersUrlPath = "/api/v1/customer"
 
 func makeGetCustomerPath() string { return common.GetBzUrl() + customersUrlPath }
 func makePostCustomerPath(customerName string) string {
-	return common.GetBzUrl() + common.BaazPath + "/" + customerName
+	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName
 }
 
 type customerList struct {

@@ -2,7 +2,6 @@ package kubeconfig
 
 import (
 	"bz/pkg/common"
-	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log"
@@ -10,30 +9,33 @@ import (
 )
 
 type KubeConfig struct {
-	APIVersion string `yaml:"apiVersion" json:"apiVersion"`
-	Kind       string `yaml:"kind" json:"kind"`
-	Clusters   []struct {
-		Name    string `yaml:"name" json:"name"`
+	APIVersion  string   `json:"apiVersion" yaml:"apiVersion"`
+	Kind        string   `json:"kind" yaml:"kind"`
+	Preferences struct{} `json:"preferences" yaml:"preferences"`
+	Clusters    []struct {
 		Cluster struct {
-			CertificateAuthorityData string `yaml:"certificate-authority-data" json:"certificate-authority-data"`
-			Server                   string `yaml:"server" json:"server"`
-		} `yaml:"cluster" json:"cluster"`
-	} `yaml:"clusters" json:"clusters"`
-	Contexts []struct {
-		Name    string `yaml:"name" json:"name"`
-		Context struct {
-			Cluster   string `yaml:"cluster" json:"cluster"`
-			Namespace string `yaml:"namespace" json:"namespace"`
-			User      string `yaml:"user" json:"user"`
-		} `yaml:"context" json:"context"`
-	} `yaml:"contexts" json:"contexts"`
-	CurrentContext string `yaml:"current-context" json:"current-contexts"`
-	Users          []struct {
-		Name string `yaml:"name" json:"name"`
+			CertificateAuthorityData string `json:"certificate-authority-data" yaml:"certificate-authority-data"`
+			Server                   string `json:"server" yaml:"server"`
+		} `json:"cluster" yaml:"cluster"`
+		Name string `json:"name" yaml:"name"`
+	} `json:"clusters" yaml:"clusters"`
+	Users []struct {
+		Name string `json:"name" yaml:"name"`
 		User struct {
-			Token string `yaml:"token" json:"token"`
-		} `yaml:"user" json:"user"`
-	} `yaml:"users" json:"users"`
+			AsUserExtra   struct{}    `json:"as-user-extra" yaml:"as-user-extra"`
+			ClientKeyData interface{} `json:"client-key-data" yaml:"client-key-data"`
+			Token         string      `json:"token" yaml:"token"`
+		} `json:"user" yaml:"user"`
+	} `json:"users" yaml:"users"`
+	Contexts []struct {
+		Context struct {
+			Cluster   string `json:"cluster" yaml:"cluster"`
+			Namespace string `json:"namespace" yaml:"namespace"`
+			User      string `json:"user" yaml:"user"`
+		} `json:"context" yaml:"context"`
+		Name string `json:"name" yaml:"name"`
+	} `json:"contexts" yaml:"contexts"`
+	CurrentContext string `json:"current-context" yaml:"current-context"`
 }
 
 func makeGetCustomerKubeConfigPath(customerName string) string {
@@ -65,63 +67,68 @@ func GetCustomerKubeConfig(customerName string) (*KubeConfig, error) {
 	}
 
 	newKubeConfig := KubeConfig{
-		APIVersion:     "v1",
-		Kind:           "Config",
-		CurrentContext: resp["current_context"],
+		APIVersion:  "v1",
+		Kind:        "Config",
+		Preferences: struct{}{},
 		Clusters: []struct {
-			Name    string `yaml:"name" json:"name"`
 			Cluster struct {
-				CertificateAuthorityData string `yaml:"certificate-authority-data" json:"certificate-authority-data"`
-				Server                   string `yaml:"server" json:"server"`
-			} `yaml:"cluster" json:"cluster"`
+				CertificateAuthorityData string `json:"certificate-authority-data" yaml:"certificate-authority-data"`
+				Server                   string `json:"server" yaml:"server"`
+			} `json:"cluster" yaml:"cluster"`
+			Name string `json:"name" yaml:"name"`
 		}{
 			{
-				Name: resp["current_context"],
 				Cluster: struct {
-					CertificateAuthorityData string `yaml:"certificate-authority-data" json:"certificate-authority-data"`
-					Server                   string `yaml:"server" json:"server"`
+					CertificateAuthorityData string `json:"certificate-authority-data" yaml:"certificate-authority-data"`
+					Server                   string `json:"server" yaml:"server"`
 				}{
-					CertificateAuthorityData: base64.StdEncoding.EncodeToString([]byte(resp["cluster_ca"])),
-					Server:                   resp["cluster_server"],
+					CertificateAuthorityData: resp["cluster_ca"],
+					Server:                   "https://127.0.0.1:60646",
 				},
-			},
-		},
-		Contexts: []struct {
-			Name    string `yaml:"name" json:"name"`
-			Context struct {
-				Cluster   string `yaml:"cluster" json:"cluster"`
-				Namespace string `yaml:"namespace" json:"namespace"`
-				User      string `yaml:"user" json:"user"`
-			} `yaml:"context" json:"context"`
-		}{
-			{
-				Name: resp["current_context"],
-				Context: struct {
-					Cluster   string `yaml:"cluster" json:"cluster"`
-					Namespace string `yaml:"namespace" json:"namespace"`
-					User      string `yaml:"user" json:"user"`
-				}{
-					Cluster:   resp["current_context"],
-					Namespace: resp["namespace"],
-					User:      resp["current_context"],
-				},
+				Name: resp["customer"] + "-cluster",
 			},
 		},
 		Users: []struct {
-			Name string `yaml:"name" json:"name"`
+			Name string `json:"name" yaml:"name"`
 			User struct {
-				Token string `yaml:"token" json:"token"`
-			} `yaml:"user" json:"user"`
+				AsUserExtra   struct{}    `json:"as-user-extra" yaml:"as-user-extra"`
+				ClientKeyData interface{} `json:"client-key-data" yaml:"client-key-data"`
+				Token         string      `json:"token" yaml:"token"`
+			} `json:"user" yaml:"user"`
 		}{
 			{
-				Name: resp["current_context"],
+				Name: resp["customer"],
 				User: struct {
-					Token string `yaml:"token" json:"token"`
+					AsUserExtra   struct{}    `json:"as-user-extra" yaml:"as-user-extra"`
+					ClientKeyData interface{} `json:"client-key-data" yaml:"client-key-data"`
+					Token         string      `json:"token" yaml:"token"`
 				}{
 					Token: resp["user_token_value"],
 				},
 			},
 		},
+		Contexts: []struct {
+			Context struct {
+				Cluster   string `json:"cluster" yaml:"cluster"`
+				Namespace string `json:"namespace" yaml:"namespace"`
+				User      string `json:"user" yaml:"user"`
+			} `json:"context" yaml:"context"`
+			Name string `json:"name" yaml:"name"`
+		}{
+			{
+				Context: struct {
+					Cluster   string `json:"cluster" yaml:"cluster"`
+					Namespace string `json:"namespace" yaml:"namespace"`
+					User      string `json:"user" yaml:"user"`
+				}{
+					Cluster:   resp["customer"] + "-cluster",
+					Namespace: resp["namespace"],
+					User:      resp["customer"],
+				},
+				Name: resp["customer"],
+			},
+		},
+		CurrentContext: resp["customer"],
 	}
 
 	return &newKubeConfig, nil

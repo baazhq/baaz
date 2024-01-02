@@ -1,5 +1,5 @@
 customer:
-  name: test
+  name: onecard
   saas_type: "private"
   cloud_type: "aws"
   labels: 

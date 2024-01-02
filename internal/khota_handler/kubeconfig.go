@@ -2,6 +2,7 @@ package khota_handler
 
 import (
 	"context"
+	b64 "encoding/base64"
 	"encoding/json"
 	"net/http"
 
@@ -32,8 +33,8 @@ func NewKubeConfig(
 		CurrentContext: customerName + "-context",
 		Customer:       customerName,
 		Namespace:      string(secret.Data["namespace"]),
-		ClusterCA:      string(secret.Data["ca.crt"]),
-		ClusterServer:  "127.0.0.1:46001",
+		ClusterCA:      b64.StdEncoding.EncodeToString([]byte(secret.Data["ca.crt"])),
+		ClusterServer:  "https://127.0.0.1:60646",
 		UserTokenValue: string(secret.Data["token"]),
 	}, nil
 
