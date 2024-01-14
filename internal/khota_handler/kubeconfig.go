@@ -29,12 +29,14 @@ func NewKubeConfig(
 		return nil, err
 	}
 
+	url := "https://" + clientset.RESTClient().Get().URL().Host
+
 	return &KubeConfig{
 		CurrentContext: customerName + "-context",
 		Customer:       customerName,
 		Namespace:      string(secret.Data["namespace"]),
 		ClusterCA:      b64.StdEncoding.EncodeToString([]byte(secret.Data["ca.crt"])),
-		ClusterServer:  "https://127.0.0.1:60646",
+		ClusterServer:  url,
 		UserTokenValue: string(secret.Data["token"]),
 	}, nil
 

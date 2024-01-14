@@ -10,7 +10,7 @@ testbin/*
 Dockerfile.cross
 helm-cache
 helm-config
-
+hack/
 # Test binary, build with `go test -c`
 *.test
 

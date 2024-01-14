@@ -1,7 +1,6 @@
 dataplane:
   cloudType: aws
   cloudRegion: us-east-1
-  customerName: onecard
   cloudAuth:
     awsAuth:
       awsAccessKey: AKIAWLZK4B6AOP67T7OA

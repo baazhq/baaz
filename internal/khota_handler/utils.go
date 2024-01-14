@@ -27,7 +27,8 @@ func getKubeClientset() (*kubernetes.Clientset, dynamic.Interface) {
 
 	if os.Getenv("RUN_LOCAL") == "true" {
 		// for running locally
-		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		//kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		kubeconfig := filepath.Join("hack/aws")
 		conf, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			panic(err.Error())

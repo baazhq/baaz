@@ -2,8 +2,7 @@ package commands
 
 import (
 	"bz/pkg/kubeconfig"
-	"encoding/json"
-	"os"
+	"bz/pkg/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -18,12 +17,11 @@ var (
 			if err != nil {
 				return err
 			}
-			bytes, err := json.Marshal(config)
+
+			err = kubeconfig.WriteKubeConfig2Cm(customer_name, config, utils.GetKubeClientset())
 			if err != nil {
 				return err
 			}
-
-			err = os.WriteFile(customer_name+"-kubeconfig", bytes, 0644)
 
 			return nil
 		},

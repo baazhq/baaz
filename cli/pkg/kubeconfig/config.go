@@ -2,10 +2,15 @@ package kubeconfig
 
 import (
 	"bz/pkg/common"
+	"context"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
+
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 type KubeConfig struct {
@@ -132,5 +137,31 @@ func GetCustomerKubeConfig(customerName string) (*KubeConfig, error) {
 	}
 
 	return &newKubeConfig, nil
+
+}
+
+func WriteKubeConfig2Cm(customerName string, config *KubeConfig, cs *kubernetes.Clientset) error {
+
+	bytes, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	cm := &corev1.ConfigMap{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      customerName,
+			Namespace: customerName,
+		},
+		Data: map[string]string{
+			customerName: string(bytes),
+		},
+	}
+
+	_, err = cs.CoreV1().ConfigMaps(customerName).Create(context.TODO(), cm, v1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
 
 }
