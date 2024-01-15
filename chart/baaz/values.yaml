@@ -1,0 +1,54 @@
+replicaCount: 1
+
+image:
+  repository: datainfrahq/baaz
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  #tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  annotations: {}
+  name: "parseable"
+
+podAnnotations: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8000
+
+env:
+ XDG_CONFIG_HOME: helm-config
+ HELM_CACHE_HOME: helm-cache
+ AWS_SYSTEM_NODEGROUP_SIZE: t2.medium
+
+private_mode:
+  enabled: true
+  customer_name: parseable
+  args: ["kubeconfig=/kubeconfig/parseable-kubeconfig","private_mode=true", "customer_name=parseable"]
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+resources: {}
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

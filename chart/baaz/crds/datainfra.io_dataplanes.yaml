@@ -1,0 +1,203 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: dataplanes.datainfra.io
+spec:
+  group: datainfra.io
+  names:
+    kind: DataPlanes
+    listKind: DataPlanesList
+    plural: dataplanes
+    singular: dataplanes
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: DataPlane is the Schema for the DataPlanes API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DataPlaneSpec defines the desired state of DataPlane
+            properties:
+              applications:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    spec:
+                      properties:
+                        chartName:
+                          type: string
+                        repoName:
+                          type: string
+                        repoUrl:
+                          type: string
+                        values:
+                          items:
+                            type: string
+                          type: array
+                        version:
+                          type: string
+                      required:
+                      - chartName
+                      - repoName
+                      - repoUrl
+                      - version
+                      type: object
+                  required:
+                  - name
+                  - spec
+                  type: object
+                type: array
+              cloudInfra:
+                description: Cloud can be any pubic name ie aws, gcp, azure.
+                properties:
+                  authSecretRef:
+                    description: AuthSecretRef holds the secret info which contains
+                      aws secret key & access key info Secret must be in the same
+                      namespace as dataplane
+                    properties:
+                      accessKeyName:
+                        type: string
+                      secretKeyName:
+                        type: string
+                      secretName:
+                        type: string
+                    required:
+                    - accessKeyName
+                    - secretKeyName
+                    - secretName
+                    type: object
+                  cloudType:
+                    description: CloudType
+                    type: string
+                  eks:
+                    properties:
+                      name:
+                        type: string
+                      securityGroupIds:
+                        items:
+                          type: string
+                        type: array
+                      subnetIds:
+                        items:
+                          type: string
+                        type: array
+                      version:
+                        type: string
+                    required:
+                    - name
+                    - securityGroupIds
+                    - subnetIds
+                    - version
+                    type: object
+                  region:
+                    type: string
+                required:
+                - authSecretRef
+                - cloudType
+                - eks
+                - region
+                type: object
+            required:
+            - applications
+            - cloudInfra
+            type: object
+          status:
+            description: DataPlaneStatus defines the observed state of DataPlane
+            properties:
+              addonStatus:
+                additionalProperties:
+                  type: string
+                description: 'AddonStatus holds a map of addon name & their current
+                  status Example: addonStatus: aws-ebs-csi-driver: CREATING coredns:            READY'
+                type: object
+              cloudInfraStatus:
+                properties:
+                  eksStatus:
+                    properties:
+                      OIDCProviderArn:
+                        type: string
+                      clusterId:
+                        type: string
+                    type: object
+                  type:
+                    type: string
+                type: object
+              conditions:
+                items:
+                  description: DataPlaneCondition describes the state of a deployment
+                    at a certain point.
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    lastUpdateTime:
+                      description: The last time this condition was updated.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of deployment condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              nodegroupStatus:
+                additionalProperties:
+                  type: string
+                description: 'NodegroupStatus will contain a map of node group name
+                  & status Example: nodegroupStatus: druid-ng1: CREATING druid-ng2:
+                  ACTIVE druid-ng3: DELETING'
+                type: object
+              observedGeneration:
+                format: int64
+                type: integer
+              phase:
+                type: string
+              version:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

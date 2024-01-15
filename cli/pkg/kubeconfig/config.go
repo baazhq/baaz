@@ -147,13 +147,14 @@ func WriteKubeConfig2Cm(customerName string, config *KubeConfig, cs *kubernetes.
 		return err
 	}
 
+	cmName := customerName + "-kubeconfig"
 	cm := &corev1.ConfigMap{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      customerName,
+			Name:      cmName,
 			Namespace: customerName,
 		},
 		Data: map[string]string{
-			customerName: string(bytes),
+			cmName: string(bytes),
 		},
 	}
 

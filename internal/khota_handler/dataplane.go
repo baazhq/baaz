@@ -283,6 +283,10 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		})
 	}
 
+	labels = mergeMaps(labels, map[string]string{
+		"dataplane_type": string(v1.SharedSaaS),
+	})
+
 	dpDeploy := makeAwsEksConfig(dpName, dataplane, labels)
 
 	_, err = dc.Resource(dpGVK).Namespace(dpNamespace).Create(context.TODO(), dpDeploy, metav1.CreateOptions{})

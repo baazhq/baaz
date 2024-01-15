@@ -1,5 +1,5 @@
 customer:
-  name: onecards
+  name: parseable
   saas_type: "private"
   cloud_type: "aws"
   labels: 

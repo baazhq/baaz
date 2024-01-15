@@ -1,0 +1,94 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: tenantsinfras.datainfra.io
+spec:
+  group: datainfra.io
+  names:
+    kind: TenantsInfra
+    listKind: TenantsInfraList
+    plural: tenantsinfras
+    singular: tenantsinfra
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: TenantsInfra is the Schema for the tenants API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              dataplane:
+                type: string
+              tenantSizes:
+                items:
+                  properties:
+                    machinePool:
+                      items:
+                        properties:
+                          labels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          max:
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          min:
+                            format: int32
+                            minimum: 1
+                            type: integer
+                          name:
+                            type: string
+                          size:
+                            type: string
+                        required:
+                        - labels
+                        - max
+                        - min
+                        - name
+                        - size
+                        type: object
+                      type: array
+                    name:
+                      type: string
+                  required:
+                  - machinePool
+                  - name
+                  type: object
+                type: array
+            required:
+            - dataplane
+            - tenantSizes
+            type: object
+          status:
+            description: TenantsStatus defines the observed state of Tenants
+            properties:
+              machinePoolStatus:
+                additionalProperties:
+                  type: string
+                type: object
+              phase:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

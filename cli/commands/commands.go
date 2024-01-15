@@ -18,6 +18,7 @@ var (
 	dataplane_name string
 	customer_name  string
 	tenant_name    string
+	private_mode   bool
 )
 
 var (

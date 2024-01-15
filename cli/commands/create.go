@@ -26,7 +26,6 @@ var (
 			case "dataplane", "dataplanes":
 				resp, err := dataplanes.CreateDataplane(file)
 				if err != nil {
-					fmt.Println(err)
 					return err
 				}
 				fmt.Println(resp)

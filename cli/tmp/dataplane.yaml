@@ -21,9 +21,8 @@ dataplane:
     chartName: "operator"
     repoName: "parseable"
     repoUrl: "https://charts.parseable.io"
-    version: "0.0.3"
+    version: "0.0.4"
     values:
-     - image.tag=edge
      - nodeSelector.nodeType=system
   - name: "nginx"
     namespace: nginx-ingress

@@ -1,0 +1,28 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "baaz.fullname" . }}
+  labels:
+    {{- include "baaz.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - datainfra.io
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups:
+  - datainfra.io
+  resources:
+  - dataplanes/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - pods
+  - configmaps
+  - namespaces
+  - serviceaccounts
+  verbs: ["*"]

@@ -52,7 +52,7 @@ type saasInitalizer struct {
 
 func newSaaSinitalizer(enablePrivateSaaS, runLocal bool) *saasInitalizer {
 
-	if enablePrivateSaaS && runLocal {
+	if enablePrivateSaaS {
 		return &saasInitalizer{
 			HealthProbePort:  ":7001",
 			MetricServerPort: ":7002",
@@ -74,7 +74,6 @@ func main() {
 
 	flag.BoolVar(&enablePrivateSaaS, "private_mode", false, "Enable private mode runs BaaZ controllers in a private saas mode.")
 	flag.StringVar(&customerName, "customer_name", "", "Customer name for private saas")
-	flag.BoolVar(&runLocal, "run_local", false, "Runs BaaZ controller locally.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false, "Enable leader election for controller manager. "+"Enabling this will ensure there is only one active controller manager.")
 
 	opts := zap.Options{
