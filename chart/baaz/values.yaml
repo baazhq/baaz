@@ -30,9 +30,12 @@ env:
  AWS_SYSTEM_NODEGROUP_SIZE: t2.medium
 
 private_mode:
-  enabled: true
+  enabled: false
   customer_name: parseable
-  args: ["kubeconfig=/kubeconfig/parseable-kubeconfig","private_mode=true", "customer_name=parseable"]
+  args: 
+   kubeconfig: /kubeconfig/parseable-kubeconfig
+   private_mode: true 
+   customer_name: parseable
 
 ingress:
   enabled: false

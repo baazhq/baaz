@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bz/pkg/helm"
 	"bz/pkg/kubeconfig"
 	"bz/pkg/utils"
 	"fmt"
@@ -14,21 +15,56 @@ var (
 		Short: "bz init - initalise baaz control plane, this command deploys the control plane",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
+			if customer_name == "" {
+				return fmt.Errorf("Customer Name cannot be nil")
+			}
+			config, err := kubeconfig.GetCustomerKubeConfig(customer_name)
+			if err != nil {
+				return err
+			}
+
+			err = kubeconfig.WriteKubeConfig2Cm(customer_name, config, utils.GetKubeClientset())
+			if err != nil {
+				return err
+			}
+
 			if private_mode {
-				if customer_name == "" {
-					return fmt.Errorf("Customer Name cannot be nil")
-				}
-				config, err := kubeconfig.GetCustomerKubeConfig(customer_name)
+
+				helmBuild := helm.NewHelm(
+					"baaz",
+					customer_name,
+					"../chart/baaz/",
+					nil,
+					[]string{
+						"private_mode.enabled=true",
+						"private_mode.customer_name=" + customer_name,
+						"private_mode.args.kubeconfig=/kubeconfig/" + customer_name + "-kubeconfig",
+						"private_mode.args.private_mode=true",
+						"private_mode.customer_name=" + customer_name,
+					},
+				)
+
+				err = helmBuild.Apply()
 				if err != nil {
 					return err
 				}
 
-				err = kubeconfig.WriteKubeConfig2Cm(customer_name, config, utils.GetKubeClientset())
+			} else {
+				helmBuild := helm.NewHelm(
+					"baaz",
+					customer_name,
+					"../chart/baaz/",
+					nil,
+					nil,
+				)
+
+				err = helmBuild.Apply()
 				if err != nil {
 					return err
 				}
 
 			}
+
 			return nil
 		},
 	}

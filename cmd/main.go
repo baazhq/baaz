@@ -50,7 +50,7 @@ type saasInitalizer struct {
 	MetricServerPort string
 }
 
-func newSaaSinitalizer(enablePrivateSaaS, runLocal bool) *saasInitalizer {
+func newSaaSinitalizer(enablePrivateSaaS bool) *saasInitalizer {
 
 	if enablePrivateSaaS {
 		return &saasInitalizer{
@@ -70,7 +70,6 @@ func main() {
 	var enableLeaderElection bool
 	var enablePrivateSaaS bool
 	var customerName string
-	var runLocal bool
 
 	flag.BoolVar(&enablePrivateSaaS, "private_mode", false, "Enable private mode runs BaaZ controllers in a private saas mode.")
 	flag.StringVar(&customerName, "customer_name", "", "Customer name for private saas")
@@ -85,7 +84,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	saasInit := newSaaSinitalizer(enablePrivateSaaS, runLocal)
+	saasInit := newSaaSinitalizer(enablePrivateSaaS)
 
 	if !enablePrivateSaaS {
 		go func() {

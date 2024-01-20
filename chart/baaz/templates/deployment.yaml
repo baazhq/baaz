@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ include "baaz.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "baaz.labels" . | nindent 4 }}
 spec:
@@ -31,10 +32,12 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          {{ if .Values.private_mode.enabled }}
-          args: {{- range .Values.private_mode.args }}
-          - -{{.}}{{- end }}
-          {{- end }}
+        {{ if .Values.private_mode.enabled }}
+          args:
+        {{- range $key, $value := .Values.private_mode.args }}
+           - -{{ $key }}={{ $value }}
+        {{- end }}
+        {{ end }}
           env:
           {{- range $key, $value :=  .Values.env }}
             - name: {{ $key }}
@@ -46,7 +49,7 @@ spec:
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-    {{ if .Values.private_mode.enabled }}
+{{ if .Values.private_mode.enabled }}
           volumeMounts:
           - name: config-volume
             mountPath: /kubeconfig
@@ -54,7 +57,7 @@ spec:
         - name: config-volume
           configMap:
             name: {{ include "private_mode.configmap" . }}
-    {{- end }}
+{{ end }}
        {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

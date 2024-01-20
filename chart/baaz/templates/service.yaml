@@ -2,6 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: {{ include "baaz.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "baaz.labels" . | nindent 4 }}
 spec:
