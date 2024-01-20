@@ -4,17 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 
 	"net/http"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v1 "datainfra.io/baaz/api/v1/types"
+	helm "datainfra.io/baaz/pkg/helmchartpath"
 	"github.com/gorilla/mux"
 )
 
@@ -87,7 +87,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 
 	customerName := vars["customer_name"]
 
-	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
 		res.SetResponse(&w)
@@ -123,6 +123,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			"dataplane":     dataplane_unavailable,
 			"controlplane":  "baaz",
 		}
+
 		_, err := client.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   customerName,
@@ -135,62 +136,29 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			res.LogResponse()
 			return
 		}
-		// _, err = client.CoreV1().ServiceAccounts(customerName).Create(context.TODO(), &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{
-		// 	Name:      customerName,
-		// 	Namespace: customerName,
-		// 	Labels:    mergeMaps(labels, setLabelPrefix(customer.Labels)),
-		// }}, metav1.CreateOptions{})
-		// if err != nil {
-		// 	res := NewResponse(CustomerServiceAccountCreateFail, internal_error, err, http.StatusInternalServerError)
-		// 	res.SetResponse(&w)
-		// 	res.LogResponse()
-		// 	return
-		// }
 
-		if err := createSaToken(client, customerName); err != nil {
-			res := NewResponse(CustomerServiceAccountCreateFail, internal_error, err, http.StatusInternalServerError)
+		helmBuild := helm.NewHelm(
+			customerName+"-customer",
+			customerName,
+			customer_chartpath,
+			nil,
+			[]string{
+				"customer.name=" + customerName,
+				"customer.labels.saas_type=" + string(customer.SaaSType),
+				"customer.labels.cloud_type=" + string(customer.CloudType),
+				"customer.labels.customer_name=" + string(customerName),
+				"customer.labels.dataplane=" + dataplane_unavailable,
+				"customer.labels.controlplane=" + "baaz",
+			},
+		)
+		err = helmBuild.Apply()
+		if err != nil {
+			res := NewResponse(CustomerNamespaceCreateFail, internal_error, err, http.StatusInternalServerError)
 			res.SetResponse(&w)
 			res.LogResponse()
 			return
 		}
-		// customer_secret, err := Base62Random(50)
-		// if err != nil {
-		// 	klog.Errorf("ErrMsg: Base62 encoder not able to generate UUID ", err)
-		// 	return
-		// }
-		// // create secret for customer
-		// _, err = client.CoreV1().Secrets(customerName).Create(context.TODO(), &corev1.Secret{
-		// 	ObjectMeta: metav1.ObjectMeta{
-		// 		Name:      customerName,
-		// 		Namespace: customerName,
-		// 	},
-		// 	StringData: map[string]string{
-		// 		"token": customer_secret,
-		// 	},
-		// 	Type: corev1.SecretTypeOpaque,
-		// }, metav1.CreateOptions{})
 
-		// if err != nil {
-		// 	// remove namespace if secret token creation fails
-		// 	namespace_deletion_policy := metav1.DeletePropagationBackground
-		// 	var grace_period int64 = 0
-		// 	ns_err := client.CoreV1().Namespaces().Delete(context.TODO(), customerName, metav1.DeleteOptions{
-		// 		PropagationPolicy:  &namespace_deletion_policy,
-		// 		GracePeriodSeconds: &grace_period,
-		// 	})
-		// 	// returns error if namespace cleanup fails
-		// 	if ns_err != nil {
-		// 		res := NewResponse(CustomerNamespaceCreateFail, internal_error, ns_err, http.StatusInternalServerError)
-		// 		res.SetResponse(&w)
-		// 		res.LogResponse()
-		// 		return
-		// 	}
-		// 	// returns error if secret token creation fails
-		// 	res := NewResponse(CustomerNamespaceCreateFail, internal_error, err, http.StatusInternalServerError)
-		// 	res.SetResponse(&w)
-		// 	res.LogResponse()
-		// 	return
-		// }
 		res := NewResponse(CustomerNamespaceSuccess, success, nil, 200)
 		res.SetResponse(&w)
 		res.LogResponse()
@@ -211,7 +179,7 @@ func UpdateCustomer(w http.ResponseWriter, req *http.Request) {
 
 	customerName := vars["customer_name"]
 
-	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
 		res.SetResponse(&w)

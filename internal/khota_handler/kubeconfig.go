@@ -5,6 +5,7 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,14 +30,12 @@ func NewKubeConfig(
 		return nil, err
 	}
 
-	url := "https://" + clientset.RESTClient().Get().URL().Host
-
 	return &KubeConfig{
 		CurrentContext: customerName + "-context",
 		Customer:       customerName,
 		Namespace:      string(secret.Data["namespace"]),
 		ClusterCA:      b64.StdEncoding.EncodeToString([]byte(secret.Data["ca.crt"])),
-		ClusterServer:  url,
+		ClusterServer:  os.Getenv("KUBERNETES_CONFIG_SERVER_URL"),
 		UserTokenValue: string(secret.Data["token"]),
 	}, nil
 

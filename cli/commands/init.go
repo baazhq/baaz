@@ -15,20 +15,21 @@ var (
 		Short: "bz init - initalise baaz control plane, this command deploys the control plane",
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			if customer_name == "" {
-				return fmt.Errorf("Customer Name cannot be nil")
-			}
-			config, err := kubeconfig.GetCustomerKubeConfig(customer_name)
-			if err != nil {
-				return err
-			}
-
-			err = kubeconfig.WriteKubeConfig2Cm(customer_name, config, utils.GetKubeClientset())
-			if err != nil {
-				return err
-			}
-
 			if private_mode {
+
+				if customer_name == "" {
+					return fmt.Errorf("Customer Name cannot be nil")
+				}
+
+				config, err := kubeconfig.GetCustomerKubeConfig(customer_name)
+				if err != nil {
+					return err
+				}
+
+				err = kubeconfig.WriteKubeConfig2Cm(customer_name, config, utils.GetLocalKubeClientset())
+				if err != nil {
+					return err
+				}
 
 				helmBuild := helm.NewHelm(
 					"baaz",
@@ -50,15 +51,24 @@ var (
 				}
 
 			} else {
+
+				if kubernetes_config_server_url == "" {
+					return fmt.Errorf("kubernetes_config_server_url flag cannot be nil")
+				}
+
+				if namespace == "" {
+					namespace = "baaz"
+				}
+
 				helmBuild := helm.NewHelm(
 					"baaz",
-					customer_name,
+					namespace,
 					"../chart/baaz/",
-					nil,
+					[]string{"env.KUBERNETES_CONFIG_SERVER_URL=" + kubernetes_config_server_url},
 					nil,
 				)
 
-				err = helmBuild.Apply()
+				err := helmBuild.Apply()
 				if err != nil {
 					return err
 				}
@@ -74,4 +84,7 @@ func init() {
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().StringVarP(&customer_name, "customer", "", "", "Customer Name")
 	initCmd.Flags().BoolVarP(&private_mode, "private_mode", "", false, "Run BaaZ control plane in private mode")
+	initCmd.Flags().StringVarP(&kubernetes_config_server_url, "kubernetes_config_server_url", "", "", "Kubernetes config server url, make sure it is public accessible")
+	initCmd.Flags().StringVarP(&namespace, "namespace", "", "", "Namespace to deploy BaaZ control plane")
+
 }

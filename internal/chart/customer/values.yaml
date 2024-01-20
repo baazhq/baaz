@@ -1,0 +1,4 @@
+customer: 
+  name: c1
+  labels:
+    "customer_name": "c1"

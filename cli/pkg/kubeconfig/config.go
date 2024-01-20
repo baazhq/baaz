@@ -88,7 +88,7 @@ func GetCustomerKubeConfig(customerName string) (*KubeConfig, error) {
 					Server                   string `json:"server" yaml:"server"`
 				}{
 					CertificateAuthorityData: resp["cluster_ca"],
-					Server:                   "https://127.0.0.1:60646",
+					Server:                   resp["cluster_server"],
 				},
 				Name: resp["customer"] + "-cluster",
 			},

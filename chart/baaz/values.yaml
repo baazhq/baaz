@@ -11,8 +11,9 @@ nameOverride: ""
 fullnameOverride: ""
 
 serviceAccount:
+  create: true
   annotations: {}
-  name: "parseable"
+  name: "baaz"
 
 podAnnotations: {}
 

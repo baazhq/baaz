@@ -9,13 +9,21 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func GetKubeClientset() *kubernetes.Clientset {
+func GetLocalKubeClientset() *kubernetes.Clientset {
 
 	var conf *rest.Config
 	var err error
 
 	// for running locally
-	kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
+
+	var kubeconfig string
+	path, ok := os.LookupEnv("KUBECONFIG")
+	if ok {
+		kubeconfig = path
+	} else {
+		kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+	}
+
 	conf, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
 		panic(err.Error())
