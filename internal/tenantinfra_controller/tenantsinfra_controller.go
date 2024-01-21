@@ -123,6 +123,7 @@ func (r *TenantsInfraReconciler) Reconcile(ctx context.Context, req ctrl.Request
 func (r *TenantsInfraReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.TenantsInfra{}).
+		WithEventFilter(r.Predicates).
 		Complete(r)
 }
 

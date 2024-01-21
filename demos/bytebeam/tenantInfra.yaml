@@ -8,13 +8,6 @@ tenantsInfra:
       labels:
         app: iot
         size: small
-    - name: bytebeam-app2
-      size: t2.small
-      min: 1
-      max: 3
-      labels:
-        app: iot
-        size: query-small
   - name: bytebeam-medium
     machinePool:
     - name: bytebeam-app1
@@ -24,10 +17,3 @@ tenantsInfra:
       labels:
         app: iot
         size: small
-    - name: bytebeam-app2
-      size: t2.medium
-      min: 1
-      max: 3
-      labels:
-        app: iot
-        size: query-small

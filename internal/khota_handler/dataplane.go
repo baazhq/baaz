@@ -284,7 +284,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 
 		if customer.GetLabels()["saas_type"] == "private" {
 			labels = mergeMaps(labels, map[string]string{
-				"customer_private": "true",
+				"private_object": "true",
 			})
 		}
 	} else {

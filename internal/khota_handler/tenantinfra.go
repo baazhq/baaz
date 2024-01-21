@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	v1 "datainfra.io/baaz/api/v1/types"
@@ -26,7 +25,7 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 
 	dataplaneName := vars["dataplane_name"]
 
-	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
 		res.SetResponse(&w)
@@ -61,6 +60,11 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var namespace string
+	var labels map[string]string
+	labels = map[string]string{
+		"dataplane_name": dataplaneName,
+	}
+
 	for _, dp := range dpList.Items {
 		if dp.GetName() == dataplaneName {
 			dpType := dp.GetLabels()["dataplane_type"]
@@ -68,6 +72,11 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 				namespace = string(v1.SharedSaaS)
 			} else if dpType == string(v1.DedicatedSaaS) {
 				namespace = matchStringInMap("customer_", dp.GetLabels())
+			} else if dpType == string(v1.PrivateSaaS) {
+				namespace = matchStringInMap("customer_", dp.GetLabels())
+				labels = mergeMaps(labels, map[string]string{
+					"private_object": "true",
+				})
 			}
 
 			phase, _, _ := unstructured.NestedString(dp.Object, "status", "phase")
@@ -80,7 +89,7 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	_, err = dc.Resource(tenantInfraGVK).Namespace(namespace).Create(context.TODO(), makeTenantsInfra(dataplaneName, &tenantsInfra), metav1.CreateOptions{})
+	_, err = dc.Resource(tenantInfraGVK).Namespace(namespace).Create(context.TODO(), makeTenantsInfra(dataplaneName, &tenantsInfra, labels), metav1.CreateOptions{})
 	if err != nil {
 		res := NewResponse(TenantsInfraCreateFail, req_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
@@ -100,7 +109,9 @@ func GetTenantInfra(w http.ResponseWriter, req *http.Request) {
 
 	dataplane := mux.Vars(req)["dataplane_name"]
 
-	tenantInfra, err := dc.Resource(tenantInfraGVK).Namespace("shared").Get(context.TODO(), dataplane+"-tenantinfra", metav1.GetOptions{})
+	tenantsInfras, err := dc.Resource(tenantInfraGVK).Namespace("").List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "dataplane_name=" + dataplane,
+	})
 	if err != nil {
 		res := NewResponse(TenantsInfraGetFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
@@ -116,20 +127,27 @@ func GetTenantInfra(w http.ResponseWriter, req *http.Request) {
 		Status            string            `json:"status"`
 	}
 
-	status, _, _ := unstructured.NestedString(tenantInfra.Object, "status", "phase")
+	var tenantsInfrasResp []tenantInfraResp
 
-	machinePoolStatus, _, _ := unstructured.NestedStringMap(tenantInfra.Object, "status", "machinePoolStatus")
+	for _, ti := range tenantsInfras.Items {
+		status, _, _ := unstructured.NestedString(ti.Object, "status", "phase")
 
-	tenantSizes, _, _ := unstructured.NestedSlice(tenantInfra.Object, "spec", "tenantSizes")
+		machinePoolStatus, _, _ := unstructured.NestedStringMap(ti.Object, "status", "machinePoolStatus")
 
-	resp := tenantInfraResp{
-		Name:              tenantInfra.GetName(),
-		DataplaneName:     tenantInfra.GetLabels()["dataplane_name"],
-		MachinePoolStatus: machinePoolStatus,
-		TenantSizes:       tenantSizes,
-		Status:            status,
+		tenantSizes, _, _ := unstructured.NestedSlice(ti.Object, "spec", "tenantSizes")
+
+		resp := tenantInfraResp{
+			Name:              ti.GetName(),
+			DataplaneName:     ti.GetLabels()["dataplane_name"],
+			MachinePoolStatus: machinePoolStatus,
+			TenantSizes:       tenantSizes,
+			Status:            status,
+		}
+
+		tenantsInfrasResp = append(tenantsInfrasResp, resp)
 	}
-	bytes, _ := json.Marshal(resp)
+
+	bytes, _ := json.Marshal(tenantsInfrasResp)
 	sendJsonResponse(bytes, http.StatusOK, &w)
 
 }

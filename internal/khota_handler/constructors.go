@@ -169,7 +169,7 @@ func makeApplicationConfig(apps []v1.HTTPApplication, dataplaneName, tenantName,
 	}
 }
 
-func makeTenantsInfra(dataplaneName string, tenantSizes *[]v1.HTTPTenantSizes) *unstructured.Unstructured {
+func makeTenantsInfra(dataplaneName string, tenantSizes *[]v1.HTTPTenantSizes, labels map[string]string) *unstructured.Unstructured {
 
 	var allTenantSizes []map[string]interface{}
 	for _, tenantSize := range *tenantSizes {
@@ -184,10 +184,8 @@ func makeTenantsInfra(dataplaneName string, tenantSizes *[]v1.HTTPTenantSizes) *
 			"apiVersion": "datainfra.io/v1",
 			"kind":       "TenantsInfra",
 			"metadata": map[string]interface{}{
-				"name": dataplaneName + "-" + "tenantinfra",
-				"labels": map[string]string{
-					"dataplane_name": dataplaneName,
-				},
+				"name":   dataplaneName + "-" + "tenantinfra",
+				"labels": labels,
 			},
 			"spec": map[string]interface{}{
 				"dataplane":   dataplaneName,
