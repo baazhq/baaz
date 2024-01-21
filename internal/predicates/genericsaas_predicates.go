@@ -3,7 +3,6 @@ package predicates
 import (
 	"fmt"
 
-	v1 "datainfra.io/baaz/api/v1/types"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -32,7 +31,7 @@ func (GenericSaaSPredicates) Delete(e event.DeleteEvent) bool {
 
 func IgnorePrivateSaaSCustomer(obj client.Object) bool {
 
-	if obj.GetLabels()["saas_type"] == string(v1.PrivateSaaS) {
+	if obj.GetLabels()["customer_private"] == "true" {
 		msg := fmt.Sprintf("baaz controllers will not renconcile private saas %s", obj.GetNamespace())
 		klog.Info(msg)
 		return false

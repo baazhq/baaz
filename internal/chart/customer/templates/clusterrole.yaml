@@ -1,9 +1,11 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: "baaz-clusterrole"
+  name: {{ .Values.customer.name }}
+  {{- range $key, $value := .Values.customer.labels }}
   labels:
-    {{- include "baaz.labels" . | nindent 4 }}
+      {{ $key }}: {{ $value }}
+  {{- end }}
 rules:
 - apiGroups:
   - datainfra.io
@@ -25,4 +27,5 @@ rules:
   - configmaps
   - namespaces
   - serviceaccounts
+  - clusterrolebindings
   verbs: ["*"]
