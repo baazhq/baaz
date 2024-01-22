@@ -34,6 +34,7 @@ var settings *cli.EnvSettings
 type HelmAct interface {
 	Apply(rest *rest.Config) error
 	Uninstall(rest *rest.Config) error
+	Upgrade(rest *rest.Config) error
 	List(rest *rest.Config) (status string, exists bool)
 }
 
@@ -170,6 +171,65 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	}
 
 	release, err := client.Run(chartRequested, vals)
+	if err != nil {
+		return err
+	}
+
+	klog.Infof("Release Name: [%s] Namespace [%s] Status [%s]", release.Name, release.Namespace, release.Info.Status)
+
+	return nil
+}
+
+// HelmInstall Method installs the chart.
+// ref: https://github.com/PrasadG193/helm-clientgo-example/tree/master
+func (h *Helm) Upgrade(rest *rest.Config) error {
+
+	settings := cli.New()
+
+	restGetter := NewRESTClientGetter(rest, h.Namespace)
+
+	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+		return err
+	}
+
+	client := action.NewUpgrade(h.Action)
+
+	settings.EnvVars()
+
+	repoAdd(h.RepoName, h.RepoUrl)
+
+	cp, err := client.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", h.RepoName, h.ChartName), settings)
+	if err != nil {
+		return err
+	}
+
+	err = h.RepoUpdate()
+	if err != nil {
+		return err
+	}
+
+	chartRequested, err := loader.Load(cp)
+	if err != nil {
+		return err
+	}
+
+	client.Namespace = h.Namespace
+	client.Wait = true
+	client.Timeout = 120 * time.Second
+
+	client.WaitForJobs = true
+	//client.IncludeCRDs = true
+
+	values := values.Options{
+		Values: h.Values,
+	}
+
+	vals, err := values.MergeValues(getter.All(settings))
+	if err != nil {
+		return err
+	}
+
+	release, err := client.Run(h.ReleaseName, chartRequested, vals)
 	if err != nil {
 		return err
 	}

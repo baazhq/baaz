@@ -43,7 +43,7 @@ func NewApplicationReconciler(mgr ctrl.Manager, enablePrivate bool, customerName
 		Client:        mgr.GetClient(),
 		Log:           initLogger,
 		Scheme:        mgr.GetScheme(),
-		ReconcileWait: lookupReconcileTime(initLogger),
+		ReconcileWait: lookupReconcileTime(),
 		Predicates:    predicates.GetPredicates(enablePrivate, customerName),
 		Recorder:      mgr.GetEventRecorderFor("applications-controller"),
 	}
@@ -91,7 +91,6 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		if _, _, err := utils.PatchStatus(ctx, r.Client, applicationObj, func(obj client.Object) client.Object {
 			in := obj.(*v1.Applications)
 			in.Status.Phase = v1.ApplicationPhase(v1.PendingA)
-			//	in.Status.ApplicationCurrentSpec = applicationObj
 			return in
 		}); err != nil {
 			return ctrl.Result{}, err
@@ -111,17 +110,18 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Applications{}).
+		WithEventFilter(r.Predicates).
 		Complete(r)
 }
 
-func lookupReconcileTime(log logr.Logger) time.Duration {
+func lookupReconcileTime() time.Duration {
 	val, exists := os.LookupEnv("RECONCILE_WAIT")
 	if !exists {
 		return time.Second * 10
 	} else {
 		v, err := time.ParseDuration(val)
 		if err != nil {
-			log.Error(err, err.Error())
+			klog.Error(err, err.Error())
 			// Exit Program if not valid
 			os.Exit(1)
 		}

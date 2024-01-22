@@ -21,6 +21,11 @@ var (
 					return fmt.Errorf("Customer Name cannot be nil")
 				}
 
+				err := utils.CreateNamespace(utils.GetLocalKubeClientset(), customer_name)
+				if err != nil {
+					return err
+				}
+
 				config, err := kubeconfig.GetCustomerKubeConfig(customer_name)
 				if err != nil {
 					return err
@@ -31,24 +36,24 @@ var (
 					return err
 				}
 
-				helmBuild := helm.NewHelm(
-					"baaz",
-					customer_name,
-					"../chart/baaz/",
-					nil,
-					[]string{
-						"private_mode.enabled=true",
-						"private_mode.customer_name=" + customer_name,
-						"private_mode.args.kubeconfig=/kubeconfig/" + customer_name + "-kubeconfig",
-						"private_mode.args.private_mode=true",
-						"private_mode.customer_name=" + customer_name,
-					},
-				)
+				// helmBuild := helm.NewHelm(
+				// 	"baaz",
+				// 	customer_name,
+				// 	"../chart/baaz/",
+				// 	nil,
+				// 	[]string{
+				// 		"private_mode.enabled=true",
+				// 		"private_mode.customer_name=" + customer_name,
+				// 		"private_mode.args.kubeconfig=/kubeconfig/" + customer_name + "-kubeconfig",
+				// 		"private_mode.args.private_mode=true",
+				// 		"private_mode.customer_name=" + customer_name,
+				// 	},
+				// )
 
-				err = helmBuild.Apply()
-				if err != nil {
-					return err
-				}
+				// err = helmBuild.Apply()
+				// if err != nil {
+				// 	return err
+				// }
 
 			} else {
 

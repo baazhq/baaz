@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -35,4 +38,21 @@ func GetLocalKubeClientset() *kubernetes.Clientset {
 	}
 
 	return cs
+}
+
+func CreateNamespace(cs *kubernetes.Clientset, customerName string) error {
+	_, err := cs.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: customerName,
+			Labels: map[string]string{
+				"private":                  "true",
+				"customer_" + customerName: customerName,
+				"baaz":                     "controlplane",
+			},
+		},
+	}, metav1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
 }

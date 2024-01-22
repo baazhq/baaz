@@ -6,8 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
+	"os"
 
 	"gopkg.in/yaml.v3"
 )
@@ -24,12 +24,12 @@ type Applications struct {
 }
 
 func makeApplicationUrl(customerName, tenantName string) string {
-	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.TenantPath + "/" + tenantName
+	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.TenantPath + "/" + tenantName + common.Application
 }
 
 func CreateApplication(filePath, customerName, tenantName string) (string, error) {
 
-	yamlByte, err := ioutil.ReadFile(filePath)
+	yamlByte, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
 	}
@@ -46,6 +46,7 @@ func CreateApplication(filePath, customerName, tenantName string) (string, error
 		return "", err
 	}
 
+	fmt.Println(string(appByte))
 	resp, err := http.Post(
 		makeApplicationUrl(customerName, tenantName),
 		"application/json",

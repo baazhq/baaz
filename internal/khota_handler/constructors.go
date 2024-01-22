@@ -137,7 +137,7 @@ func makeTenantConfig(
 	}
 }
 
-func makeApplicationConfig(apps []v1.HTTPApplication, dataplaneName, tenantName, appCRName string) *unstructured.Unstructured {
+func makeApplicationConfig(apps []v1.HTTPApplication, dataplaneName, tenantName, appCRName string, labels map[string]string) *unstructured.Unstructured {
 
 	var allApplications []map[string]interface{}
 	for _, app := range apps {
@@ -158,7 +158,8 @@ func makeApplicationConfig(apps []v1.HTTPApplication, dataplaneName, tenantName,
 			"apiVersion": "datainfra.io/v1",
 			"kind":       "Applications",
 			"metadata": map[string]interface{}{
-				"name": appCRName,
+				"name":   appCRName,
+				"labels": labels,
 			},
 			"spec": map[string]interface{}{
 				"dataplane":    dataplaneName,

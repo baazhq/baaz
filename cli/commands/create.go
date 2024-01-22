@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bz/pkg/applications"
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
 	"bz/pkg/tenants"
@@ -39,13 +40,25 @@ var (
 				}
 				fmt.Println(resp)
 			case "tenants", "tenant":
-				if dataplane_name == "" || tenant_name == "" || customer_name == "" {
-					return fmt.Errorf("Dataplane, Tenant and Customer name is required")
+				if tenant_name == "" || customer_name == "" {
+					return fmt.Errorf("Tenant and Customer name is required")
 				}
 				resp, err := tenants.CreateTenant(
 					file,
 					customer_name,
-					dataplane_name,
+					tenant_name,
+				)
+				if err != nil {
+					return err
+				}
+				fmt.Println(resp)
+			case "application", "applications", "app", "apps":
+				if tenant_name == "" || customer_name == "" {
+					return fmt.Errorf("Tenant and Customer name is required")
+				}
+				resp, err := applications.CreateApplication(
+					file,
+					customer_name,
 					tenant_name,
 				)
 				if err != nil {
