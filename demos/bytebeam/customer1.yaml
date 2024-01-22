@@ -1,7 +1,7 @@
 customer:
-  name: customer1
-  saas_type: "shared"
+  name: parseable
+  saas_type: "private"
   cloud_type: "aws"
   labels: 
-    tier: "free"
+    tier: "enterprise"
     region:  "us-east-1"

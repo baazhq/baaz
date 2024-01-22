@@ -28,6 +28,7 @@ func getKubeClientset() (*kubernetes.Clientset, dynamic.Interface) {
 	if os.Getenv("RUN_LOCAL") == "true" {
 		// for running locally
 		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		//kubeconfig := filepath.Join("hack/aws")
 		conf, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			panic(err.Error())
@@ -66,24 +67,18 @@ func mergeMaps(m1 map[string]string, m2 map[string]string) map[string]string {
 func getNamespace(customerName string) string {
 	if customerName == "" {
 		return shared_namespace
-	} else if customerName != "" {
-		return customerName
 	}
-	return ""
+
+	return customerName
 }
 
 func makeDataPlaneName(cloudType v1.CloudType, customerName, region string) string {
-	var dpName string
 	// here we assume, its a shared saas
 	if customerName == "" {
-		dpName = string(cloudType) + "-" + region + "-" + String(4)
-		return dpName
-	} else if customerName != "" {
-		dpName = customerName
-		return dpName
-
+		return string(cloudType) + "-" + region + "-" + String(4)
 	}
-	return ""
+	return customerName + "-" + string(cloudType) + "-" + region + "-" + String(4)
+
 }
 
 func makeTenantName(appName, appSize string) string {

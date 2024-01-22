@@ -127,6 +127,7 @@ func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 func (r *TenantsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Tenants{}).
+		WithEventFilter(r.Predicates).
 		Complete(r)
 }
 

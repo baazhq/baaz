@@ -3,13 +3,13 @@ package app_controller
 import (
 	"context"
 
+	v1 "datainfra.io/baaz/api/v1/types"
 	"datainfra.io/baaz/pkg/aws/eks"
 	"datainfra.io/baaz/pkg/helm"
 	"datainfra.io/baaz/pkg/utils"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	v1 "datainfra.io/baaz/api/v1/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Application struct {
@@ -51,26 +51,42 @@ func (a *Application) ReconcileApplicationDeployer() error {
 		}
 
 		result, exists := helm.List(restConfig)
-
-		if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
-			in := obj.(*v1.Applications)
-			in.Status.Phase = v1.ApplicationPhase(result)
-			in.Status.ApplicationCurrentSpec = a.App.Spec
-			return in
-		}); err != nil {
-			return err
+		if exists {
+			for _, current := range a.App.Status.ApplicationCurrentSpec.Applications {
+				if current.Spec.Version != app.Spec.Version {
+					klog.Infof("Initating upgrade for application [%s], current version [%s], desired version [%s]", app.Spec.ChartName, current.Spec.Version, app.Spec.Version)
+					err = helm.Upgrade(restConfig)
+					if err != nil {
+						return err
+					}
+					if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
+						in := obj.(*v1.Applications)
+						in.Status.Phase = v1.ApplicationPhase(result)
+						in.Status.ApplicationCurrentSpec = a.App.Spec
+						return in
+					}); err != nil {
+						return err
+					}
+				}
+			}
 		}
 
 		if exists == false {
-			go func() error {
-				err = helm.Apply(restConfig)
-				if err != nil {
-					return err
-				}
+			//go func() error {
+			err = helm.Apply(restConfig)
+			if err != nil {
 				return err
-			}()
-
-			return nil
+			}
+			//	return err
+			//}()
+			if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
+				in := obj.(*v1.Applications)
+				in.Status.Phase = v1.ApplicationPhase(result)
+				in.Status.ApplicationCurrentSpec = a.App.Spec
+				return in
+			}); err != nil {
+				return err
+			}
 		}
 
 	}

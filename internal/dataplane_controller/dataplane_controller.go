@@ -91,15 +91,6 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	// If first time recoe == "" {
-	if _, _, err := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
-		in := obj.(*v1.DataPlanes)
-		in.Status.Phase = v1.PendingD
-		return in
-	}); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	if err := r.do(ctx, desiredObj); err != nil {
 		if _, _, upErr := utils.PatchStatus(ctx, r.Client, desiredObj, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)

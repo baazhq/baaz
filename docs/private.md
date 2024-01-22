@@ -18,6 +18,41 @@ We expect the customers to run the BaaZ control plane in there own network, and 
 
 ### Run locally in same cluster
 
+# Run BaaZ Control Plane in Standard Mode
+- Set local env
 ```
-go run cmd/main.go -kubeconfig=hack/kind -private_mode=true -customer_name=bytebeam -run_local=true
+source local.sh
+```
+- Run BaaZ HTTP server with controllers
+```
+make run
+```
+
+# Run BaaZ Control Plane in Private Mode
+
+- create customer with ```saas_type: private```
+```
+cat << EOF > customer.yaml
+customer:
+  name: foo
+  saas_type: "private"
+  cloud_type: "aws"
+  labels: 
+    tier: "enterprise"
+EOF
+```
+
+```
+bz create customer -f customer.yaml
+```
+
+- create kubeconfig for customer
+```
+curl --location 'http://localhost:8000/api/v1/customer/foo/config'
+```
+
+- construct kubeconfig and save it in a file
+
+```
+go run cmd/main.go -kubeconfig=hack/kind -private_mode=true -customer_name=foo 
 ```

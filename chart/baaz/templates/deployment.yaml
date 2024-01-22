@@ -1,14 +1,15 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "ballasdata.fullname" . }}
+  name: {{ include "baaz.fullname" . }}
+  namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "ballasdata.labels" . | nindent 4 }}
+    {{- include "baaz.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "ballasdata.selectorLabels" . | nindent 6 }}
+      {{- include "baaz.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -16,13 +17,13 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "ballasdata.selectorLabels" . | nindent 8 }}
+        {{- include "baaz.selectorLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "ballasdata.serviceAccountName" . }}
+      serviceAccountName: {{ .Values.serviceAccount.name }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
@@ -31,13 +32,33 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
+        {{ if .Values.private_mode.enabled }}
+          args:
+        {{- range $key, $value := .Values.private_mode.args }}
+           - -{{ $key }}={{ $value }}
+        {{- end }}
+        {{ end }}
+          env:
+          {{- range $key, $value :=  .Values.env }}
+            - name: {{ $key }}
+              value: {{ tpl $value $ | quote }}
+          {{- end }}
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- with .Values.nodeSelector }}
+{{ if .Values.private_mode.enabled }}
+          volumeMounts:
+          - name: config-volume
+            mountPath: /kubeconfig
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "private_mode.configmap" . }}
+{{ end }}
+       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}

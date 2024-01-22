@@ -14,10 +14,13 @@ var commonValidArgs = []string{
 }
 
 var (
-	file           string
-	dataplane_name string
-	customer_name  string
-	tenant_name    string
+	file                         string
+	dataplane_name               string
+	customer_name                string
+	tenant_name                  string
+	private_mode                 bool
+	kubernetes_config_server_url string
+	namespace                    string
 )
 
 var (

@@ -36,7 +36,7 @@ type Ti struct {
 	} `yaml:"tenantsInfra"`
 }
 
-type tiResp struct {
+type tiResp []struct {
 	Name              string            `json:"name"`
 	Dataplane         string            `json:"dataplane"`
 	MachinePoolStatus map[string]string `json:"machine_pool_status"`
@@ -77,25 +77,28 @@ func GetTenantsInfra(dataplane string) error {
 		"Status",
 	})
 
-	for _, tenantSize := range ts.TenantSizes {
-		var row []string
-		for _, mp := range tenantSize.MachinePool {
-			row = []string{
-				tenantSize.Name,
-				mp.Name,
-				mp.Size,
-				strconv.Itoa(mp.Min),
-				strconv.Itoa(mp.Max),
-				common.CreateKeyValuePairs(mp.Labels),
-				ts.MachinePoolStatus[tenantSize.Name+"-"+mp.Name],
+	for _, tsSize := range ts {
+
+		for _, tenantSize := range tsSize.TenantSizes {
+			var row []string
+			for _, mp := range tenantSize.MachinePool {
+				row = []string{
+					tenantSize.Name,
+					mp.Name,
+					mp.Size,
+					strconv.Itoa(mp.Min),
+					strconv.Itoa(mp.Max),
+					common.CreateKeyValuePairs(mp.Labels),
+					tsSize.MachinePoolStatus[tenantSize.Name+"-"+mp.Name],
+				}
+				table.SetRowLine(true)
+				table.Append(row)
+				table.SetAutoMergeCellsByColumnIndex([]int{0})
+
+				table.SetAlignment(1)
 			}
-			table.SetRowLine(true)
-			table.Append(row)
-			table.SetAutoMergeCellsByColumnIndex([]int{0})
 
-			table.SetAlignment(1)
 		}
-
 	}
 	table.SetAlignment(1)
 

@@ -82,6 +82,7 @@ const (
 	active                string = "active"
 	dataplane_unavailable string = "unavailable"
 	label_prefix          string = "b_"
+	customer_chartpath    string = "internal/chart/customer/"
 )
 
 // config

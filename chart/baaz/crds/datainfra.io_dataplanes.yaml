@@ -5,14 +5,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: environments.datainfra.io
+  name: dataplanes.datainfra.io
 spec:
   group: datainfra.io
   names:
-    kind: Environment
-    listKind: EnvironmentList
-    plural: environments
-    singular: environment
+    kind: DataPlanes
+    listKind: DataPlanesList
+    plural: dataplanes
+    singular: dataplanes
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
@@ -25,7 +25,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: Environment is the Schema for the environments API
+        description: DataPlane is the Schema for the DataPlanes API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -40,15 +40,47 @@ spec:
           metadata:
             type: object
           spec:
-            description: EnvironmentSpec defines the desired state of Environment
+            description: DataPlaneSpec defines the desired state of DataPlane
             properties:
+              applications:
+                items:
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                    spec:
+                      properties:
+                        chartName:
+                          type: string
+                        repoName:
+                          type: string
+                        repoUrl:
+                          type: string
+                        values:
+                          items:
+                            type: string
+                          type: array
+                        version:
+                          type: string
+                      required:
+                      - chartName
+                      - repoName
+                      - repoUrl
+                      - version
+                      type: object
+                  required:
+                  - name
+                  - spec
+                  type: object
+                type: array
               cloudInfra:
                 description: Cloud can be any pubic name ie aws, gcp, azure.
                 properties:
                   authSecretRef:
                     description: AuthSecretRef holds the secret info which contains
                       aws secret key & access key info Secret must be in the same
-                      namespace as environment
+                      namespace as dataplane
                     properties:
                       accessKeyName:
                         type: string
@@ -61,7 +93,8 @@ spec:
                     - secretKeyName
                     - secretName
                     type: object
-                  awsRegion:
+                  cloudType:
+                    description: CloudType
                     type: string
                   eks:
                     properties:
@@ -83,91 +116,20 @@ spec:
                     - subnetIds
                     - version
                     type: object
-                  type:
-                    description: CloudType
+                  region:
                     type: string
                 required:
                 - authSecretRef
-                - awsRegion
+                - cloudType
                 - eks
-                - type
-                type: object
-              envType:
-                description: EnvType can be dev, stage, prod environments
-                type: string
-              sizes:
-                description: Define Size consists of AppType
-                items:
-                  properties:
-                    name:
-                      type: string
-                    spec:
-                      properties:
-                        appType:
-                          enum:
-                          - druid
-                          - pinot
-                          - zookeeper
-                          type: string
-                        nodes:
-                          additionalProperties:
-                            properties:
-                              max:
-                                format: int32
-                                minimum: 1
-                                type: integer
-                              min:
-                                format: int32
-                                minimum: 1
-                                type: integer
-                              nodeLabels:
-                                additionalProperties:
-                                  type: string
-                                type: object
-                              nodeSize:
-                                type: string
-                            required:
-                            - max
-                            - min
-                            - nodeLabels
-                            - nodeSize
-                            type: object
-                          type: object
-                      required:
-                      - appType
-                      type: object
-                  required:
-                  - name
-                  - spec
-                  type: object
-                type: array
-              tenants:
-                additionalProperties:
-                  items:
-                    properties:
-                      appType:
-                        enum:
-                        - druid
-                        - pinot
-                        - zookeeper
-                        type: string
-                      size:
-                        type: string
-                    required:
-                    - appType
-                    - size
-                    type: object
-                  type: array
-                description: Tenant Config consists of AppType
+                - region
                 type: object
             required:
+            - applications
             - cloudInfra
-            - envType
-            - sizes
-            - tenants
             type: object
           status:
-            description: EnvironmentStatus defines the observed state of Environment
+            description: DataPlaneStatus defines the observed state of DataPlane
             properties:
               addonStatus:
                 additionalProperties:
@@ -189,7 +151,7 @@ spec:
                 type: object
               conditions:
                 items:
-                  description: EnvironmentCondition describes the state of a deployment
+                  description: DataPlaneCondition describes the state of a deployment
                     at a certain point.
                   properties:
                     lastTransitionTime:

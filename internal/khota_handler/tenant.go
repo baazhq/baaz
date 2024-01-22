@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	v1 "datainfra.io/baaz/api/v1/types"
@@ -24,11 +23,10 @@ var tenantGVK = schema.GroupVersionResource{
 func CreateTenant(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 
-	dataplaneName := vars["dataplane_name"]
 	tenantName := vars["tenant_name"]
 	customerName := vars["customer_name"]
 
-	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
 		res.SetResponse(&w)
@@ -63,16 +61,22 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		},
 	}
 
-	_, dc := getKubeClientset()
+	kc, dc := getKubeClientset()
 
-	tenant_labels := map[string]string{
-		"dataplane":                dataplaneName,
+	customer, err := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
+	if err != nil {
+		res := NewResponse(CustomerNamespaceGetFail, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	tenantLabels := map[string]string{
+		"dataplane":                customer.GetLabels()["dataplane"],
 		"customer_" + customerName: customerName,
 		"application":              tenant.Application.Name,
 		"size":                     tenant.Application.Size,
 	}
-
-	tenantDeploy := makeTenantConfig(tenantName, tenantNew, dataplaneName, tenant_labels)
 
 	dpList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
@@ -84,12 +88,17 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 
 	var dpNamespace string
 	for _, dp := range dpList.Items {
-		if dp.GetName() == dataplaneName {
+		if dp.GetName() == customer.GetLabels()["dataplane"] {
 			dpType := dp.GetLabels()["dataplane_type"]
 			if dpType == string(v1.SharedSaaS) {
 				dpNamespace = string(v1.SharedSaaS)
 			} else if dpType == string(v1.DedicatedSaaS) {
 				dpNamespace = matchStringInMap("customer_", dp.GetLabels())
+			} else if dpType == string(v1.PrivateSaaS) {
+				dpNamespace = matchStringInMap("customer_", dp.GetLabels())
+				tenantLabels = mergeMaps(tenantLabels, map[string]string{
+					"private_object": "true",
+				})
 			}
 
 			phase, _, _ := unstructured.NestedString(dp.Object, "status", "phase")
@@ -110,7 +119,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	dataplane, err := dc.Resource(dpGVK).Namespace(dpNamespace).Get(context.TODO(), dataplaneName, metav1.GetOptions{})
+	dataplane, err := dc.Resource(dpGVK).Namespace(dpNamespace).Get(context.TODO(), customer.GetLabels()["dataplane"], metav1.GetOptions{})
 	if err != nil {
 		return
 	}
@@ -134,6 +143,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		res.LogResponse()
 		return
 	}
+	tenantDeploy := makeTenantConfig(tenantName, tenantNew, customer.GetLabels()["dataplane"], tenantLabels)
 
 	_, err = dc.Resource(tenantGVK).Namespace(customerName).Create(context.TODO(), tenantDeploy, metav1.CreateOptions{})
 	if err != nil {

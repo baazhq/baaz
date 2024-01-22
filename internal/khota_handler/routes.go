@@ -129,7 +129,7 @@ var routes = Routes{
 	Route{
 		"CREATE TENANT",
 		"POST",
-		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/tenant/{tenant_name}",
+		"/api/v1/customer/{customer_name}/tenant/{tenant_name}",
 		CreateTenant,
 	},
 	Route{

@@ -2,10 +2,15 @@ package kubeconfig
 
 import (
 	"bz/pkg/common"
+	"context"
 	"encoding/json"
 	"io"
 	"log"
 	"net/http"
+
+	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 type KubeConfig struct {
@@ -83,7 +88,7 @@ func GetCustomerKubeConfig(customerName string) (*KubeConfig, error) {
 					Server                   string `json:"server" yaml:"server"`
 				}{
 					CertificateAuthorityData: resp["cluster_ca"],
-					Server:                   "https://127.0.0.1:60646",
+					Server:                   resp["cluster_server"],
 				},
 				Name: resp["customer"] + "-cluster",
 			},
@@ -132,5 +137,32 @@ func GetCustomerKubeConfig(customerName string) (*KubeConfig, error) {
 	}
 
 	return &newKubeConfig, nil
+
+}
+
+func WriteKubeConfig2Cm(customerName string, config *KubeConfig, cs *kubernetes.Clientset) error {
+
+	bytes, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	cmName := customerName + "-kubeconfig"
+	cm := &corev1.ConfigMap{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      cmName,
+			Namespace: customerName,
+		},
+		Data: map[string]string{
+			cmName: string(bytes),
+		},
+	}
+
+	_, err = cs.CoreV1().ConfigMaps(customerName).Create(context.TODO(), cm, v1.CreateOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
 
 }

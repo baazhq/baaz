@@ -10,12 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/discovery/cached/memory"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/restmapper"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	"github.com/gofrs/flock"
@@ -32,44 +26,44 @@ import (
 var settings *cli.EnvSettings
 
 type HelmAct interface {
-	Apply(rest *rest.Config) error
-	Uninstall(rest *rest.Config) error
-	Upgrade(rest *rest.Config) error
-	List(rest *rest.Config) (status string, exists bool)
+	Apply() error
+	Uninstall() error
+	List() (status string, exists bool)
 }
 
 type Helm struct {
-	Action      *action.Configuration
-	ReleaseName string
-	Namespace   string
-	Values      []string
-	RepoName    string
-	ChartName   string
-	RepoUrl     string
+	Action       *action.Configuration
+	ReleaseName  string
+	Namespace    string
+	Values       []string
+	StringValues []string
+	//RepoName    string
+	ChartPath string
+	//RepoUrl     string
 }
 
 func NewHelm(
-	releaseName, namespace, chartName, repoName, repoUrl string,
-	values []string) HelmAct {
+	releaseName, namespace, chartPath string,
+	values []string, stringValues []string) HelmAct {
 	return &Helm{
 		Action:      new(action.Configuration),
 		ReleaseName: releaseName,
 		Namespace:   namespace,
-		RepoName:    repoName,
-		RepoUrl:     repoUrl,
-		ChartName:   chartName,
-		Values:      values,
+		// RepoName:    repoName,
+		// RepoUrl:     repoUrl,
+		ChartPath:    chartPath,
+		Values:       values,
+		StringValues: stringValues,
 	}
 }
 
 // HelmList Method installs the chart.
 // https://helm.sh/docs/topics/advanced/#simple-example
-func (h *Helm) List(rest *rest.Config) (status string, exists bool) {
+func (h *Helm) List() (status string, exists bool) {
 
 	settings := cli.New()
-	restGetter := NewRESTClientGetter(rest, h.Namespace)
 
-	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return "", false
 	}
 
@@ -92,13 +86,11 @@ func (h *Helm) List(rest *rest.Config) (status string, exists bool) {
 	return "", false
 }
 
-func (h *Helm) Uninstall(rest *rest.Config) error {
+func (h *Helm) Uninstall() error {
 
 	settings := cli.New()
 
-	restGetter := NewRESTClientGetter(rest, h.Namespace)
-
-	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return err
 	}
 
@@ -109,7 +101,7 @@ func (h *Helm) Uninstall(rest *rest.Config) error {
 	client.Wait = true
 	client.Timeout = 120 * time.Second
 
-	release, err := client.Run(h.ChartName)
+	release, err := client.Run(h.ChartPath)
 	if err != nil {
 		return err
 	}
@@ -121,13 +113,12 @@ func (h *Helm) Uninstall(rest *rest.Config) error {
 
 // HelmInstall Method installs the chart.
 // ref: https://github.com/PrasadG193/helm-clientgo-example/tree/master
-func (h *Helm) Apply(rest *rest.Config) error {
+func (h *Helm) Apply() error {
 
 	settings := cli.New()
 
-	restGetter := NewRESTClientGetter(rest, h.Namespace)
-
-	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	fmt.Println(h.StringValues)
+	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return err
 	}
 
@@ -135,16 +126,14 @@ func (h *Helm) Apply(rest *rest.Config) error {
 
 	settings.EnvVars()
 
-	repoAdd(h.RepoName, h.RepoUrl)
-
-	cp, err := client.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", h.RepoName, h.ChartName), settings)
+	cp, err := client.LocateChart(h.ChartPath, settings)
 	if err != nil {
 		return err
 	}
 
 	err = h.RepoUpdate()
 	if err != nil {
-		return err
+		//	return err
 	}
 
 	chartRequested, err := loader.Load(cp)
@@ -162,7 +151,8 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	//client.IncludeCRDs = true
 
 	values := values.Options{
-		Values: h.Values,
+		Values:       h.Values,
+		StringValues: h.StringValues,
 	}
 
 	vals, err := values.MergeValues(getter.All(settings))
@@ -170,66 +160,8 @@ func (h *Helm) Apply(rest *rest.Config) error {
 		return err
 	}
 
+	// fmt.Println(vals)
 	release, err := client.Run(chartRequested, vals)
-	if err != nil {
-		return err
-	}
-
-	klog.Infof("Release Name: [%s] Namespace [%s] Status [%s]", release.Name, release.Namespace, release.Info.Status)
-
-	return nil
-}
-
-// HelmInstall Method installs the chart.
-// ref: https://github.com/PrasadG193/helm-clientgo-example/tree/master
-func (h *Helm) Upgrade(rest *rest.Config) error {
-
-	settings := cli.New()
-
-	restGetter := NewRESTClientGetter(rest, h.Namespace)
-
-	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
-		return err
-	}
-
-	client := action.NewUpgrade(h.Action)
-
-	settings.EnvVars()
-
-	repoAdd(h.RepoName, h.RepoUrl)
-
-	cp, err := client.ChartPathOptions.LocateChart(fmt.Sprintf("%s/%s", h.RepoName, h.ChartName), settings)
-	if err != nil {
-		return err
-	}
-
-	err = h.RepoUpdate()
-	if err != nil {
-		return err
-	}
-
-	chartRequested, err := loader.Load(cp)
-	if err != nil {
-		return err
-	}
-
-	client.Namespace = h.Namespace
-	client.Wait = true
-	client.Timeout = 120 * time.Second
-
-	client.WaitForJobs = true
-	//client.IncludeCRDs = true
-
-	values := values.Options{
-		Values: h.Values,
-	}
-
-	vals, err := values.MergeValues(getter.All(settings))
-	if err != nil {
-		return err
-	}
-
-	release, err := client.Run(h.ReleaseName, chartRequested, vals)
 	if err != nil {
 		return err
 	}
@@ -337,50 +269,50 @@ func repoAdd(name, url string) {
 	}
 }
 
-type simpleRESTClientGetter struct {
-	config    *rest.Config
-	namespace string
-}
+// type simpleRESTClientGetter struct {
+// 	config    *rest.Config
+// 	namespace string
+// }
 
-func NewRESTClientGetter(config *rest.Config, namespace string) simpleRESTClientGetter {
-	return simpleRESTClientGetter{
-		namespace: namespace,
-		config:    config,
-	}
-}
+// func NewRESTClientGetter(config *rest.Config, namespace string) simpleRESTClientGetter {
+// 	return simpleRESTClientGetter{
+// 		namespace: namespace,
+// 		config:    config,
+// 	}
+// }
 
-func (c *simpleRESTClientGetter) ToRESTConfig() (*rest.Config, error) {
-	return c.config, nil
-}
+// func (c *simpleRESTClientGetter) ToRESTConfig() (*rest.Config, error) {
+// 	return c.config, nil
+// }
 
-func (c *simpleRESTClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
-	config, err := c.ToRESTConfig()
-	if err != nil {
-		return nil, err
-	}
-	config.Burst = 100
+// func (c *simpleRESTClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
+// 	config, err := c.ToRESTConfig()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	config.Burst = 100
 
-	discoveryClient, _ := discovery.NewDiscoveryClientForConfig(config)
-	return memory.NewMemCacheClient(discoveryClient), nil
-}
+// 	discoveryClient, _ := discovery.NewDiscoveryClientForConfig(config)
+// 	return memory.NewMemCacheClient(discoveryClient), nil
+// }
 
-func (c *simpleRESTClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
-	discoveryClient, err := c.ToDiscoveryClient()
-	if err != nil {
-		return nil, err
-	}
+// func (c *simpleRESTClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
+// 	discoveryClient, err := c.ToDiscoveryClient()
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient)
-	expander := restmapper.NewShortcutExpander(mapper, discoveryClient)
-	return expander, nil
-}
+// 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient)
+// 	expander := restmapper.NewShortcutExpander(mapper, discoveryClient)
+// 	return expander, nil
+// }
 
-func (c *simpleRESTClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
+// func (c *simpleRESTClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
+// 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
+// 	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
 
-	overrides := &clientcmd.ConfigOverrides{ClusterDefaults: clientcmd.ClusterDefaults}
-	overrides.Context.Namespace = c.namespace
+// 	overrides := &clientcmd.ConfigOverrides{ClusterDefaults: clientcmd.ClusterDefaults}
+// 	overrides.Context.Namespace = c.namespace
 
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, overrides)
-}
+// 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, overrides)
+// }

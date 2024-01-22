@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 
@@ -27,8 +26,8 @@ type Tenants struct {
 	} `yaml:"tenants" json:"tenants"`
 }
 
-func makeCreateTenantPath(customerName, dataplaneName, tenantName string) string {
-	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.DataplanePath + "/" + dataplaneName + common.TenantPath + "/" + tenantName
+func makeCreateTenantPath(customerName, tenantName string) string {
+	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.TenantPath + "/" + tenantName
 }
 
 func makeGetTenantPath(customerName string) string {
@@ -93,8 +92,8 @@ func getTenants(customerName string) ([]map[string]interface{}, error) {
 	return tresp, nil
 }
 
-func CreateTenant(filePath, customerName, dataplaneName, tenantName string) (string, error) {
-	yamlByte, err := ioutil.ReadFile(filePath)
+func CreateTenant(filePath, customerName, tenantName string) (string, error) {
+	yamlByte, err := os.ReadFile(filePath)
 	if err != nil {
 		return "", err
 	}
@@ -112,7 +111,7 @@ func CreateTenant(filePath, customerName, dataplaneName, tenantName string) (str
 	}
 
 	resp, err := http.Post(
-		makeCreateTenantPath(customerName, dataplaneName, tenantName),
+		makeCreateTenantPath(customerName, tenantName),
 		"application/json",
 		bytes.NewBuffer(tenantByte),
 	)

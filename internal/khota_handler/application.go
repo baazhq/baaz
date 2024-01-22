@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
 
 	v1 "datainfra.io/baaz/api/v1/types"
@@ -27,7 +26,7 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 	tenantName := vars["tenant_name"]
 	applicationName := customerName + "-" + tenantName + "-" + "apps"
 
-	body, err := ioutil.ReadAll(io.LimitReader(req.Body, 1048576))
+	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
 		res.SetResponse(&w)
@@ -41,7 +40,6 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 		res.LogResponse()
 		return
 	}
-
 	var applications []v1.HTTPApplication
 
 	if err := json.Unmarshal(body, &applications); err != nil {
@@ -62,7 +60,15 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 	}
 
 	dataplaneName := customer.GetLabels()["dataplane"]
-	appDeploy := makeApplicationConfig(applications, dataplaneName, tenantName, applicationName)
+	var labels map[string]string
+	if customer.GetLabels()["saas_type"] == string(v1.PrivateSaaS) {
+		labels = map[string]string{
+			"customer_" + customerName: customerName,
+			"private_object":           "true",
+			"tenant":                   tenantName,
+		}
+	}
+	appDeploy := makeApplicationConfig(applications, dataplaneName, tenantName, applicationName, labels)
 
 	_, err = dc.Resource(applicationGVK).Namespace(customerName).Create(context.TODO(), appDeploy, metav1.CreateOptions{})
 	if err != nil {

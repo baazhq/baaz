@@ -1,2 +1,0 @@
-Thanks for installing Ballasdata. You can check your Ballasdata controller pod by running:
-$ kubectl get pods --selector=app.kubernetes.io/instance=ballasdata

@@ -281,6 +281,16 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 			"customer_" + dataplane.CustomerName: dataplane.CustomerName,
 			"dataplane_type":                     customer.GetLabels()["saas_type"],
 		})
+
+		if customer.GetLabels()["saas_type"] == "private" {
+			labels = mergeMaps(labels, map[string]string{
+				"private_object": "true",
+			})
+		}
+	} else {
+		labels = mergeMaps(labels, map[string]string{
+			"dataplane_type": string(v1.SharedSaaS),
+		})
 	}
 
 	dpDeploy := makeAwsEksConfig(dpName, dataplane, labels)

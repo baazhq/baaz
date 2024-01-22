@@ -77,6 +77,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 			createEksResult := ae.eksIC.CreateEks()
 			if createEksResult.Success {
+				fmt.Println(createEksResult.Success)
 				if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 					in := obj.(*v1.DataPlanes)
 					in.Status.Phase = v1.CreatingD
@@ -90,6 +91,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 					})
 					return in
 				}); err != nil {
+					fmt.Println(err)
 					return err
 				}
 
