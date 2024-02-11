@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	awssts "github.com/aws/aws-sdk-go-v2/service/sts"
@@ -45,4 +46,13 @@ func newAwsStsClient(ctx context.Context, region string) *awssts.Client {
 	}
 
 	return awssts.NewFromConfig(config)
+}
+
+func newAwsEc2Client(ctx context.Context, region string) *awsec2.Client {
+	config, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
+	if err != nil {
+		log.Fatalf("unable to build AWS client, %v", err)
+	}
+
+	return awsec2.NewFromConfig(config)
 }

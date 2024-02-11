@@ -6,15 +6,17 @@ dataplane:
     awsAuth:
       awsAccessKey: AKIAWLZK4B6AOP67T7OA
       awsSecretKey: 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
+  network:
+    create: true
   kubernetesConfig:
-    eks:
-      subnetIds:
-      - subnet-01cbca574f0d8b8d8
-      - subnet-0a4d9c31739a9ac87
-      - subnet-0391a677569f5fb89
-      - subnet-026f7cbe029859bb0
-      securityGroupIds:
-      - sg-0da08285aacbdea70
+    # eks:
+    #   subnetIds:
+    #   - subnet-01cbca574f0d8b8d8
+    #   - subnet-0a4d9c31739a9ac87
+    #   - subnet-0391a677569f5fb89
+    #   - subnet-026f7cbe029859bb0
+    #   securityGroupIds:
+    #   - sg-0da08285aacbdea70
       version: '1.27'
   applicationConfig:
   - name:  "monitoring-stack"

@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
@@ -31,13 +32,20 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 
 	eksClient := eks.NewEks(ctx, dp)
 
-	awsEnv := awsEnv{
+	awsEnv := &awsEnv{
 		ctx:    ctx,
 		dp:     dp,
 		eksIC:  eksClient,
 		client: r.Client,
 		store:  r.NgStore,
 	}
+
+	if err := awsEnv.reconcileNetwork(); err != nil {
+		return err
+	}
+
+	fmt.Println(awsEnv.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds)
+	fmt.Println(awsEnv.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SecurityGroupIds)
 
 	if err := awsEnv.reconcileAwsEks(); err != nil {
 		return err
@@ -195,6 +203,68 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 	return nil
 
+}
+
+func (ae *awsEnv) reconcileNetwork() error {
+	if !ae.dp.Spec.CloudInfra.ProvisionNetwork {
+		return nil
+	}
+
+	// todo: need to handle already exists cases
+
+	vpc, err := ae.eksIC.CreateVPC(context.TODO(), &awsec2.CreateVpcInput{})
+	if err != nil {
+		return err
+	}
+
+	subnetInput := &awsec2.CreateSubnetInput{
+		VpcId: vpc.Vpc.VpcId,
+	}
+	subnet1, err := ae.eksIC.CreateSubnet(context.TODO(), subnetInput)
+	if err != nil {
+		return err
+	}
+
+	subnet2, err := ae.eksIC.CreateSubnet(context.TODO(), subnetInput)
+	if err != nil {
+		return err
+	}
+
+	subnet3, err := ae.eksIC.CreateSubnet(context.TODO(), subnetInput)
+	if err != nil {
+		return err
+	}
+
+	subnet4, err := ae.eksIC.CreateSubnet(context.TODO(), subnetInput)
+	if err != nil {
+		return err
+	}
+
+	sgName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
+
+	sgInput := &awsec2.CreateSecurityGroupInput{
+		GroupName: &sgName,
+		VpcId:     vpc.Vpc.VpcId,
+	}
+
+	sg, err := ae.eksIC.CreateSG(context.TODO(), sgInput)
+	if err != nil {
+		return err
+	}
+
+	ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds = append(
+		ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
+		*subnet1.Subnet.SubnetId,
+		*subnet2.Subnet.SubnetId,
+		*subnet3.Subnet.SubnetId,
+		*subnet4.Subnet.SubnetId,
+	)
+	ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SecurityGroupIds = append(
+		ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SecurityGroupIds,
+		*sg.GroupId,
+	)
+
+	return nil
 }
 
 // bootstrap applications for aws eks dataplanes

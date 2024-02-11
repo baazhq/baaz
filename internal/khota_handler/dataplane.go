@@ -222,6 +222,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 				AwsSecretKey: dp.CloudAuth.AwsAuth.AwsSecretKey,
 			},
 		},
+		ProvisionNetwork: dp.ProvisionNetwork,
 		KubeConfig: v1.KubernetesConfig{
 			EKS: v1.EKSConfig{
 				Name:             dpName,
