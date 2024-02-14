@@ -13,8 +13,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	v1 "datainfra.io/baaz/api/v1/types"
-	helm "datainfra.io/baaz/pkg/helmchartpath"
+	v1 "github.com/baazhq/baaz/api/v1/types"
+	helm "github.com/baazhq/baaz/pkg/helmchartpath"
 	"github.com/gorilla/mux"
 )
 
@@ -124,10 +124,11 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			"controlplane":  "baaz",
 		}
 
+		allLabels := mergeMaps(labels, setLabelPrefix(customer.Labels))
 		_, err := client.CoreV1().Namespaces().Create(context.TODO(), &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   customerName,
-				Labels: mergeMaps(labels, setLabelPrefix(customer.Labels)),
+				Labels: allLabels,
 			},
 		}, metav1.CreateOptions{})
 		if err != nil {
@@ -162,6 +163,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 		res := NewResponse(CustomerNamespaceSuccess, success, nil, 200)
 		res.SetResponse(&w)
 		res.LogResponse()
+		sendEventParseable(customerEventStream, customerCreateSuccess, allLabels, map[string]string{"customer_name": customerName})
 		return
 	}
 
@@ -169,6 +171,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 		res := NewResponse(CustomerNamespaceExists, duplicate_entry, err, http.StatusConflict)
 		res.SetResponse(&w)
 		res.LogResponse()
+		sendEventParseable(customerEventStream, customerCreateFail, nil, map[string]string{"customer_name": customerName})
 	}
 
 }

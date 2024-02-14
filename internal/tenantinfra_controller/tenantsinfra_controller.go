@@ -15,11 +15,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	v1 "datainfra.io/baaz/api/v1/types"
-	"datainfra.io/baaz/internal/predicates"
-	"datainfra.io/baaz/pkg/aws/eks"
-	"datainfra.io/baaz/pkg/store"
-	"datainfra.io/baaz/pkg/utils"
+	v1 "github.com/baazhq/baaz/api/v1/types"
+	"github.com/baazhq/baaz/internal/predicates"
+	"github.com/baazhq/baaz/pkg/aws/eks"
+	"github.com/baazhq/baaz/pkg/store"
+	"github.com/baazhq/baaz/pkg/utils"
 )
 
 var tenantsFinalizer = "tenantsinfra.datainfra.io/finalizer"

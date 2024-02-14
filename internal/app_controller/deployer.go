@@ -3,10 +3,10 @@ package app_controller
 import (
 	"context"
 
-	v1 "datainfra.io/baaz/api/v1/types"
-	"datainfra.io/baaz/pkg/aws/eks"
-	"datainfra.io/baaz/pkg/helm"
-	"datainfra.io/baaz/pkg/utils"
+	v1 "github.com/baazhq/baaz/api/v1/types"
+	"github.com/baazhq/baaz/pkg/aws/eks"
+	"github.com/baazhq/baaz/pkg/helm"
+	"github.com/baazhq/baaz/pkg/utils"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"

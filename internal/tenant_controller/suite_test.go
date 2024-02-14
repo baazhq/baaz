@@ -14,7 +14,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	datainfraiov1 "datainfra.io/baaz/api/v1/types"
+	datainfraiov1 "github.com/baazhq/baaz/api/v1/types"
 	//+kubebuilder:scaffold:imports
 )
 

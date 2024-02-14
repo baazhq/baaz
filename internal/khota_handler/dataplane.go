@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 
-	v1 "datainfra.io/baaz/api/v1/types"
+	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -300,12 +300,14 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
+		sendEventParseable(dataplanesEventStream, dataplaneInitiationSuccess, nil, map[string]string{"dataplane_name": dpName})
 		return
 	}
 
 	res := NewResponse(DataPlaneCreateIntiated, success, nil, http.StatusOK)
 	res.LogResponse()
 	res.SetResponse(&w)
+	sendEventParseable(dataplanesEventStream, dataplaneInitiationSuccess, labels, map[string]string{"dataplane_name": dpName})
 
 }
 

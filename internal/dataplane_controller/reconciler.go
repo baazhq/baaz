@@ -7,7 +7,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	v1 "datainfra.io/baaz/api/v1/types"
+	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 const (

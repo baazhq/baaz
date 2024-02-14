@@ -3,10 +3,10 @@ package eks
 import (
 	"context"
 
-	v1 "datainfra.io/baaz/api/v1/types"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	awssts "github.com/aws/aws-sdk-go-v2/service/sts"
+	v1 "github.com/baazhq/baaz/api/v1/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
