@@ -12,7 +12,8 @@ import (
 	"github.com/gorilla/handlers"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	khota "datainfra.io/baaz/internal/khota_handler"
+	khota "github.com/baazhq/baaz/internal/khota_handler"
+	"github.com/baazhq/baaz/pkg/parseable"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -21,17 +22,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	datainfraiov1 "datainfra.io/baaz/api/v1/types"
-	"datainfra.io/baaz/internal/app_controller"
-	dataplane_controller "datainfra.io/baaz/internal/dataplane_controller"
-	tenant_controller "datainfra.io/baaz/internal/tenant_controller"
-	tenantinfra_controller "datainfra.io/baaz/internal/tenantinfra_controller"
+	datainfraiov1 "github.com/baazhq/baaz/api/v1/types"
+	"github.com/baazhq/baaz/internal/app_controller"
+	dataplane_controller "github.com/baazhq/baaz/internal/dataplane_controller"
+	tenant_controller "github.com/baazhq/baaz/internal/tenant_controller"
+	tenantinfra_controller "github.com/baazhq/baaz/internal/tenantinfra_controller"
 	//+kubebuilder:scaffold:imports
 )
 
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+	streams  = []string{
+		"customers",
+		"dataplanes",
+		"tenantsinfra",
+		"tenants",
+		"applications",
+	}
 )
 
 func init() {
@@ -89,12 +97,28 @@ func main() {
 	if !enablePrivateSaaS {
 		go func() {
 			router := khota.NewRouter()
-			setupLog.Info(fmt.Sprintf("Started BaaZ HTTP server on :%s", saasInit.HttpServerPort))
+			setupLog.Info(fmt.Sprintf("started baaz http server on :%s", saasInit.HttpServerPort))
 			if err := http.ListenAndServe(saasInit.HttpServerPort, handlers.CORS(handlers.AllowedHeaders([]string{"X-Requested-With", "Content-Type", "Authorization", "Access-Control-Allow-Origin"}), handlers.AllowedMethods([]string{"GET", "POST", "PUT", "HEAD", "DELETE", "OPTIONS"}), handlers.AllowedOrigins([]string{"*"}))(router)); err != nil {
-				setupLog.Error(err, "unable to start HTTP server")
+				setupLog.Error(err, "unable to start http server")
 				os.Exit(1)
 			}
 		}()
+	}
+
+	if os.Getenv("PARSEABLE_ENABLE") == "true" {
+		for _, stream := range streams {
+			createStream := parseable.NewStream(
+				stream,
+				nil,
+				nil,
+				nil,
+			)
+			resp, err := createStream.CreateStream()
+			if err != nil && resp == 400 {
+				setupLog.Error(err, "create stream failed for parseable")
+				os.Exit(1)
+			}
+		}
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

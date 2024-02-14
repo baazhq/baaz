@@ -3,22 +3,19 @@ package khota_handler
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	v1 "datainfra.io/baaz/api/v1/types"
+	v1 "github.com/baazhq/baaz/api/v1/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
-
-type client struct {
-	*kubernetes.Clientset
-}
 
 func getKubeClientset() (*kubernetes.Clientset, dynamic.Interface) {
 
@@ -173,4 +170,13 @@ func NewPatchValue(op, path string, value interface{}) []byte {
 
 func Ptr[T any](v T) *T {
 	return &v
+}
+
+func JsonWrap(data string) ([]byte, error) {
+	payload := strings.NewReader(fmt.Sprintf(`[%s]`, data))
+	bytes, err := json.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+	return bytes, nil
 }

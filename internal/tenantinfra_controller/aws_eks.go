@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	v1 "datainfra.io/baaz/api/v1/types"
-	"datainfra.io/baaz/pkg/aws/eks"
-	"datainfra.io/baaz/pkg/store"
-	"datainfra.io/baaz/pkg/utils"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go/aws"
+	v1 "github.com/baazhq/baaz/api/v1/types"
+	"github.com/baazhq/baaz/pkg/aws/eks"
+	"github.com/baazhq/baaz/pkg/store"
+	"github.com/baazhq/baaz/pkg/utils"
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"

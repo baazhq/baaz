@@ -3,7 +3,7 @@ package khota_handler
 import (
 	"context"
 
-	v1 "datainfra.io/baaz/api/v1/types"
+	v1 "github.com/baazhq/baaz/api/v1/types"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 
