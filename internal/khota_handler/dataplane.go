@@ -234,6 +234,8 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		ApplicationConfig: appConfig,
 	}
 
+	fmt.Println(dataplane.ProvisionNetwork)
+
 	kc, dc := getKubeClientset()
 
 	dpSecret := getAwsEksSecret(dpName, dataplane)
@@ -260,9 +262,9 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 				return err
 			}
 
-			if customer.GetLabels()["dataplane"] != "unavailable" {
-				return fmt.Errorf("dataplane exists for customer")
-			}
+			// if customer.GetLabels()["dataplane"] != "unavailable" {
+			// 	return fmt.Errorf("dataplane exists for customer")
+			// }
 
 			customer.ObjectMeta.Labels = mergeMaps(customer.Labels, map[string]string{
 				"dataplane": dpName,

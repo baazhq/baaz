@@ -116,12 +116,15 @@ spec:
                     - subnetIds
                     - version
                     type: object
+                  provisionNetwork:
+                    type: boolean
                   region:
                     type: string
                 required:
                 - authSecretRef
                 - cloudType
                 - eks
+                - provisionNetwork
                 - region
                 type: object
             required:

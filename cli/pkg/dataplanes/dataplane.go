@@ -27,6 +27,7 @@ type Dataplane struct {
 				AwsSecretKey string `yaml:"awsSecretKey" json:"aws_secret_key"`
 			} `yaml:"awsAuth" json:"aws_auth"`
 		} `yaml:"cloudAuth" json:"cloud_auth"`
+		ProvisionNetwork bool `yaml:"provisionNetwork" json:"provision_network"`
 		KubernetesConfig struct {
 			Eks struct {
 				SubnetIds        []string `yaml:"subnetIds" json:"subnet_ids"`
@@ -277,6 +278,9 @@ func CreateDataplane(filePath string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// fmt.Println(dataplane.Dataplane.ProvisionNetwork)
+	// return "", nil
 
 	dataplaneByte, err := json.Marshal(dataplane.Dataplane)
 	if err != nil {
