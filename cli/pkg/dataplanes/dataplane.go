@@ -279,13 +279,14 @@ func CreateDataplane(filePath string) (string, error) {
 		return "", err
 	}
 
-	// fmt.Println(dataplane.Dataplane.ProvisionNetwork)
-	// return "", nil
+	fmt.Println(dataplane.Dataplane.ProvisionNetwork)
 
 	dataplaneByte, err := json.Marshal(dataplane.Dataplane)
 	if err != nil {
 		return "", err
 	}
+
+	// fmt.Println(string(dataplaneByte))
 
 	resp, err := http.Post(
 		makeDataplaneUrl(),

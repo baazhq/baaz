@@ -1,7 +1,7 @@
 dataplane:
   cloudType: aws
   cloudRegion: us-east-1
-  customerName: parseable
+  # customerName: parseable
   cloudAuth:
     awsAuth:
       awsAccessKey: AKIAWLZK4B6AOP67T7OA

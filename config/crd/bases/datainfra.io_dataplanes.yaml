@@ -151,6 +151,10 @@ spec:
                     type: object
                   type:
                     type: string
+                  vpc:
+                    type: string
+                required:
+                - vpc
                 type: object
               conditions:
                 items:

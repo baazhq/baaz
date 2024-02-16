@@ -48,16 +48,18 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 	fmt.Println(awsEnv.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds)
 	fmt.Println(awsEnv.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SecurityGroupIds)
 
-	if err := awsEnv.reconcileAwsEks(); err != nil {
-		return err
-	}
-
-	// bootstrap dataplane with apps
-	if err := awsEnv.reconcileAwsApplications(); err != nil {
-		return err
-	}
-
 	return nil
+
+	// if err := awsEnv.reconcileAwsEks(); err != nil {
+	// 	return err
+	// }
+
+	// // bootstrap dataplane with apps
+	// if err := awsEnv.reconcileAwsApplications(); err != nil {
+	// 	return err
+	// }
+
+	// return nil
 }
 
 type awsEnv struct {
@@ -212,14 +214,31 @@ func (ae *awsEnv) reconcileNetwork() error {
 	}
 
 	// todo: need to handle already exists cases
+	vpcCidr := "10.0.0.0/16"
+	vpcId := ae.dp.Status.CloudInfraStatus.Vpc
 
-	vpc, err := ae.eksIC.CreateVPC(context.TODO(), &awsec2.CreateVpcInput{})
-	if err != nil {
-		return err
+	if vpcId == "" {
+		vpc, err := ae.eksIC.CreateVPC(context.TODO(), &awsec2.CreateVpcInput{
+			CidrBlock: &vpcCidr,
+		})
+		if err != nil {
+			return err
+		}
+		_, _, err = utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.Vpc = *vpc.Vpc.VpcId
+
+			return in
+		})
+		if err != nil {
+			return err
+		}
+		vpcId = *vpc.Vpc.VpcId
 	}
 
 	subnetInput := &awsec2.CreateSubnetInput{
-		VpcId: vpc.Vpc.VpcId,
+		VpcId:     &vpcId,
+		CidrBlock: &vpcCidr,
 	}
 	subnet1, err := ae.eksIC.CreateSubnet(context.TODO(), subnetInput)
 	if err != nil {
@@ -245,7 +264,7 @@ func (ae *awsEnv) reconcileNetwork() error {
 
 	sgInput := &awsec2.CreateSecurityGroupInput{
 		GroupName: &sgName,
-		VpcId:     vpc.Vpc.VpcId,
+		VpcId:     &vpcId,
 	}
 
 	sg, err := ae.eksIC.CreateSG(context.TODO(), sgInput)
