@@ -59,10 +59,19 @@ func (ec *eks) createEks() error {
 	if err != nil {
 		return err
 	}
+	subnetIds := ec.dp.Spec.CloudInfra.Eks.SubnetIds
+	sgIds := ec.dp.Spec.CloudInfra.Eks.SecurityGroupIds
+
+	if ec.dp.Spec.CloudInfra.ProvisionNetwork {
+		subnetIds = ec.dp.Status.CloudInfraStatus.SubnetIds
+		sgIds = ec.dp.Status.CloudInfraStatus.SecurityGroupIds
+	}
+
 	_, err = ec.awsClient.CreateCluster(ec.ctx, &awseks.CreateClusterInput{
 		Name: &ec.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
 		ResourcesVpcConfig: &types.VpcConfigRequest{
-			SubnetIds: ec.dp.Spec.CloudInfra.Eks.SubnetIds,
+			SubnetIds:        subnetIds,
+			SecurityGroupIds: sgIds,
 		},
 		RoleArn: roleName.Role.Arn,
 		Version: aws.String(ec.dp.Spec.CloudInfra.Eks.Version),

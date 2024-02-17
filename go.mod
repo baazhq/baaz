@@ -7,8 +7,8 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.24.1
 	github.com/aws/aws-sdk-go-v2/config v1.18.19
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.146.0
-	github.com/aws/aws-sdk-go-v2/service/eks v1.27.8
-	github.com/aws/aws-sdk-go-v2/service/iam v1.19.12
+	github.com/aws/aws-sdk-go-v2/service/eks v1.37.0
+	github.com/aws/aws-sdk-go-v2/service/iam v1.28.6
 	github.com/aws/aws-sdk-go-v2/service/sts v1.18.7
 	github.com/go-logr/logr v1.2.4
 	github.com/gofrs/flock v0.8.1

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"time"
 
@@ -49,11 +48,10 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 	fmt.Println(awsEnv.dp.Status.CloudInfraStatus.SubnetIds)
 	fmt.Println(awsEnv.dp.Status.CloudInfraStatus.SecurityGroupIds)
 
+	if err := awsEnv.reconcileAwsEks(); err != nil {
+		return err
+	}
 	return nil
-
-	// if err := awsEnv.reconcileAwsEks(); err != nil {
-	// 	return err
-	// }
 
 	// // bootstrap dataplane with apps
 	// if err := awsEnv.reconcileAwsApplications(); err != nil {
@@ -82,7 +80,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 			clusterRoleOutput, err := ae.eksIC.CreateClusterIamRole()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create cluster iam role: %s", err.Error())
 			}
 
 			klog.Infof("Cluster Role [%s] Created", *clusterRoleOutput.Role.RoleName)
@@ -190,6 +188,9 @@ func (ae *awsEnv) reconcileAwsEks() error {
 				in.Status.CloudInfraStatus.EksStatus.OIDCProviderArn = *oidcOutput.OpenIDConnectProviderArn
 				return in
 			})
+			if err != nil {
+				return err
+			}
 		}
 
 		if err := ae.reconcileSystemNodeGroup(); err != nil {
@@ -214,8 +215,7 @@ func (ae *awsEnv) reconcileNetwork() error {
 		return nil
 	}
 
-	// todo: need to handle already exists cases
-	vpcCidr := "10.0.0.0/16"
+	vpcCidr := "10.1.0.0/16"
 	vpcId := ae.dp.Status.CloudInfraStatus.Vpc
 
 	if vpcId == "" {
@@ -237,26 +237,24 @@ func (ae *awsEnv) reconcileNetwork() error {
 		vpcId = *vpc.Vpc.VpcId
 	}
 
-	subnetIndex := 0
-	subnetsCidr, err := generateSubnets(vpcCidr, 4)
-	if err != nil {
-		return err
-	}
+	subnetsCidr := []string{"10.1.16.0/20", "10.1.32.0/20", "10.1.0.0/20", "10.1.80.0/20"}
 
-	for {
+	for i := range subnetsCidr {
 		if len(ae.dp.Status.CloudInfraStatus.SubnetIds) >= 4 {
 			break
 		}
 
+		az := fmt.Sprintf("%s%c", ae.dp.Spec.CloudInfra.Region, 'a'+(i%3))
 		subnetInput := &awsec2.CreateSubnetInput{
-			VpcId:     &vpcId,
-			CidrBlock: &subnetsCidr[subnetIndex],
+			VpcId:            &vpcId,
+			CidrBlock:        &subnetsCidr[i],
+			AvailabilityZone: &az,
 		}
-		subnetIndex += 1
 
 		subnet, err := ae.eksIC.CreateSubnet(context.TODO(), subnetInput)
 		if err != nil {
-			return err
+			fmt.Println(err.Error())
+			continue
 		}
 		newObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
@@ -280,9 +278,11 @@ func (ae *awsEnv) reconcileNetwork() error {
 
 	sgName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
 
+	sgDescription := fmt.Sprintf("sg for %s", ae.dp.Name)
 	sgInput := &awsec2.CreateSecurityGroupInput{
-		GroupName: &sgName,
-		VpcId:     &vpcId,
+		Description: &sgDescription,
+		GroupName:   &sgName,
+		VpcId:       &vpcId,
 	}
 
 	sg, err := ae.eksIC.CreateSG(context.TODO(), sgInput)
@@ -295,7 +295,7 @@ func (ae *awsEnv) reconcileNetwork() error {
 		if in.Status.CloudInfraStatus.SecurityGroupIds == nil {
 			in.Status.CloudInfraStatus.SecurityGroupIds = make([]string, 0)
 		}
-		in.Status.CloudInfraStatus.SubnetIds = append(in.Status.CloudInfraStatus.SubnetIds, *sg.GroupId)
+		in.Status.CloudInfraStatus.SecurityGroupIds = append(in.Status.CloudInfraStatus.SecurityGroupIds, *sg.GroupId)
 
 		return in
 	})
@@ -306,33 +306,6 @@ func (ae *awsEnv) reconcileNetwork() error {
 	ae.dp = newObj.(*v1.DataPlanes)
 
 	return nil
-}
-
-func generateSubnets(vpcCIDR string, numSubnets int) ([]string, error) {
-	_, vpcNet, err := net.ParseCIDR(vpcCIDR)
-	if err != nil {
-		return nil, err
-	}
-
-	subnetCIDRs := make([]string, numSubnets)
-	subnetMask, _ := vpcNet.Mask.Size()
-
-	for i := 0; i < numSubnets; i++ {
-		subnetSize := subnetMask + i + 1
-		if subnetSize > 32 {
-			return nil, fmt.Errorf("subnet size exceeds maximum allowed (32 bits)")
-		}
-
-		subnetMask := net.CIDRMask(subnetSize, 32)
-		subnet := net.IPNet{
-			IP:   vpcNet.IP,
-			Mask: subnetMask,
-		}
-
-		subnetCIDRs[i] = subnet.String()
-	}
-
-	return subnetCIDRs, nil
 }
 
 // bootstrap applications for aws eks dataplanes
