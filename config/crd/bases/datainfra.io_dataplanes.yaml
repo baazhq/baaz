@@ -149,12 +149,18 @@ spec:
                       clusterId:
                         type: string
                     type: object
+                  securityGroupIds:
+                    items:
+                      type: string
+                    type: array
+                  subnetIds:
+                    items:
+                      type: string
+                    type: array
                   type:
                     type: string
                   vpc:
                     type: string
-                required:
-                - vpc
                 type: object
               conditions:
                 items:

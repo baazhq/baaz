@@ -22,8 +22,10 @@ type EksConfig struct {
 }
 
 type AwsCloudInfraConfigStatus struct {
-	Vpc       string    `json:"vpc"`
-	EksStatus EksStatus `json:"eksStatus,omitempty"`
+	Vpc              string    `json:"vpc,omitempty"`
+	SubnetIds        []string  `json:"subnetIds,omitempty"`
+	SecurityGroupIds []string  `json:"securityGroupIds,omitempty"`
+	EksStatus        EksStatus `json:"eksStatus,omitempty"`
 }
 
 type EksStatus struct {
