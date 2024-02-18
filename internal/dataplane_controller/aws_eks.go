@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
@@ -51,14 +52,13 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 	if err := awsEnv.reconcileAwsEks(); err != nil {
 		return err
 	}
+
+	// bootstrap dataplane with apps
+	if err := awsEnv.reconcileAwsApplications(); err != nil {
+		return err
+	}
+
 	return nil
-
-	// // bootstrap dataplane with apps
-	// if err := awsEnv.reconcileAwsApplications(); err != nil {
-	// 	return err
-	// }
-
-	// return nil
 }
 
 type awsEnv struct {
@@ -215,7 +215,10 @@ func (ae *awsEnv) reconcileNetwork() error {
 		return nil
 	}
 
-	vpcCidr := "10.1.0.0/16"
+	// Generate a random number between 0 and 253
+	cidrRandom := rand.Intn(254)
+
+	vpcCidr := fmt.Sprintf("10.%d.0.0/16", cidrRandom)
 	vpcId := ae.dp.Status.CloudInfraStatus.Vpc
 
 	if vpcId == "" {
@@ -237,7 +240,12 @@ func (ae *awsEnv) reconcileNetwork() error {
 		vpcId = *vpc.Vpc.VpcId
 	}
 
-	subnetsCidr := []string{"10.1.16.0/20", "10.1.32.0/20", "10.1.0.0/20", "10.1.80.0/20"}
+	subnetsCidr := []string{
+		fmt.Sprintf("10.%d.16.0/20", cidrRandom),
+		fmt.Sprintf("10.%d.32.0/20", cidrRandom),
+		fmt.Sprintf("10.%d.0.0/20", cidrRandom),
+		fmt.Sprintf("10.%d.80.0/20", cidrRandom),
+	}
 
 	for i := range subnetsCidr {
 		if len(ae.dp.Status.CloudInfraStatus.SubnetIds) >= 4 {
@@ -272,40 +280,53 @@ func (ae *awsEnv) reconcileNetwork() error {
 		ae.dp = newObj.(*v1.DataPlanes)
 	}
 
-	if len(ae.dp.Status.CloudInfraStatus.SecurityGroupIds) >= 1 {
+	if len(ae.dp.Status.CloudInfraStatus.SecurityGroupIds) == 0 {
+		sgName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
+
+		sgDescription := fmt.Sprintf("sg for %s", ae.dp.Name)
+		sgInput := &awsec2.CreateSecurityGroupInput{
+			Description: &sgDescription,
+			GroupName:   &sgName,
+			VpcId:       &vpcId,
+		}
+
+		sg, err := ae.eksIC.CreateSG(context.TODO(), sgInput)
+		if err != nil {
+			return err
+		}
+
+		newObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			if in.Status.CloudInfraStatus.SecurityGroupIds == nil {
+				in.Status.CloudInfraStatus.SecurityGroupIds = make([]string, 0)
+			}
+			in.Status.CloudInfraStatus.SecurityGroupIds = append(in.Status.CloudInfraStatus.SecurityGroupIds, *sg.GroupId)
+
+			return in
+		})
+		if err != nil {
+			return err
+		}
+
+		ae.dp = newObj.(*v1.DataPlanes)
+	}
+
+	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" {
 		return nil
 	}
 
-	sgName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
-
-	sgDescription := fmt.Sprintf("sg for %s", ae.dp.Name)
-	sgInput := &awsec2.CreateSecurityGroupInput{
-		Description: &sgDescription,
-		GroupName:   &sgName,
-		VpcId:       &vpcId,
-	}
-
-	sg, err := ae.eksIC.CreateSG(context.TODO(), sgInput)
+	nat, err := ae.eksIC.CreateNAT(context.TODO(), ae.dp)
 	if err != nil {
 		return err
 	}
 
-	newObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+	_, _, err = utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
 		in := obj.(*v1.DataPlanes)
-		if in.Status.CloudInfraStatus.SecurityGroupIds == nil {
-			in.Status.CloudInfraStatus.SecurityGroupIds = make([]string, 0)
-		}
-		in.Status.CloudInfraStatus.SecurityGroupIds = append(in.Status.CloudInfraStatus.SecurityGroupIds, *sg.GroupId)
+		in.Status.CloudInfraStatus.NATGatewayId = *nat.NatGateway.NatGatewayId
 
 		return in
 	})
-	if err != nil {
-		return err
-	}
-
-	ae.dp = newObj.(*v1.DataPlanes)
-
-	return nil
+	return err
 }
 
 // bootstrap applications for aws eks dataplanes
@@ -442,11 +463,16 @@ func (ae *awsEnv) reconcileSystemNodeGroup() error {
 		return errors.New("node role is nil")
 	}
 
+	subnetIds := ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds
+	if ae.dp.Spec.CloudInfra.ProvisionNetwork {
+		subnetIds = ae.dp.Status.CloudInfraStatus.SubnetIds
+	}
+
 	systemNodeGroupInput := &awseks.CreateNodegroupInput{
 		ClusterName:        aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
 		NodeRole:           aws.String(*nodeRole.Role.Arn),
 		NodegroupName:      aws.String(systemNodeGroupName),
-		Subnets:            ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
+		Subnets:            subnetIds,
 		AmiType:            "",
 		CapacityType:       "",
 		ClientRequestToken: nil,

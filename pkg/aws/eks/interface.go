@@ -44,6 +44,8 @@ type Eks interface {
 	CreateVPC(ctx context.Context, params *awsec2.CreateVpcInput) (*awsec2.CreateVpcOutput, error)
 	CreateSubnet(ctx context.Context, params *awsec2.CreateSubnetInput) (*awsec2.CreateSubnetOutput, error)
 	CreateSG(ctx context.Context, params *awsec2.CreateSecurityGroupInput) (*awsec2.CreateSecurityGroupOutput, error)
+	CreateNAT(ctx context.Context, dp *v1.DataPlanes) (*awsec2.CreateNatGatewayOutput, error)
+	CreateElasticIP(ctx context.Context) (*awsec2.AllocateAddressOutput, error)
 }
 
 type eks struct {
