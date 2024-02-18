@@ -149,6 +149,8 @@ spec:
                       clusterId:
                         type: string
                     type: object
+                  internetGatewayId:
+                    type: string
                   natGatewayId:
                     type: string
                   securityGroupIds:

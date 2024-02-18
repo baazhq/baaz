@@ -315,18 +315,42 @@ func (ae *awsEnv) reconcileNetwork() error {
 		return nil
 	}
 
+	ig, err := ae.eksIC.CreateInternetGateway(context.TODO())
+	if err != nil {
+		return err
+	}
+	upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+		in := obj.(*v1.DataPlanes)
+		in.Status.CloudInfraStatus.InternetGatewayId = *ig.InternetGateway.InternetGatewayId
+		return in
+	})
+	if err != nil {
+		return err
+	}
+	ae.dp = upObj.(*v1.DataPlanes)
+
+	_, err = ae.eksIC.AttachInternetGateway(context.TODO(), *ig.InternetGateway.InternetGatewayId, vpcId)
+	if err != nil {
+		return err
+	}
+
 	nat, err := ae.eksIC.CreateNAT(context.TODO(), ae.dp)
 	if err != nil {
 		return err
 	}
 
-	_, _, err = utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+	upObj, _, err = utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
 		in := obj.(*v1.DataPlanes)
 		in.Status.CloudInfraStatus.NATGatewayId = *nat.NatGateway.NatGatewayId
-
 		return in
 	})
-	return err
+	if err != nil {
+		return err
+	}
+
+	ae.dp = upObj.(*v1.DataPlanes)
+
+	return ae.eksIC.AssociateNATWithRT(context.TODO(), ae.dp)
 }
 
 // bootstrap applications for aws eks dataplanes

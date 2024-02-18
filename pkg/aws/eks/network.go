@@ -5,7 +5,9 @@ import (
 	"errors"
 
 	v1 "datainfra.io/baaz/api/v1/types"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 )
 
 func (ec *eks) CreateVPC(ctx context.Context, params *awsec2.CreateVpcInput) (*awsec2.CreateVpcOutput, error) {
@@ -47,6 +49,46 @@ func (ec *eks) CreateNAT(ctx context.Context, dp *v1.DataPlanes) (*awsec2.Create
 	return ec.awsec2Client.CreateNatGateway(ctx, input)
 }
 
+func (ec *eks) CreateInternetGateway(ctx context.Context) (*awsec2.CreateInternetGatewayOutput, error) {
+	return ec.awsec2Client.CreateInternetGateway(ctx, &awsec2.CreateInternetGatewayInput{})
+}
+
+func (ec *eks) AttachInternetGateway(ctx context.Context, igId, vpcId string) (*awsec2.AttachInternetGatewayOutput, error) {
+	return ec.awsec2Client.AttachInternetGateway(ctx, &awsec2.AttachInternetGatewayInput{
+		InternetGatewayId: &igId,
+		VpcId:             &vpcId,
+	})
+}
+
 func (ec *eks) CreateElasticIP(ctx context.Context) (*awsec2.AllocateAddressOutput, error) {
 	return ec.awsec2Client.AllocateAddress(ctx, &awsec2.AllocateAddressInput{})
+}
+
+func (ec *eks) AssociateNATWithRT(ctx context.Context, dp *v1.DataPlanes) error {
+	vpc := dp.Status.CloudInfraStatus.Vpc
+	natId := dp.Status.CloudInfraStatus.NATGatewayId
+
+	routeTables, err := ec.awsec2Client.DescribeRouteTables(ctx, &awsec2.DescribeRouteTablesInput{
+		Filters: []ec2types.Filter{
+			{
+				Name:   aws.String("vpc-id"),
+				Values: []string{vpc},
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, rt := range routeTables.RouteTables {
+		_, err = ec.awsec2Client.CreateRoute(ctx, &awsec2.CreateRouteInput{
+			DestinationCidrBlock: aws.String("0.0.0.0/0"),
+			RouteTableId:         rt.RouteTableId,
+			NatGatewayId:         &natId,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

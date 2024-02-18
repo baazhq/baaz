@@ -22,11 +22,12 @@ type EksConfig struct {
 }
 
 type AwsCloudInfraConfigStatus struct {
-	Vpc              string    `json:"vpc,omitempty"`
-	SubnetIds        []string  `json:"subnetIds,omitempty"`
-	SecurityGroupIds []string  `json:"securityGroupIds,omitempty"`
-	NATGatewayId     string    `json:"natGatewayId,omitempty"`
-	EksStatus        EksStatus `json:"eksStatus,omitempty"`
+	Vpc               string    `json:"vpc,omitempty"`
+	SubnetIds         []string  `json:"subnetIds,omitempty"`
+	SecurityGroupIds  []string  `json:"securityGroupIds,omitempty"`
+	NATGatewayId      string    `json:"natGatewayId,omitempty"`
+	InternetGatewayId string    `json:"internetGatewayId,omitempty"`
+	EksStatus         EksStatus `json:"eksStatus,omitempty"`
 }
 
 type EksStatus struct {
