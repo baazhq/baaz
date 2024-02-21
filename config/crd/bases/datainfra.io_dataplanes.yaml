@@ -169,6 +169,8 @@ spec:
                     type: string
                   vpc:
                     type: string
+                  vpcCidr:
+                    type: string
                 type: object
               conditions:
                 items:
