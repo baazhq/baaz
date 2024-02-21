@@ -231,7 +231,6 @@ func (ae *awsEnv) reconcileNetwork() error {
 		_, _, err = utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.Vpc = *vpc.Vpc.VpcId
-			in.Status.CloudInfraStatus.VpcCidr = vpcCidr
 
 			return in
 		})
@@ -312,7 +311,7 @@ func (ae *awsEnv) reconcileNetwork() error {
 	}
 
 	if !ae.dp.Status.CloudInfraStatus.SGInboundRuleAdded && len(ae.dp.Status.CloudInfraStatus.SecurityGroupIds) > 0 {
-		if _, err := ae.eksIC.AddSGInboundRule(context.TODO(), ae.dp.Status.CloudInfraStatus.SecurityGroupIds[0], ae.dp.Status.CloudInfraStatus.VpcCidr); err != nil {
+		if _, err := ae.eksIC.AddSGInboundRule(context.TODO(), ae.dp.Status.CloudInfraStatus.SecurityGroupIds[0], ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
 			return err
 		}
 

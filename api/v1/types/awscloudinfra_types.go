@@ -23,7 +23,6 @@ type EksConfig struct {
 
 type AwsCloudInfraConfigStatus struct {
 	Vpc                string    `json:"vpc,omitempty"`
-	VpcCidr            string    `json:"vpcCidr,omitempty"`
 	SubnetIds          []string  `json:"subnetIds,omitempty"`
 	SecurityGroupIds   []string  `json:"securityGroupIds,omitempty"`
 	NATGatewayId       string    `json:"natGatewayId,omitempty"`

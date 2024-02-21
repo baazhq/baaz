@@ -93,7 +93,22 @@ func (ec *eks) AssociateNATWithRT(ctx context.Context, dp *v1.DataPlanes) error 
 	return nil
 }
 
-func (ec *eks) AddSGInboundRule(ctx context.Context, sgGroupId, cidr string) (*awsec2.AuthorizeSecurityGroupIngressOutput, error) {
+func (ec *eks) DescribeVpcAttribute(ctx context.Context, vpcId string) (*awsec2.DescribeVpcsOutput, error) {
+	return ec.awsec2Client.DescribeVpcs(ctx, &awsec2.DescribeVpcsInput{
+		VpcIds: []string{vpcId},
+	})
+}
+
+func (ec *eks) AddSGInboundRule(ctx context.Context, sgGroupId, vpcId string) (*awsec2.AuthorizeSecurityGroupIngressOutput, error) {
+	vpcs, err := ec.DescribeVpcAttribute(ctx, vpcId)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(vpcs.Vpcs) != 1 {
+		return nil, errors.New("failed to get vpc details")
+	}
+
 	input := &awsec2.AuthorizeSecurityGroupIngressInput{
 		GroupId: &sgGroupId,
 		IpPermissions: []ec2types.IpPermission{
@@ -101,7 +116,7 @@ func (ec *eks) AddSGInboundRule(ctx context.Context, sgGroupId, cidr string) (*a
 				IpProtocol: aws.String(string(ec2types.TransportProtocolTcp)),
 				IpRanges: []ec2types.IpRange{
 					{
-						CidrIp: &cidr,
+						CidrIp: vpcs.Vpcs[0].CidrBlock,
 					},
 				},
 				FromPort: aws.Int32(0),
