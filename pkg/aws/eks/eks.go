@@ -70,8 +70,10 @@ func (ec *eks) createEks() error {
 	_, err = ec.awsClient.CreateCluster(ec.ctx, &awseks.CreateClusterInput{
 		Name: &ec.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
 		ResourcesVpcConfig: &types.VpcConfigRequest{
-			SubnetIds:        subnetIds,
-			SecurityGroupIds: sgIds,
+			EndpointPrivateAccess: aws.Bool(true),
+			EndpointPublicAccess:  aws.Bool(true),
+			SubnetIds:             subnetIds,
+			SecurityGroupIds:      sgIds,
 		},
 		RoleArn: roleName.Role.Arn,
 		Version: aws.String(ec.dp.Spec.CloudInfra.Eks.Version),

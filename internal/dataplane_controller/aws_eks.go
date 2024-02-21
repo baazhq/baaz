@@ -311,46 +311,61 @@ func (ae *awsEnv) reconcileNetwork() error {
 		ae.dp = newObj.(*v1.DataPlanes)
 	}
 
-	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" {
-		return nil
+	if ae.dp.Status.CloudInfraStatus.InternetGatewayId == "" {
+		ig, err := ae.eksIC.CreateInternetGateway(context.TODO())
+		if err != nil {
+			return err
+		}
+		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.InternetGatewayId = *ig.InternetGateway.InternetGatewayId
+			return in
+		})
+		if err != nil {
+			return err
+		}
+		ae.dp = upObj.(*v1.DataPlanes)
+
+		_, err = ae.eksIC.AttachInternetGateway(context.TODO(), *ig.InternetGateway.InternetGatewayId, vpcId)
+		if err != nil {
+			return err
+		}
 	}
 
-	ig, err := ae.eksIC.CreateInternetGateway(context.TODO())
-	if err != nil {
-		return err
-	}
-	upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
-		in := obj.(*v1.DataPlanes)
-		in.Status.CloudInfraStatus.InternetGatewayId = *ig.InternetGateway.InternetGatewayId
-		return in
-	})
-	if err != nil {
-		return err
-	}
-	ae.dp = upObj.(*v1.DataPlanes)
+	if ae.dp.Status.CloudInfraStatus.NATGatewayId == "" {
+		nat, err := ae.eksIC.CreateNAT(context.TODO(), ae.dp)
+		if err != nil {
+			return err
+		}
 
-	_, err = ae.eksIC.AttachInternetGateway(context.TODO(), *ig.InternetGateway.InternetGatewayId, vpcId)
-	if err != nil {
-		return err
-	}
+		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.NATGatewayId = *nat.NatGateway.NatGatewayId
+			return in
+		})
+		if err != nil {
+			return err
+		}
 
-	nat, err := ae.eksIC.CreateNAT(context.TODO(), ae.dp)
-	if err != nil {
-		return err
+		ae.dp = upObj.(*v1.DataPlanes)
 	}
 
-	upObj, _, err = utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
-		in := obj.(*v1.DataPlanes)
-		in.Status.CloudInfraStatus.NATGatewayId = *nat.NatGateway.NatGatewayId
-		return in
-	})
-	if err != nil {
-		return err
+	if !ae.dp.Status.CloudInfraStatus.NATAttachedWithRT {
+		if err := ae.eksIC.AssociateNATWithRT(context.TODO(), ae.dp); err != nil {
+			upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
+				in.Status.CloudInfraStatus.NATAttachedWithRT = true
+				return in
+			})
+			if err != nil {
+				return err
+			}
+
+			ae.dp = upObj.(*v1.DataPlanes)
+		}
 	}
 
-	ae.dp = upObj.(*v1.DataPlanes)
-
-	return ae.eksIC.AssociateNATWithRT(context.TODO(), ae.dp)
+	return nil
 }
 
 // bootstrap applications for aws eks dataplanes
