@@ -49,6 +49,7 @@ type Eks interface {
 	AssociateNATWithRT(ctx context.Context, dp *v1.DataPlanes) error
 	CreateInternetGateway(ctx context.Context) (*awsec2.CreateInternetGatewayOutput, error)
 	AttachInternetGateway(ctx context.Context, igId, vpcId string) (*awsec2.AttachInternetGatewayOutput, error)
+	AddSGInboundRule(ctx context.Context, sgGroupId, cidr string) (*awsec2.AuthorizeSecurityGroupIngressOutput, error)
 }
 
 type eks struct {

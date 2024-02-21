@@ -159,6 +159,8 @@ spec:
                     items:
                       type: string
                     type: array
+                  sgInboundRuleAdded:
+                    type: boolean
                   subnetIds:
                     items:
                       type: string
