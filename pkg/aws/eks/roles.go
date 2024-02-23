@@ -10,7 +10,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
-	"k8s.io/klog/v2"
 )
 
 var clusterRolePolicyArns = []string{
@@ -122,11 +121,8 @@ func (ec *eks) CreateClusterIamRole() (*awsiam.GetRoleOutput, error) {
 			AssumeRolePolicyDocument: aws.String(strings.TrimSpace(assumeClusterRolePolicy)),
 		})
 		if cerr != nil {
-			klog.Error(cerr.Error())
 			return nil, cerr
 		}
-
-		klog.Info("=========== okay created role ================")
 
 		for _, clusterRolePolicyArn := range clusterRolePolicyArns {
 			_, cerr := ec.awsIamClient.AttachRolePolicy(ec.ctx, &awsiam.AttachRolePolicyInput{

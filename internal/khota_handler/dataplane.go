@@ -171,9 +171,6 @@ func AddRemoveDataPlane(w http.ResponseWriter, req *http.Request) {
 
 func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 
-	fmt.Println("========================================")
-	fmt.Println("Received request")
-
 	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
 		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
@@ -197,9 +194,6 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		res.LogResponse()
 		return
 	}
-
-	fmt.Println("============== dataplane network provisioning ============")
-	fmt.Println(dp.ProvisionNetwork)
 
 	dpName := makeDataPlaneName(dp.CloudType, dp.CustomerName, dp.CloudRegion)
 	dpNamespace := getNamespace(dp.CustomerName)
@@ -240,8 +234,6 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		ApplicationConfig: appConfig,
 	}
 
-	fmt.Println(dataplane.ProvisionNetwork)
-
 	kc, dc := getKubeClientset()
 
 	dpSecret := getAwsEksSecret(dpName, dataplane)
@@ -268,9 +260,9 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 				return err
 			}
 
-			// if customer.GetLabels()["dataplane"] != "unavailable" {
-			// 	return fmt.Errorf("dataplane exists for customer")
-			// }
+			if customer.GetLabels()["dataplane"] != "unavailable" {
+				return fmt.Errorf("dataplane exists for customer")
+			}
 
 			customer.ObjectMeta.Labels = mergeMaps(customer.Labels, map[string]string{
 				"dataplane": dpName,

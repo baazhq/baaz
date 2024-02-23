@@ -45,10 +45,6 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 		return err
 	}
 
-	fmt.Println("================= Network Details =================")
-	fmt.Println(awsEnv.dp.Status.CloudInfraStatus.SubnetIds)
-	fmt.Println(awsEnv.dp.Status.CloudInfraStatus.SecurityGroupIds)
-
 	if err := awsEnv.reconcileAwsEks(); err != nil {
 		return err
 	}
