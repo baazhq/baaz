@@ -3,11 +3,12 @@ package eks
 import (
 	"context"
 	"errors"
+	"fmt"
 
-	v1 "datainfra.io/baaz/api/v1/types"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 func (ec *eks) CreateVPC(ctx context.Context, params *awsec2.CreateVpcInput) (*awsec2.CreateVpcOutput, error) {
@@ -81,13 +82,17 @@ func (ec *eks) AssociateNATWithRT(ctx context.Context, dp *v1.DataPlanes) error 
 	}
 
 	for _, rt := range routeTables.RouteTables {
+		if *rt.RouteTableId == dp.Status.CloudInfraStatus.PublicRTId {
+			continue
+		}
+
 		_, err = ec.awsec2Client.CreateRoute(ctx, &awsec2.CreateRouteInput{
 			DestinationCidrBlock: aws.String("0.0.0.0/0"),
 			RouteTableId:         rt.RouteTableId,
 			NatGatewayId:         &natId,
 		})
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to attach NAT with RT %s: %s", *rt.RouteTableId, err.Error())
 		}
 	}
 	return nil
