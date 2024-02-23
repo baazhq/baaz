@@ -127,3 +127,36 @@ func (ec *eks) AddSGInboundRule(ctx context.Context, sgGroupId, vpcId string) (*
 
 	return ec.awsec2Client.AuthorizeSecurityGroupIngress(ctx, input)
 }
+
+func (ec *eks) SubnetAutoAssignPublicIP(ctx context.Context, subnetId string) (*awsec2.ModifySubnetAttributeOutput, error) {
+	input := &awsec2.ModifySubnetAttributeInput{
+		SubnetId: &subnetId,
+		MapPublicIpOnLaunch: &ec2types.AttributeBooleanValue{
+			Value: aws.Bool(true),
+		},
+	}
+
+	return ec.awsec2Client.ModifySubnetAttribute(ctx, input)
+}
+
+func (ec *eks) CreateRouteTable(ctx context.Context, vpcId string) (*awsec2.CreateRouteTableOutput, error) {
+	input := &awsec2.CreateRouteTableInput{
+		VpcId: &vpcId,
+	}
+
+	return ec.awsec2Client.CreateRouteTable(ctx, input)
+}
+
+func (ec *eks) CreateRoute(ctx context.Context, input *awsec2.CreateRouteInput) (*awsec2.CreateRouteOutput, error) {
+	return ec.awsec2Client.CreateRoute(ctx, input)
+}
+
+func (ec *eks) AssociateRTWithSubnet(ctx context.Context, rtId, subnetId string) error {
+	input := &awsec2.AssociateRouteTableInput{
+		RouteTableId: &rtId,
+		SubnetId:     &subnetId,
+	}
+
+	_, err := ec.awsec2Client.AssociateRouteTable(ctx, input)
+	return err
+}

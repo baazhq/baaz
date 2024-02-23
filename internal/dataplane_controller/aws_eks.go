@@ -228,7 +228,7 @@ func (ae *awsEnv) reconcileNetwork() error {
 		if err != nil {
 			return err
 		}
-		_, _, err = utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.Vpc = *vpc.Vpc.VpcId
 
@@ -238,6 +238,53 @@ func (ae *awsEnv) reconcileNetwork() error {
 			return err
 		}
 		vpcId = *vpc.Vpc.VpcId
+		ae.dp = upObj.(*v1.DataPlanes)
+	}
+
+	if ae.dp.Status.CloudInfraStatus.InternetGatewayId == "" {
+		ig, err := ae.eksIC.CreateInternetGateway(context.TODO())
+		if err != nil {
+			return err
+		}
+		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.InternetGatewayId = *ig.InternetGateway.InternetGatewayId
+			return in
+		})
+		if err != nil {
+			return err
+		}
+		ae.dp = upObj.(*v1.DataPlanes)
+
+		_, err = ae.eksIC.AttachInternetGateway(context.TODO(), *ig.InternetGateway.InternetGatewayId, vpcId)
+		if err != nil {
+			return err
+		}
+	}
+
+	if ae.dp.Status.CloudInfraStatus.PublicRTId == "" {
+		rt, err := ae.eksIC.CreateRouteTable(context.TODO(), ae.dp.Status.CloudInfraStatus.Vpc)
+		if err != nil {
+			return err
+		}
+
+		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.PublicRTId = *rt.RouteTable.RouteTableId
+			return in
+		})
+		if err != nil {
+			return err
+		}
+		ae.dp = upObj.(*v1.DataPlanes)
+
+		if _, err := ae.eksIC.CreateRoute(context.TODO(), &awsec2.CreateRouteInput{
+			RouteTableId:         rt.RouteTable.RouteTableId,
+			GatewayId:            &ae.dp.Status.CloudInfraStatus.InternetGatewayId,
+			DestinationCidrBlock: aws.String("0.0.0.0/0"),
+		}); err != nil {
+			return err
+		}
 	}
 
 	subnetsCidr := []string{
@@ -264,6 +311,17 @@ func (ae *awsEnv) reconcileNetwork() error {
 			fmt.Println(err.Error())
 			continue
 		}
+
+		// AutoAssignPublicIP for public subnets only
+		if i%2 == 0 {
+			if _, err := ae.eksIC.SubnetAutoAssignPublicIP(context.TODO(), *subnet.Subnet.SubnetId); err != nil {
+				return err
+			}
+			if err := ae.eksIC.AssociateRTWithSubnet(context.TODO(), ae.dp.Status.CloudInfraStatus.PublicRTId, *subnet.Subnet.SubnetId); err != nil {
+				return err
+			}
+		}
+
 		newObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			if in.Status.CloudInfraStatus.SubnetIds == nil {
@@ -326,27 +384,6 @@ func (ae *awsEnv) reconcileNetwork() error {
 		}
 
 		ae.dp = newObj.(*v1.DataPlanes)
-	}
-
-	if ae.dp.Status.CloudInfraStatus.InternetGatewayId == "" {
-		ig, err := ae.eksIC.CreateInternetGateway(context.TODO())
-		if err != nil {
-			return err
-		}
-		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
-			in := obj.(*v1.DataPlanes)
-			in.Status.CloudInfraStatus.InternetGatewayId = *ig.InternetGateway.InternetGatewayId
-			return in
-		})
-		if err != nil {
-			return err
-		}
-		ae.dp = upObj.(*v1.DataPlanes)
-
-		_, err = ae.eksIC.AttachInternetGateway(context.TODO(), *ig.InternetGateway.InternetGatewayId, vpcId)
-		if err != nil {
-			return err
-		}
 	}
 
 	if ae.dp.Status.CloudInfraStatus.NATGatewayId == "" {

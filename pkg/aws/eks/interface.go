@@ -50,6 +50,10 @@ type Eks interface {
 	CreateInternetGateway(ctx context.Context) (*awsec2.CreateInternetGatewayOutput, error)
 	AttachInternetGateway(ctx context.Context, igId, vpcId string) (*awsec2.AttachInternetGatewayOutput, error)
 	AddSGInboundRule(ctx context.Context, sgGroupId, vpcId string) (*awsec2.AuthorizeSecurityGroupIngressOutput, error)
+	SubnetAutoAssignPublicIP(ctx context.Context, subnetId string) (*awsec2.ModifySubnetAttributeOutput, error)
+	CreateRouteTable(ctx context.Context, vpcId string) (*awsec2.CreateRouteTableOutput, error)
+	CreateRoute(ctx context.Context, input *awsec2.CreateRouteInput) (*awsec2.CreateRouteOutput, error)
+	AssociateRTWithSubnet(ctx context.Context, rtId, subnetId string) error
 }
 
 type eks struct {

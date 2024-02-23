@@ -29,6 +29,7 @@ type AwsCloudInfraConfigStatus struct {
 	NATAttachedWithRT  bool      `json:"natAttchedWithRT,omitempty"`
 	SGInboundRuleAdded bool      `json:"sgInboundRuleAdded,omitempty"`
 	InternetGatewayId  string    `json:"internetGatewayId,omitempty"`
+	PublicRTId         string    `json:"publicRTId,omitempty"`
 	EksStatus          EksStatus `json:"eksStatus,omitempty"`
 }
 

@@ -155,6 +155,8 @@ spec:
                     type: boolean
                   natGatewayId:
                     type: string
+                  publicRTId:
+                    type: string
                   securityGroupIds:
                     items:
                       type: string

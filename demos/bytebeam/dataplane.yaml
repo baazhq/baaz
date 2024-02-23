@@ -6,7 +6,7 @@ dataplane:
     awsAuth:
       awsAccessKey: AKIAWLZK4B6AOP67T7OA
       awsSecretKey: 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
-  provisionNetwork: true
+  # provisionNetwork: true
   kubernetesConfig:
     eks:
       subnetIds:
