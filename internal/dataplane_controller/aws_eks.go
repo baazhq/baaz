@@ -404,19 +404,21 @@ func (ae *awsEnv) reconcileNetwork() error {
 		ae.dp = upObj.(*v1.DataPlanes)
 	}
 
-	if !ae.dp.Status.CloudInfraStatus.NATAttachedWithRT {
+	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" && !ae.dp.Status.CloudInfraStatus.NATAttachedWithRT {
 		if err := ae.eksIC.AssociateNATWithRT(context.TODO(), ae.dp); err != nil {
-			upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
-				in := obj.(*v1.DataPlanes)
-				in.Status.CloudInfraStatus.NATAttachedWithRT = true
-				return in
-			})
-			if err != nil {
-				return err
-			}
-
-			ae.dp = upObj.(*v1.DataPlanes)
+			return err
 		}
+
+		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.NATAttachedWithRT = true
+			return in
+		})
+		if err != nil {
+			return err
+		}
+
+		ae.dp = upObj.(*v1.DataPlanes)
 	}
 
 	return nil
