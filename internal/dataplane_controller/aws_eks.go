@@ -15,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/baazhq/baaz/pkg/aws/eks"
+	"github.com/baazhq/baaz/pkg/aws/network"
 	"github.com/baazhq/baaz/pkg/helm"
 	"github.com/baazhq/baaz/pkg/store"
 	"github.com/baazhq/baaz/pkg/utils"
@@ -32,16 +33,21 @@ const (
 func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v1.DataPlanes) error {
 
 	eksClient := eks.NewEks(ctx, dp)
-
-	awsEnv := &awsEnv{
-		ctx:    ctx,
-		dp:     dp,
-		eksIC:  eksClient,
-		client: r.Client,
-		store:  r.NgStore,
+	network, err := network.NewProvisioner(ctx, dp.Spec.CloudInfra.Region)
+	if err != nil {
+		return err
 	}
 
-	if err := awsEnv.reconcileNetwork(); err != nil {
+	awsEnv := &awsEnv{
+		ctx:     ctx,
+		dp:      dp,
+		eksIC:   eksClient,
+		client:  r.Client,
+		store:   r.NgStore,
+		network: network,
+	}
+
+	if err := awsEnv.reconcileNetwork(ctx); err != nil {
 		return err
 	}
 
@@ -58,11 +64,12 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 }
 
 type awsEnv struct {
-	ctx    context.Context
-	dp     *v1.DataPlanes
-	eksIC  eks.Eks
-	client client.Client
-	store  store.Store
+	ctx     context.Context
+	dp      *v1.DataPlanes
+	eksIC   eks.Eks
+	client  client.Client
+	store   store.Store
+	network network.Network
 }
 
 func (ae *awsEnv) reconcileAwsEks() error {
@@ -206,7 +213,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 }
 
-func (ae *awsEnv) reconcileNetwork() error {
+func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 	if !ae.dp.Spec.CloudInfra.ProvisionNetwork {
 		return nil
 	}
@@ -218,13 +225,13 @@ func (ae *awsEnv) reconcileNetwork() error {
 
 	if vpcId == "" {
 		vpcCidr := fmt.Sprintf("10.%d.0.0/16", cidrRandom)
-		vpc, err := ae.eksIC.CreateVPC(context.TODO(), &awsec2.CreateVpcInput{
+		vpc, err := ae.network.CreateVPC(ctx, &awsec2.CreateVpcInput{
 			CidrBlock: &vpcCidr,
 		})
 		if err != nil {
 			return err
 		}
-		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.Vpc = *vpc.Vpc.VpcId
 
@@ -238,11 +245,11 @@ func (ae *awsEnv) reconcileNetwork() error {
 	}
 
 	if ae.dp.Status.CloudInfraStatus.InternetGatewayId == "" {
-		ig, err := ae.eksIC.CreateInternetGateway(context.TODO())
+		ig, err := ae.network.CreateInternetGateway(ctx)
 		if err != nil {
 			return err
 		}
-		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.InternetGatewayId = *ig.InternetGateway.InternetGatewayId
 			return in
@@ -252,19 +259,19 @@ func (ae *awsEnv) reconcileNetwork() error {
 		}
 		ae.dp = upObj.(*v1.DataPlanes)
 
-		_, err = ae.eksIC.AttachInternetGateway(context.TODO(), *ig.InternetGateway.InternetGatewayId, vpcId)
+		_, err = ae.network.AttachInternetGateway(ctx, *ig.InternetGateway.InternetGatewayId, vpcId)
 		if err != nil {
 			return err
 		}
 	}
 
 	if ae.dp.Status.CloudInfraStatus.PublicRTId == "" {
-		rt, err := ae.eksIC.CreateRouteTable(context.TODO(), ae.dp.Status.CloudInfraStatus.Vpc)
+		rt, err := ae.network.CreateRouteTable(ctx, ae.dp.Status.CloudInfraStatus.Vpc)
 		if err != nil {
 			return err
 		}
 
-		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.PublicRTId = *rt.RouteTable.RouteTableId
 			return in
@@ -274,7 +281,7 @@ func (ae *awsEnv) reconcileNetwork() error {
 		}
 		ae.dp = upObj.(*v1.DataPlanes)
 
-		if _, err := ae.eksIC.CreateRoute(context.TODO(), &awsec2.CreateRouteInput{
+		if _, err := ae.network.CreateRoute(ctx, &awsec2.CreateRouteInput{
 			RouteTableId:         rt.RouteTable.RouteTableId,
 			GatewayId:            &ae.dp.Status.CloudInfraStatus.InternetGatewayId,
 			DestinationCidrBlock: aws.String("0.0.0.0/0"),
@@ -302,7 +309,7 @@ func (ae *awsEnv) reconcileNetwork() error {
 			AvailabilityZone: &az,
 		}
 
-		subnet, err := ae.eksIC.CreateSubnet(context.TODO(), subnetInput)
+		subnet, err := ae.network.CreateSubnet(ctx, subnetInput)
 		if err != nil {
 			fmt.Println(err.Error())
 			continue
@@ -310,15 +317,15 @@ func (ae *awsEnv) reconcileNetwork() error {
 
 		// AutoAssignPublicIP for public subnets only
 		if i%2 == 0 {
-			if _, err := ae.eksIC.SubnetAutoAssignPublicIP(context.TODO(), *subnet.Subnet.SubnetId); err != nil {
+			if _, err := ae.network.SubnetAutoAssignPublicIP(ctx, *subnet.Subnet.SubnetId); err != nil {
 				return err
 			}
-			if err := ae.eksIC.AssociateRTWithSubnet(context.TODO(), ae.dp.Status.CloudInfraStatus.PublicRTId, *subnet.Subnet.SubnetId); err != nil {
+			if err := ae.network.AssociateRTWithSubnet(ctx, ae.dp.Status.CloudInfraStatus.PublicRTId, *subnet.Subnet.SubnetId); err != nil {
 				return err
 			}
 		}
 
-		newObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+		newObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			if in.Status.CloudInfraStatus.SubnetIds == nil {
 				in.Status.CloudInfraStatus.SubnetIds = make([]string, 0)
@@ -344,12 +351,12 @@ func (ae *awsEnv) reconcileNetwork() error {
 			VpcId:       &vpcId,
 		}
 
-		sg, err := ae.eksIC.CreateSG(context.TODO(), sgInput)
+		sg, err := ae.network.CreateSG(ctx, sgInput)
 		if err != nil {
 			return err
 		}
 
-		newObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+		newObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			if in.Status.CloudInfraStatus.SecurityGroupIds == nil {
 				in.Status.CloudInfraStatus.SecurityGroupIds = make([]string, 0)
@@ -365,11 +372,11 @@ func (ae *awsEnv) reconcileNetwork() error {
 	}
 
 	if !ae.dp.Status.CloudInfraStatus.SGInboundRuleAdded && len(ae.dp.Status.CloudInfraStatus.SecurityGroupIds) > 0 {
-		if _, err := ae.eksIC.AddSGInboundRule(context.TODO(), ae.dp.Status.CloudInfraStatus.SecurityGroupIds[0], ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
+		if _, err := ae.network.AddSGInboundRule(ctx, ae.dp.Status.CloudInfraStatus.SecurityGroupIds[0], ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
 			return err
 		}
 
-		newObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+		newObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.SGInboundRuleAdded = true
 
@@ -383,12 +390,12 @@ func (ae *awsEnv) reconcileNetwork() error {
 	}
 
 	if ae.dp.Status.CloudInfraStatus.NATGatewayId == "" {
-		nat, err := ae.eksIC.CreateNAT(context.TODO(), ae.dp)
+		nat, err := ae.network.CreateNAT(ctx, ae.dp)
 		if err != nil {
 			return err
 		}
 
-		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.NATGatewayId = *nat.NatGateway.NatGatewayId
 			return in
@@ -401,11 +408,11 @@ func (ae *awsEnv) reconcileNetwork() error {
 	}
 
 	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" && !ae.dp.Status.CloudInfraStatus.NATAttachedWithRT {
-		if err := ae.eksIC.AssociateNATWithRT(context.TODO(), ae.dp); err != nil {
+		if err := ae.network.AssociateNATWithRT(ctx, ae.dp); err != nil {
 			return err
 		}
 
-		upObj, _, err := utils.PatchStatus(context.TODO(), ae.client, ae.dp, func(obj client.Object) client.Object {
+		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.NATAttachedWithRT = true
 			return in
