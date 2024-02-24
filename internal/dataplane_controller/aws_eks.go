@@ -48,16 +48,16 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 	}
 
 	if err := awsEnv.reconcileNetwork(ctx); err != nil {
-		return err
+		return fmt.Errorf("error in reconciling network: %s", err.Error())
 	}
 
 	if err := awsEnv.reconcileAwsEks(); err != nil {
-		return err
+		return fmt.Errorf("error in reconciling aws eks cluster: %s", err.Error())
 	}
 
 	// bootstrap dataplane with apps
 	if err := awsEnv.reconcileAwsApplications(); err != nil {
-		return err
+		return fmt.Errorf("error in reconciling applications: %s", err.Error())
 	}
 
 	return nil
