@@ -134,7 +134,7 @@ func (ec *eks) CreateClusterIamRole() (*awsiam.GetRoleOutput, error) {
 			}
 		}
 
-		return nil, err
+		return ec.CreateClusterIamRole()
 	}
 
 	return awsIamGetRoleOutput, nil

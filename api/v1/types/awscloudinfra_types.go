@@ -3,8 +3,9 @@ package v1
 type AwsCloudInfraConfig struct {
 	// AuthSecretRef holds the secret info which contains aws secret key & access key info
 	// Secret must be in the same namespace as dataplane
-	AuthSecretRef AWSAuthSecretRef `json:"authSecretRef"`
-	Eks           EksConfig        `json:"eks"`
+	AuthSecretRef    AWSAuthSecretRef `json:"authSecretRef"`
+	ProvisionNetwork bool             `json:"provisionNetwork"`
+	Eks              EksConfig        `json:"eks"`
 }
 
 type AWSAuthSecretRef struct {
@@ -21,7 +22,15 @@ type EksConfig struct {
 }
 
 type AwsCloudInfraConfigStatus struct {
-	EksStatus EksStatus `json:"eksStatus,omitempty"`
+	Vpc                string    `json:"vpc,omitempty"`
+	SubnetIds          []string  `json:"subnetIds,omitempty"`
+	SecurityGroupIds   []string  `json:"securityGroupIds,omitempty"`
+	NATGatewayId       string    `json:"natGatewayId,omitempty"`
+	NATAttachedWithRT  bool      `json:"natAttchedWithRT,omitempty"`
+	SGInboundRuleAdded bool      `json:"sgInboundRuleAdded,omitempty"`
+	InternetGatewayId  string    `json:"internetGatewayId,omitempty"`
+	PublicRTId         string    `json:"publicRTId,omitempty"`
+	EksStatus          EksStatus `json:"eksStatus,omitempty"`
 }
 
 type EksStatus struct {

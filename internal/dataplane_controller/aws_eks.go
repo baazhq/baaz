@@ -4,15 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"time"
 
+	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go/aws"
 	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/baazhq/baaz/pkg/aws/eks"
+	"github.com/baazhq/baaz/pkg/aws/network"
 	"github.com/baazhq/baaz/pkg/helm"
 	"github.com/baazhq/baaz/pkg/store"
 	"github.com/baazhq/baaz/pkg/utils"
@@ -30,33 +33,43 @@ const (
 func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v1.DataPlanes) error {
 
 	eksClient := eks.NewEks(ctx, dp)
+	network, err := network.NewProvisioner(ctx, dp.Spec.CloudInfra.Region)
+	if err != nil {
+		return err
+	}
 
-	awsEnv := awsEnv{
-		ctx:    ctx,
-		dp:     dp,
-		eksIC:  eksClient,
-		client: r.Client,
-		store:  r.NgStore,
+	awsEnv := &awsEnv{
+		ctx:     ctx,
+		dp:      dp,
+		eksIC:   eksClient,
+		client:  r.Client,
+		store:   r.NgStore,
+		network: network,
+	}
+
+	if err := awsEnv.reconcileNetwork(ctx); err != nil {
+		return fmt.Errorf("error in reconciling network: %s", err.Error())
 	}
 
 	if err := awsEnv.reconcileAwsEks(); err != nil {
-		return err
+		return fmt.Errorf("error in reconciling aws eks cluster: %s", err.Error())
 	}
 
 	// bootstrap dataplane with apps
 	if err := awsEnv.reconcileAwsApplications(); err != nil {
-		return err
+		return fmt.Errorf("error in reconciling applications: %s", err.Error())
 	}
 
 	return nil
 }
 
 type awsEnv struct {
-	ctx    context.Context
-	dp     *v1.DataPlanes
-	eksIC  eks.Eks
-	client client.Client
-	store  store.Store
+	ctx     context.Context
+	dp      *v1.DataPlanes
+	eksIC   eks.Eks
+	client  client.Client
+	store   store.Store
+	network network.Network
 }
 
 func (ae *awsEnv) reconcileAwsEks() error {
@@ -70,7 +83,7 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 			clusterRoleOutput, err := ae.eksIC.CreateClusterIamRole()
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create cluster iam role: %s", err.Error())
 			}
 
 			klog.Infof("Cluster Role [%s] Created", *clusterRoleOutput.Role.RoleName)
@@ -178,6 +191,9 @@ func (ae *awsEnv) reconcileAwsEks() error {
 				in.Status.CloudInfraStatus.EksStatus.OIDCProviderArn = *oidcOutput.OpenIDConnectProviderArn
 				return in
 			})
+			if err != nil {
+				return err
+			}
 		}
 
 		if err := ae.reconcileSystemNodeGroup(); err != nil {
@@ -195,6 +211,220 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 	return nil
 
+}
+
+func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
+	if !ae.dp.Spec.CloudInfra.ProvisionNetwork {
+		return nil
+	}
+
+	// Generate a random number between 0 and 253
+	cidrRandom := rand.Intn(254)
+
+	vpcId := ae.dp.Status.CloudInfraStatus.Vpc
+
+	if vpcId == "" {
+		vpcCidr := fmt.Sprintf("10.%d.0.0/16", cidrRandom)
+		vpc, err := ae.network.CreateVPC(ctx, &awsec2.CreateVpcInput{
+			CidrBlock: &vpcCidr,
+		})
+		if err != nil {
+			return err
+		}
+		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.Vpc = *vpc.Vpc.VpcId
+
+			return in
+		})
+		if err != nil {
+			return err
+		}
+		vpcId = *vpc.Vpc.VpcId
+		ae.dp = upObj.(*v1.DataPlanes)
+	}
+
+	if ae.dp.Status.CloudInfraStatus.InternetGatewayId == "" {
+		ig, err := ae.network.CreateInternetGateway(ctx)
+		if err != nil {
+			return err
+		}
+		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.InternetGatewayId = *ig.InternetGateway.InternetGatewayId
+			return in
+		})
+		if err != nil {
+			return err
+		}
+		ae.dp = upObj.(*v1.DataPlanes)
+
+		_, err = ae.network.AttachInternetGateway(ctx, *ig.InternetGateway.InternetGatewayId, vpcId)
+		if err != nil {
+			return err
+		}
+	}
+
+	if ae.dp.Status.CloudInfraStatus.PublicRTId == "" {
+		rt, err := ae.network.CreateRouteTable(ctx, ae.dp.Status.CloudInfraStatus.Vpc)
+		if err != nil {
+			return err
+		}
+
+		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.PublicRTId = *rt.RouteTable.RouteTableId
+			return in
+		})
+		if err != nil {
+			return err
+		}
+		ae.dp = upObj.(*v1.DataPlanes)
+
+		if _, err := ae.network.CreateRoute(ctx, &awsec2.CreateRouteInput{
+			RouteTableId:         rt.RouteTable.RouteTableId,
+			GatewayId:            &ae.dp.Status.CloudInfraStatus.InternetGatewayId,
+			DestinationCidrBlock: aws.String("0.0.0.0/0"),
+		}); err != nil {
+			return err
+		}
+	}
+
+	subnetsCidr := []string{
+		fmt.Sprintf("10.%d.16.0/20", cidrRandom),
+		fmt.Sprintf("10.%d.32.0/20", cidrRandom),
+		fmt.Sprintf("10.%d.0.0/20", cidrRandom),
+		fmt.Sprintf("10.%d.80.0/20", cidrRandom),
+	}
+
+	for i := range subnetsCidr {
+		if len(ae.dp.Status.CloudInfraStatus.SubnetIds) >= 4 {
+			break
+		}
+
+		az := fmt.Sprintf("%s%c", ae.dp.Spec.CloudInfra.Region, 'a'+(i%3))
+		subnetInput := &awsec2.CreateSubnetInput{
+			VpcId:            &vpcId,
+			CidrBlock:        &subnetsCidr[i],
+			AvailabilityZone: &az,
+		}
+
+		subnet, err := ae.network.CreateSubnet(ctx, subnetInput)
+		if err != nil {
+			fmt.Println(err.Error())
+			continue
+		}
+
+		// AutoAssignPublicIP for public subnets only
+		if i%2 == 0 {
+			if _, err := ae.network.SubnetAutoAssignPublicIP(ctx, *subnet.Subnet.SubnetId); err != nil {
+				return err
+			}
+			if err := ae.network.AssociateRTWithSubnet(ctx, ae.dp.Status.CloudInfraStatus.PublicRTId, *subnet.Subnet.SubnetId); err != nil {
+				return err
+			}
+		}
+
+		newObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			if in.Status.CloudInfraStatus.SubnetIds == nil {
+				in.Status.CloudInfraStatus.SubnetIds = make([]string, 0)
+			}
+			in.Status.CloudInfraStatus.SubnetIds = append(in.Status.CloudInfraStatus.SubnetIds, *subnet.Subnet.SubnetId)
+
+			return in
+		})
+		if err != nil {
+			return err
+		}
+
+		ae.dp = newObj.(*v1.DataPlanes)
+	}
+
+	if len(ae.dp.Status.CloudInfraStatus.SecurityGroupIds) == 0 {
+		sgName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
+
+		sgDescription := fmt.Sprintf("sg for %s", ae.dp.Name)
+		sgInput := &awsec2.CreateSecurityGroupInput{
+			Description: &sgDescription,
+			GroupName:   &sgName,
+			VpcId:       &vpcId,
+		}
+
+		sg, err := ae.network.CreateSG(ctx, sgInput)
+		if err != nil {
+			return err
+		}
+
+		newObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			if in.Status.CloudInfraStatus.SecurityGroupIds == nil {
+				in.Status.CloudInfraStatus.SecurityGroupIds = make([]string, 0)
+			}
+			in.Status.CloudInfraStatus.SecurityGroupIds = append(in.Status.CloudInfraStatus.SecurityGroupIds, *sg.GroupId)
+
+			return in
+		})
+		if err != nil {
+			return err
+		}
+		ae.dp = newObj.(*v1.DataPlanes)
+	}
+
+	if !ae.dp.Status.CloudInfraStatus.SGInboundRuleAdded && len(ae.dp.Status.CloudInfraStatus.SecurityGroupIds) > 0 {
+		if _, err := ae.network.AddSGInboundRule(ctx, ae.dp.Status.CloudInfraStatus.SecurityGroupIds[0], ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
+			return err
+		}
+
+		newObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.SGInboundRuleAdded = true
+
+			return in
+		})
+		if err != nil {
+			return err
+		}
+
+		ae.dp = newObj.(*v1.DataPlanes)
+	}
+
+	if ae.dp.Status.CloudInfraStatus.NATGatewayId == "" {
+		nat, err := ae.network.CreateNAT(ctx, ae.dp)
+		if err != nil {
+			return err
+		}
+
+		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.NATGatewayId = *nat.NatGateway.NatGatewayId
+			return in
+		})
+		if err != nil {
+			return err
+		}
+
+		ae.dp = upObj.(*v1.DataPlanes)
+	}
+
+	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" && !ae.dp.Status.CloudInfraStatus.NATAttachedWithRT {
+		if err := ae.network.AssociateNATWithRT(ctx, ae.dp); err != nil {
+			return err
+		}
+
+		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.NATAttachedWithRT = true
+			return in
+		})
+		if err != nil {
+			return err
+		}
+
+		ae.dp = upObj.(*v1.DataPlanes)
+	}
+
+	return nil
 }
 
 // bootstrap applications for aws eks dataplanes
@@ -331,11 +561,16 @@ func (ae *awsEnv) reconcileSystemNodeGroup() error {
 		return errors.New("node role is nil")
 	}
 
+	subnetIds := ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds
+	if ae.dp.Spec.CloudInfra.ProvisionNetwork {
+		subnetIds = ae.dp.Status.CloudInfraStatus.SubnetIds
+	}
+
 	systemNodeGroupInput := &awseks.CreateNodegroupInput{
 		ClusterName:        aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
 		NodeRole:           aws.String(*nodeRole.Role.Arn),
 		NodegroupName:      aws.String(systemNodeGroupName),
-		Subnets:            ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
+		Subnets:            subnetIds,
 		AmiType:            "",
 		CapacityType:       "",
 		ClientRequestToken: nil,

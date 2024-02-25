@@ -116,12 +116,15 @@ spec:
                     - subnetIds
                     - version
                     type: object
+                  provisionNetwork:
+                    type: boolean
                   region:
                     type: string
                 required:
                 - authSecretRef
                 - cloudType
                 - eks
+                - provisionNetwork
                 - region
                 type: object
             required:
@@ -146,7 +149,27 @@ spec:
                       clusterId:
                         type: string
                     type: object
+                  internetGatewayId:
+                    type: string
+                  natAttchedWithRT:
+                    type: boolean
+                  natGatewayId:
+                    type: string
+                  publicRTId:
+                    type: string
+                  securityGroupIds:
+                    items:
+                      type: string
+                    type: array
+                  sgInboundRuleAdded:
+                    type: boolean
+                  subnetIds:
+                    items:
+                      type: string
+                    type: array
                   type:
+                    type: string
+                  vpc:
                     type: string
                 type: object
               conditions:

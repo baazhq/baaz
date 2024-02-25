@@ -4,11 +4,10 @@ import (
 	"context"
 
 	v1 "github.com/baazhq/baaz/api/v1/types"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/client-go/kubernetes"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -77,6 +76,7 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 						"accessKeyName": access_key,
 						"secretKeyName": secret_key,
 					},
+					"provisionNetwork": dataplane.ProvisionNetwork,
 					"eks": map[string]interface{}{
 						"name":             dataPlaneName,
 						"subnetIds":        dataplane.KubeConfig.EKS.SubnetIds,

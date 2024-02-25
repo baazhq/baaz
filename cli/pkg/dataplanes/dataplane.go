@@ -27,6 +27,7 @@ type Dataplane struct {
 				AwsSecretKey string `yaml:"awsSecretKey" json:"aws_secret_key"`
 			} `yaml:"awsAuth" json:"aws_auth"`
 		} `yaml:"cloudAuth" json:"cloud_auth"`
+		ProvisionNetwork bool `yaml:"provisionNetwork" json:"provision_network"`
 		KubernetesConfig struct {
 			Eks struct {
 				SubnetIds        []string `yaml:"subnetIds" json:"subnet_ids"`

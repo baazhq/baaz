@@ -3,6 +3,7 @@ package eks
 import (
 	"context"
 
+	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	awssts "github.com/aws/aws-sdk-go-v2/service/sts"
@@ -46,6 +47,7 @@ type eks struct {
 	awsClient    *awseks.Client
 	awsIamClient *awsiam.Client
 	awsStsClient *awssts.Client
+	awsec2Client *awsec2.Client
 	dp           *v1.DataPlanes
 }
 
@@ -57,6 +59,7 @@ func NewEks(
 		awsClient:    newAwsClient(ctx, dp.Spec.CloudInfra.Region),
 		awsIamClient: newAwsIamClient(ctx, dp.Spec.CloudInfra.Region),
 		awsStsClient: newAwsStsClient(ctx, dp.Spec.CloudInfra.Region),
+		awsec2Client: newAwsEc2Client(ctx, dp.Spec.CloudInfra.Region),
 		ctx:          ctx,
 		dp:           dp,
 	}
