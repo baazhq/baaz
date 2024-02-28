@@ -41,7 +41,10 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 			if ae.dp.Status.NodegroupStatus[tenantSize.Name] != "DELETING" {
 				nodeName := tenantSize.Name + "-" + machineSpec.Name
 
-				describeNodegroupOutput, found, _ := ae.eksIC.DescribeNodegroup(nodeName)
+				describeNodegroupOutput, found, err := ae.eksIC.DescribeNodegroup(nodeName)
+				if err != nil {
+					return err
+				}
 				if !found {
 					nodeRole, err := ae.eksIC.CreateNodeIamRole(nodeName)
 					if err != nil {
@@ -62,6 +65,24 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 						}
 					}
 
+				} else {
+					if describeNodegroupOutput != nil && describeNodegroupOutput.Nodegroup != nil &&
+						len(describeNodegroupOutput.Nodegroup.InstanceTypes) > 0 &&
+						describeNodegroupOutput.Nodegroup.InstanceTypes[0] != machineSpec.Size {
+						fmt.Printf("node group size changed to %s", describeNodegroupOutput.Nodegroup.InstanceTypes[0])
+
+						createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(ae.getNodegroupInput(fmt.Sprintf("%s-updated", nodeName), *describeNodegroupOutput.Nodegroup.NodeRole, &machineSpec))
+						if err != nil {
+							return err
+						}
+						if createNodeGroupOutput != nil && createNodeGroupOutput.Nodegroup != nil {
+							klog.Infof("Initated NodeGroup Launch [%s]", *createNodeGroupOutput.Nodegroup.NodegroupName)
+							if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, string(createNodeGroupOutput.Nodegroup.Status)); err != nil {
+								return err
+							}
+						}
+
+					}
 				}
 
 				if describeNodegroupOutput != nil && describeNodegroupOutput.Nodegroup != nil {
