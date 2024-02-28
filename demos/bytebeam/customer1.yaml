@@ -1,6 +1,6 @@
 customer:
   name: parseable
-  saas_type: "private"
+  saas_type: "shared"
   cloud_type: "aws"
   labels: 
     tier: "enterprise"

@@ -13,7 +13,6 @@ import (
 	"github.com/baazhq/baaz/pkg/store"
 	"github.com/baazhq/baaz/pkg/utils"
 	"k8s.io/klog/v2"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -116,12 +115,16 @@ func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, machineSpec *v1.Ma
 	var taints = &[]types.Taint{}
 
 	taints = makeTaints(nodeName)
+	subnets := ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds
+	if ae.dp.Spec.CloudInfra.ProvisionNetwork {
+		subnets = ae.dp.Status.CloudInfraStatus.SubnetIds
+	}
 
 	return &awseks.CreateNodegroupInput{
 		ClusterName:        aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
 		NodeRole:           aws.String(roleArn),
 		NodegroupName:      aws.String(nodeName),
-		Subnets:            ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds,
+		Subnets:            subnets,
 		AmiType:            "",
 		CapacityType:       "",
 		ClientRequestToken: nil,
