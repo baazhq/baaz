@@ -3,12 +3,11 @@ package v1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 type TenantsInfraSpec struct {
-	Dataplane   string        `json:"dataplane"`
-	TenantSizes []TenantSizes `json:"tenantSizes"`
+	Dataplane   string                 `json:"dataplane"`
+	TenantSizes map[string]TenantSizes `json:"tenantSizes"`
 }
 
 type TenantSizes struct {
-	Name        string        `json:"name"`
 	MachineSpec []MachineSpec `json:"machinePool"`
 }
 

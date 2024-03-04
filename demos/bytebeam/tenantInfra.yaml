@@ -1,5 +1,5 @@
 tenantsInfra:
-  - name: bytebeam-small
+  bytebeam-small:
     machinePool:
     - name: bytebeam-app1
       size: t2.small
@@ -8,7 +8,7 @@ tenantsInfra:
       labels:
         app: iot
         size: small
-  - name: bytebeam-medium
+  bytebeam-medium:
     machinePool:
     - name: bytebeam-app1
       size: t2.medium

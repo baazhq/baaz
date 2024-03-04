@@ -35,12 +35,12 @@ type awsEnv struct {
 func (ae *awsEnv) ReconcileInfraTenants() error {
 	klog.Info("Reconciling tenant infra node groups")
 
-	for _, tenantSize := range ae.tenantsInfra.Spec.TenantSizes {
+	for tenantName, machineSpecs := range ae.tenantsInfra.Spec.TenantSizes {
 
-		for _, machineSpec := range tenantSize.MachineSpec {
-			if ae.dp.Status.NodegroupStatus[tenantSize.Name] != "DELETING" {
-				nodeName := tenantSize.Name + "-" + machineSpec.Name
+		for _, machineSpec := range machineSpecs.MachineSpec {
 
+			if ae.dp.Status.NodegroupStatus[tenantName] != "DELETING" {
+				nodeName := fmt.Sprintf("%s-%s-%s", tenantName, machineSpec.Name, machineSpec.Size)
 				describeNodegroupOutput, found, err := ae.eksIC.DescribeNodegroup(nodeName)
 				if err != nil {
 					return err

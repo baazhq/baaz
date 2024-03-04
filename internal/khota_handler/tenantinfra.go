@@ -40,7 +40,7 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var tenantsInfra []v1.HTTPTenantSizes
+	var tenantsInfra map[string]v1.HTTPTenantSizes
 
 	if err := json.Unmarshal(body, &tenantsInfra); err != nil {
 		res := NewResponse(JsonMarshallError, req_error, err, http.StatusInternalServerError)
@@ -89,7 +89,7 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	_, err = dc.Resource(tenantInfraGVK).Namespace(namespace).Create(context.TODO(), makeTenantsInfra(dataplaneName, &tenantsInfra, labels), metav1.CreateOptions{})
+	_, err = dc.Resource(tenantInfraGVK).Namespace(namespace).Create(context.TODO(), makeTenantsInfra(dataplaneName, tenantsInfra, labels), metav1.CreateOptions{})
 	if err != nil {
 		res := NewResponse(TenantsInfraCreateFail, req_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)

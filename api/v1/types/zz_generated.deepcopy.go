@@ -822,9 +822,9 @@ func (in *TenantsInfraSpec) DeepCopyInto(out *TenantsInfraSpec) {
 	*out = *in
 	if in.TenantSizes != nil {
 		in, out := &in.TenantSizes, &out.TenantSizes
-		*out = make([]TenantSizes, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+		*out = make(map[string]TenantSizes, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
 		}
 	}
 }
