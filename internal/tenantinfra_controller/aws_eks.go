@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
@@ -41,6 +42,7 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 
 			if ae.dp.Status.NodegroupStatus[tenantName] != "DELETING" {
 				nodeName := fmt.Sprintf("%s-%s-%s", tenantName, machineSpec.Name, machineSpec.Size)
+				nodeName = strings.ReplaceAll(nodeName, ".", "-")
 				describeNodegroupOutput, found, err := ae.eksIC.DescribeNodegroup(nodeName)
 				if err != nil {
 					return err

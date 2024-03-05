@@ -52,6 +52,7 @@ const (
 	TenantsInfraCreateFail                  CustomMsg = "TenantsInfra creation Failed"
 	TenantsInfraGetFail                     CustomMsg = "TenantsInfra get Failed"
 	TenantsInfraCreateSuccess               CustomMsg = "TenantsInfra creation Success"
+	TenantInfraUpdateSuccess                CustomMsg = "TenantsInfra update Success"
 	TenantInfraCreateFailDataplaneNotActive CustomMsg = "TenantsInfra creation Failed, Dataplane is not Active"
 )
 

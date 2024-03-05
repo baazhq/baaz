@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -89,19 +90,56 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	_, err = dc.Resource(tenantInfraGVK).Namespace(namespace).Create(context.TODO(), makeTenantsInfra(dataplaneName, tenantsInfra, labels), metav1.CreateOptions{})
-	if err != nil {
-		res := NewResponse(TenantsInfraCreateFail, req_error, err, http.StatusInternalServerError)
+	infra := makeTenantsInfra(dataplaneName, tenantsInfra, labels)
+
+	existingObj, err := dc.Resource(tenantInfraGVK).Namespace(namespace).Get(context.TODO(), infra.GetName(), metav1.GetOptions{})
+	if err == nil {
+		ob := &v1.TenantsInfra{}
+		if errCon := runtime.DefaultUnstructuredConverter.FromUnstructured(existingObj.Object, ob); errCon != nil {
+			res := NewResponse(TenantsInfraCreateFail, req_error, errCon, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		allTenantSizes := make(map[string]v1.TenantSizes)
+		for tName, tenantSize := range tenantsInfra {
+			allTenantSizes[tName] = v1.TenantSizes(tenantSize)
+		}
+		ob.Spec.TenantSizes = allTenantSizes
+
+		upObj, errCon := runtime.DefaultUnstructuredConverter.ToUnstructured(ob)
+		if errCon != nil {
+			res := NewResponse(TenantsInfraCreateFail, req_error, errCon, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		_, uperr := dc.Resource(tenantInfraGVK).Namespace(namespace).Update(context.TODO(), &unstructured.Unstructured{Object: upObj}, metav1.UpdateOptions{})
+		if uperr != nil {
+			res := NewResponse(TenantsInfraCreateFail, req_error, uperr, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+		res := NewResponse(TenantInfraUpdateSuccess, success, nil, http.StatusOK)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
+	} else {
+		_, err = dc.Resource(tenantInfraGVK).Namespace(namespace).Create(context.TODO(), infra, metav1.CreateOptions{})
+		if err != nil {
+			res := NewResponse(TenantsInfraCreateFail, req_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
 	}
 
 	res := NewResponse(TenantsInfraCreateSuccess, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 	res.LogResponse()
-	return
-
 }
 
 func GetTenantInfra(w http.ResponseWriter, req *http.Request) {
