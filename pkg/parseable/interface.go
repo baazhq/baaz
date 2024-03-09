@@ -1,39 +1,23 @@
 package parseable
 
-import "os"
-
+// Environment variables
 const (
-	parseable_url      = "PARSEABLE_URL"
-	parseable_username = "PARSEABLE_USERNAME"
-	parseable_password = "PARSEABLE_PASSWORD"
+	ParseableURL      = "PARSEABLE_URL"
+	ParseableUsername = "PARSEABLE_USERNAME"
+	ParseablePassword = "PARSEABLE_PASSWORD"
 )
 
-type Stream struct {
-	StreamName string
-	UserName   string
-	Password   string
-	Url        string
-	Data       []byte
-	Metadata   map[string]string
-	Tags       map[string]string
-}
-
-type Streams interface {
+type Parseable interface {
+	QueryStream() (string, error)
+	InsertLogs() (int, error)
 	CreateStream() (int, error)
-	Insertlogs() (int, error)
 }
 
-func NewStream(
-	streamName string,
-	data []byte,
-	metadata, tags map[string]string) Streams {
-	return &Stream{
-		StreamName: streamName,
-		UserName:   os.Getenv(parseable_username),
-		Password:   os.Getenv(parseable_password),
-		Url:        os.Getenv(parseable_url),
-		Data:       data,
-		Metadata:   metadata,
-		Tags:       tags,
-	}
+type Query interface {
+	QueryStream() (string, error)
+}
+
+type Stream interface {
+	InsertLogs() (int, error)
+	CreateStream() (int, error)
 }

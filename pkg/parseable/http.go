@@ -4,90 +4,89 @@ import (
 	"bytes"
 	"io"
 	"net/http"
+	"os"
 )
 
-// HTTP interface
+// HTTP interface defines the Do method
 type HTTP interface {
-	Do() (*Response, error)
+	do() (*response, error)
 }
 
-// HTTP client
-type PbClient struct {
-	HTTPClient *http.Client
-	Auth       *Auth
-	Method     string
-	Url        string
-	Body       []byte
-	Metadata   map[string]string
-	Tags       map[string]string
+// pbClient represents an HTTP client
+type pbClient struct {
+	httpClient *http.Client
+	basicAuth  *basicAuth
+	method     string
+	url        string
+	body       []byte
+	metadata   map[string]string
+	tags       map[string]string
 }
 
-func NewHTTPClient(
+// newHTTPClient creates a new HTTP client instance
+func newHTTPClient(
 	client *http.Client,
-	auth *Auth,
 	method string,
 	url string,
 	body []byte,
-	metadata map[string]string,
-	tags map[string]string,
+	metadata, tags map[string]string,
 ) HTTP {
-	newClient := &PbClient{
-		HTTPClient: client,
-		Auth:       auth,
-		Method:     method,
-		Url:        url,
-		Body:       body,
-		Metadata:   metadata,
-		Tags:       tags,
+	return &pbClient{
+		httpClient: client,
+		basicAuth:  newBasicAuth(),
+		method:     method,
+		url:        url,
+		body:       body,
+		metadata:   metadata,
+		tags:       tags,
 	}
-
-	return newClient
 }
 
-// Auth mechanisms supported by control plane to authenticate with parseable
-type Auth struct {
-	BasicAuth BasicAuth
+// basicAuth represents basic authentication credentials
+type basicAuth struct {
+	userName string
+	password string
 }
 
-// BasicAuth
-type BasicAuth struct {
-	UserName string
-	Password string
+// newBasicAuth creates a new basicAuth instance with provided username and password
+func newBasicAuth() *basicAuth {
+	return &basicAuth{
+		userName: os.Getenv(ParseableUsername),
+		password: os.Getenv(ParseablePassword),
+	}
 }
 
-// Response passed to controller
-type Response struct {
-	ResponseBody string
-	StatusCode   int
+// response represents the response from HTTP requests
+type response struct {
+	responseBody string
+	statusCode   int
 }
 
-// Do method to be used schema and tenant controller.
-func (c *PbClient) Do() (*Response, error) {
-
-	req, err := http.NewRequest(c.Method, c.Url, bytes.NewBuffer(c.Body))
+// do performs the HTTP request
+func (c *pbClient) do() (*response, error) {
+	req, err := http.NewRequest(c.method, c.url, bytes.NewBuffer(c.body))
 	if err != nil {
 		return nil, err
 	}
 
-	if c.Auth.BasicAuth != (BasicAuth{}) {
-		req.SetBasicAuth(c.Auth.BasicAuth.UserName, c.Auth.BasicAuth.Password)
+	if c.basicAuth.userName != "" && c.basicAuth.password != "" {
+		req.SetBasicAuth(c.basicAuth.userName, c.basicAuth.password)
 	}
 
-	for key, value := range c.Metadata {
+	for key, value := range c.metadata {
 		req.Header.Add("X-P-META-"+key, value)
 	}
 
-	for key, value := range c.Tags {
+	for key, value := range c.tags {
 		req.Header.Add("X-P-TAG-"+key, value)
 	}
 
-	req.Header.Add("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.HTTPClient.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
-
 	defer resp.Body.Close()
 
 	responseBody, err := io.ReadAll(resp.Body)
@@ -95,5 +94,8 @@ func (c *PbClient) Do() (*Response, error) {
 		return nil, err
 	}
 
-	return &Response{ResponseBody: string(responseBody), StatusCode: resp.StatusCode}, nil
+	return &response{
+		responseBody: string(responseBody),
+		statusCode:   resp.StatusCode,
+	}, nil
 }

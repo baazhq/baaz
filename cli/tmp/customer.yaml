@@ -1,5 +1,5 @@
 customer:
-  name: datainfra
+  name: aaaa
   saas_type: "shared"
   cloud_type: "aws"
   labels: 

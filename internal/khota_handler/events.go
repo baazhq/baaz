@@ -92,13 +92,13 @@ func sendEventParseable(stream eventStreams, eventType eventType, labels, tags m
 
 	switch stream {
 	case customerEventStream:
-		stream := parseable.NewStream(
+		stream := parseable.NewStreamBuilder(
 			string(customerEventStream),
 			[]byte(eventType),
 			labels,
 			tags,
 		)
-		_, err := stream.Insertlogs()
+		_, err := stream.InsertLogs()
 		if err != nil {
 			klog.Error(err)
 		}
