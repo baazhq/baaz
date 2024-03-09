@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strings"
 
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
@@ -33,6 +34,16 @@ type awsEnv struct {
 	store        store.Store
 }
 
+func getRandomSubnet(dp *v1.DataPlanes) string {
+	subnets := dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds
+	if dp.Spec.CloudInfra.ProvisionNetwork {
+		subnets = dp.Status.CloudInfraStatus.SubnetIds
+	}
+
+	random := rand.Intn(100)
+	return subnets[random%len(subnets)]
+}
+
 func (ae *awsEnv) ReconcileInfraTenants() error {
 	klog.Info("Reconciling tenant infra node groups")
 
@@ -56,7 +67,9 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 						return errors.New("node role is nil")
 					}
 
-					createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(ae.getNodegroupInput(nodeName, *nodeRole.Role.Arn, &machineSpec))
+					subnet := getRandomSubnet(ae.dp)
+
+					createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(ae.getNodegroupInput(nodeName, *nodeRole.Role.Arn, subnet, &machineSpec))
 					if err != nil {
 						return err
 					}
@@ -67,25 +80,26 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 						}
 					}
 
-				} else {
-					if describeNodegroupOutput != nil && describeNodegroupOutput.Nodegroup != nil &&
-						len(describeNodegroupOutput.Nodegroup.InstanceTypes) > 0 &&
-						describeNodegroupOutput.Nodegroup.InstanceTypes[0] != machineSpec.Size {
-						fmt.Printf("node group size changed to %s", describeNodegroupOutput.Nodegroup.InstanceTypes[0])
-
-						createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(ae.getNodegroupInput(fmt.Sprintf("%s-updated", nodeName), *describeNodegroupOutput.Nodegroup.NodeRole, &machineSpec))
-						if err != nil {
-							return err
-						}
-						if createNodeGroupOutput != nil && createNodeGroupOutput.Nodegroup != nil {
-							klog.Infof("Initated NodeGroup Launch [%s]", *createNodeGroupOutput.Nodegroup.NodegroupName)
-							if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, string(createNodeGroupOutput.Nodegroup.Status)); err != nil {
-								return err
-							}
-						}
-
-					}
 				}
+				// else {
+				// 	if describeNodegroupOutput != nil && describeNodegroupOutput.Nodegroup != nil &&
+				// 		len(describeNodegroupOutput.Nodegroup.InstanceTypes) > 0 &&
+				// 		describeNodegroupOutput.Nodegroup.InstanceTypes[0] != machineSpec.Size {
+				// 		fmt.Printf("node group size changed to %s", describeNodegroupOutput.Nodegroup.InstanceTypes[0])
+
+				// 		createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(ae.getNodegroupInput(fmt.Sprintf("%s-updated", nodeName), *describeNodegroupOutput.Nodegroup.NodeRole, &machineSpec))
+				// 		if err != nil {
+				// 			return err
+				// 		}
+				// 		if createNodeGroupOutput != nil && createNodeGroupOutput.Nodegroup != nil {
+				// 			klog.Infof("Initated NodeGroup Launch [%s]", *createNodeGroupOutput.Nodegroup.NodegroupName)
+				// 			if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, string(createNodeGroupOutput.Nodegroup.Status)); err != nil {
+				// 				return err
+				// 			}
+				// 		}
+
+				// 	}
+				// }
 
 				if describeNodegroupOutput != nil && describeNodegroupOutput.Nodegroup != nil {
 					if err := ae.patchStatus(*describeNodegroupOutput.Nodegroup.NodegroupName, string(describeNodegroupOutput.Nodegroup.Status)); err != nil {
@@ -97,6 +111,34 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 
 	}
 
+	return ae.cleanUpUnusedNodeGroup()
+}
+
+func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
+	cleanupNodes := make(map[string]bool)
+	for node, status := range ae.dp.Status.NodegroupStatus {
+		if status != "Active" {
+			return errors.New("nodegroups are not in ready state, clean up will happen later")
+		}
+		cleanupNodes[node] = true
+	}
+
+	for tenantName, machineSpecs := range ae.tenantsInfra.Spec.TenantSizes {
+		for _, machineSpec := range machineSpecs.MachineSpec {
+			nodeName := fmt.Sprintf("%s-%s-%s", tenantName, machineSpec.Name, machineSpec.Size)
+			nodeName = strings.ReplaceAll(nodeName, ".", "-")
+			cleanupNodes[nodeName] = false
+		}
+	}
+
+	for node, cleanup := range cleanupNodes {
+		if cleanup {
+			_, err := ae.eksIC.DeleteNodeGroup(node)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -133,21 +175,17 @@ func makeNodeName(nodeName, appType, size string) string {
 // 	return nil, fmt.Errorf("no NodegroupSpec for app %s & size %s", tenantConfig.AppType, tenantConfig.Size)
 // }
 
-func (ae *awsEnv) getNodegroupInput(nodeName, roleArn string, machineSpec *v1.MachineSpec) (input *awseks.CreateNodegroupInput) {
+func (ae *awsEnv) getNodegroupInput(nodeName, roleArn, subnet string, machineSpec *v1.MachineSpec) (input *awseks.CreateNodegroupInput) {
 
 	var taints = &[]types.Taint{}
 
 	taints = makeTaints(nodeName)
-	subnets := ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds
-	if ae.dp.Spec.CloudInfra.ProvisionNetwork {
-		subnets = ae.dp.Status.CloudInfraStatus.SubnetIds
-	}
 
 	return &awseks.CreateNodegroupInput{
 		ClusterName:        aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
 		NodeRole:           aws.String(roleArn),
 		NodegroupName:      aws.String(nodeName),
-		Subnets:            subnets,
+		Subnets:            []string{subnet},
 		AmiType:            "",
 		CapacityType:       "",
 		ClientRequestToken: nil,
