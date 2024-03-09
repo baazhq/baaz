@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go/aws"
@@ -14,6 +17,10 @@ import (
 	"github.com/baazhq/baaz/pkg/aws/eks"
 	"github.com/baazhq/baaz/pkg/store"
 	"github.com/baazhq/baaz/pkg/utils"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -133,13 +140,115 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 
 	for node, cleanup := range cleanupNodes {
 		if cleanup {
-			_, err := ae.eksIC.DeleteNodeGroup(node)
+			ngOutput, _, err := ae.eksIC.DescribeNodegroup(node)
+			if err != nil {
+				return err
+			}
+
+			taintKey := "key"
+			taintValue := "value"
+			taintEffect := types.TaintEffectNoSchedule
+
+			newTaints := append(ngOutput.Nodegroup.Taints,
+				types.Taint{Key: aws.String(taintKey), Value: aws.String(taintValue), Effect: taintEffect},
+			)
+
+			updateNodegroupInput := &awseks.UpdateNodegroupConfigInput{
+				ClusterName:   aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
+				NodegroupName: aws.String(node),
+				ScalingConfig: ngOutput.Nodegroup.ScalingConfig,
+				Taints: &types.UpdateTaintsPayload{
+					AddOrUpdateTaints: newTaints,
+				},
+			}
+
+			_, err = ae.eksIC.UpdateNodegroup(updateNodegroupInput)
+			if err != nil {
+				return err
+			}
+
+			asGroupName := ngOutput.Nodegroup.Resources.AutoScalingGroups[0]
+			describeInstancesInput := &ec2.DescribeInstancesInput{
+				Filters: []ec2types.Filter{
+					{
+						Name:   aws.String("tag:aws:autoscaling:groupName"),
+						Values: []string{*asGroupName.Name},
+					},
+				},
+			}
+
+			describeInstancesOutput, err := ae.eksIC.DescribeInstances(context.TODO(), describeInstancesInput)
+			if err != nil {
+				return err
+			}
+
+			k8sNodeName := ""
+
+			for _, reservation := range describeInstancesOutput.Reservations {
+				for _, instance := range reservation.Instances {
+					k8sNodeName = getKubernetesNodeName(instance.Tags)
+				}
+			}
+
+			if k8sNodeName == "" {
+				return errors.New("failed to get aws eks node name")
+			}
+
+			clusterOutput, err := ae.eksIC.DescribeEks()
+			if err != nil {
+				return err
+			}
+
+			kubeconfig := buildKubeconfig(clusterOutput.Cluster)
+
+			// Create a Kubernetes client
+			clientset, err := kubernetes.NewForConfig(kubeconfig)
+			if err != nil {
+				fmt.Println("Error creating Kubernetes client:", err)
+				os.Exit(1)
+			}
+
+			// Now you can use 'clientset' to interact with the Kubernetes API
+			// For example, you can list pods in the cluster
+			pods, err := clientset.CoreV1().Pods(core.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
+			if err != nil {
+				return err
+			}
+
+			for _, pod := range pods.Items {
+				if pod.Spec.NodeName == k8sNodeName {
+					if err := clientset.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{}); err != nil {
+						return err
+					}
+				}
+			}
+
+			_, err = ae.eksIC.DeleteNodeGroup(node)
 			if err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+func buildKubeconfig(cluster *types.Cluster) *rest.Config {
+	return &rest.Config{
+		Host:        aws.StringValue(cluster.Endpoint),
+		BearerToken: aws.StringValue(cluster.CertificateAuthority.Data),
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: false,
+		},
+	}
+}
+
+func getKubernetesNodeName(tags []ec2types.Tag) string {
+	for _, tag := range tags {
+		if aws.StringValue(tag.Key) == "kubernetes.io/hostname" {
+			return aws.StringValue(tag.Value)
+		}
+	}
+	return ""
 }
 
 func makeNodeName(nodeName, appType, size string) string {

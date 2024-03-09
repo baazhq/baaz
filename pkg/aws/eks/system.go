@@ -1,8 +1,10 @@
 package eks
 
 import (
+	"context"
 	"errors"
 
+	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go/aws"
@@ -65,4 +67,8 @@ func (ec *eks) DeleteNodeGroup(nodeGroupName string) (*awseks.DeleteNodegroupOut
 		return nil, err
 	}
 	return result, nil
+}
+
+func (ec *eks) DescribeInstances(ctx context.Context, input *awsec2.DescribeInstancesInput) (*awsec2.DescribeInstancesOutput, error) {
+	return ec.awsec2Client.DescribeInstances(ctx, input)
 }

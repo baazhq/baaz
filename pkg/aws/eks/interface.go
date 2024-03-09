@@ -40,6 +40,7 @@ type Eks interface {
 	// roles
 	CreateEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, error)
 	CreateVpcCniRole(ctx context.Context) (roleOutput *awsiam.CreateRoleOutput, arn string, err error)
+	DescribeInstances(ctx context.Context, input *awsec2.DescribeInstancesInput) (*awsec2.DescribeInstancesOutput, error)
 }
 
 type eks struct {
