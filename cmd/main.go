@@ -107,12 +107,13 @@ func main() {
 
 	if os.Getenv("PARSEABLE_ENABLE") == "true" {
 		for _, stream := range streams {
-			createStream := parseable.NewStream(
+			createStream := parseable.NewStreamBuilder(
 				stream,
 				nil,
 				nil,
 				nil,
 			)
+
 			resp, err := createStream.CreateStream()
 			if err != nil && resp == 400 {
 				setupLog.Error(err, "create stream failed for parseable")

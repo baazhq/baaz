@@ -4,18 +4,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Valid command arguments
 var commonValidArgs = []string{
 	"customers",
 	"customer",
 	"dataplanes",
 	"dataplane",
-	"size",
-	"sizes",
+	"tenants",
+	"tenant",
+	"tenantinfra",
+	"tenantsinfra",
+	"events",
+	"event",
 }
 
 var (
 	file                         string
 	dataplane_name               string
+	entity_name                  string
 	customer_name                string
 	tenant_name                  string
 	private_mode                 bool
