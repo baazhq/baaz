@@ -1,7 +1,7 @@
 package khota_handler
 
 import (
-	"github.com/baazhq/baaz/pkg/parseable"
+	"github.com/parseablehq/parseable-sdk-go/parseable"
 	klog "k8s.io/klog/v2"
 )
 
