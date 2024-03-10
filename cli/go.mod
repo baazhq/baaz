@@ -7,6 +7,7 @@ toolchain go1.21.5
 require (
 	github.com/gofrs/flock v0.8.1
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/parseablehq/parseable-sdk-go v0.0.0-20240310064233-64d4876365b5
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.17.0

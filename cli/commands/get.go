@@ -7,6 +7,7 @@ import (
 
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
+	"bz/pkg/events"
 	"bz/pkg/tenants"
 	"bz/pkg/tenantsinfra"
 )
@@ -34,11 +35,14 @@ var getCmd = &cobra.Command{
 			if entity_name == "" {
 				return fmt.Errorf("entity name cannot be nil")
 			}
-			return tenantsinfra.GetTenantsInfra(dataplane_name)
+			if duration == "" {
+				return fmt.Errorf("duration name cannot be nil")
+			}
+			return events.GetEvents(entity_name, duration)
 		case "tenants", "tenant":
 			// Ensure customer name is provided
 			if customer_name == "" {
-				return fmt.Errorf("customer name cannot be nil")
+				return fmt.Errorf("customer cannot be nil")
 			}
 			return tenants.GetTenants(customer_name)
 		default:
@@ -57,5 +61,6 @@ func init() {
 	getCmd.Flags().StringVarP(&tenant_name, "tenant", "", "", "tenant name")
 	getCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
 	getCmd.Flags().StringVarP(&entity_name, "entity", "", "", "entity name")
+	getCmd.Flags().StringVarP(&duration, "duration", "", "", "duration to get events")
 
 }

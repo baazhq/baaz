@@ -22,6 +22,7 @@ var (
 	file                         string
 	dataplane_name               string
 	entity_name                  string
+	duration                     string
 	customer_name                string
 	tenant_name                  string
 	private_mode                 bool
