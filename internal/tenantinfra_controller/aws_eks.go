@@ -148,9 +148,16 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 	for node, cleanup := range cleanupNodes {
 		if cleanup {
 			klog.Infof("going to cleanup & delete nodegroup: %s", node)
-			ngOutput, _, err := ae.eksIC.DescribeNodegroup(node)
+			ngOutput, found, err := ae.eksIC.DescribeNodegroup(node)
 			if err != nil {
 				return err
+			}
+
+			if !found {
+				if err := ae.patchStatus(node, ""); err != nil {
+					return err
+				}
+				continue
 			}
 
 			taintFound := false
@@ -229,13 +236,15 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 			if err != nil {
 				return err
 			}
+			if err := ae.patchStatus(node, ""); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
 func newClientset(cluster *types.Cluster) (*kubernetes.Clientset, error) {
-	klog.Infof("%+v", cluster)
 	gen, err := token.NewGenerator(true, false)
 	if err != nil {
 		return nil, err
@@ -346,6 +355,10 @@ func (ae *awsEnv) patchStatus(name, status string) error {
 		in := obj.(*v1.TenantsInfra)
 		if in.Status.NodegroupStatus == nil {
 			in.Status.NodegroupStatus = make(map[string]string)
+		}
+		if status == "" {
+			delete(in.Status.NodegroupStatus, name)
+			return in
 		}
 		in.Status.NodegroupStatus[name] = status
 		in.Status.Phase = v1.TenantPhase(status)
