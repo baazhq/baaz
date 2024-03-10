@@ -2,14 +2,12 @@ package tenantinfra_controller
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math/rand"
-	"os"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/service/ec2"
-	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,6 +20,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/strings/slices"
+	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -51,6 +51,13 @@ func getRandomSubnet(dp *v1.DataPlanes) string {
 	return subnets[random%len(subnets)]
 }
 
+func getNodeGroupSubnet(tenants *v1.TenantsInfra, dp *v1.DataPlanes) string {
+	// if len(tenants.Spec.TenantSizes) == len(tenants.Status.NodegroupStatus) {
+	// 	return ""
+	// }
+	return getRandomSubnet(dp)
+}
+
 func (ae *awsEnv) ReconcileInfraTenants() error {
 	klog.Info("Reconciling tenant infra node groups")
 
@@ -74,7 +81,7 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 						return errors.New("node role is nil")
 					}
 
-					subnet := getRandomSubnet(ae.dp)
+					subnet := getNodeGroupSubnet(ae.tenantsInfra, ae.dp)
 
 					createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(ae.getNodegroupInput(nodeName, *nodeRole.Role.Arn, subnet, &machineSpec))
 					if err != nil {
@@ -123,8 +130,8 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 
 func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 	cleanupNodes := make(map[string]bool)
-	for node, status := range ae.dp.Status.NodegroupStatus {
-		if status != "Active" {
+	for node, status := range ae.tenantsInfra.Status.NodegroupStatus {
+		if status != "ACTIVE" {
 			return errors.New("nodegroups are not in ready state, clean up will happen later")
 		}
 		cleanupNodes[node] = true
@@ -140,58 +147,43 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 
 	for node, cleanup := range cleanupNodes {
 		if cleanup {
+			klog.Infof("going to cleanup & delete nodegroup: %s", node)
 			ngOutput, _, err := ae.eksIC.DescribeNodegroup(node)
 			if err != nil {
 				return err
 			}
 
-			taintKey := "key"
-			taintValue := "value"
-			taintEffect := types.TaintEffectNoSchedule
+			taintFound := false
 
-			newTaints := append(ngOutput.Nodegroup.Taints,
-				types.Taint{Key: aws.String(taintKey), Value: aws.String(taintValue), Effect: taintEffect},
-			)
-
-			updateNodegroupInput := &awseks.UpdateNodegroupConfigInput{
-				ClusterName:   aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
-				NodegroupName: aws.String(node),
-				ScalingConfig: ngOutput.Nodegroup.ScalingConfig,
-				Taints: &types.UpdateTaintsPayload{
-					AddOrUpdateTaints: newTaints,
-				},
-			}
-
-			_, err = ae.eksIC.UpdateNodegroup(updateNodegroupInput)
-			if err != nil {
-				return err
-			}
-
-			asGroupName := ngOutput.Nodegroup.Resources.AutoScalingGroups[0]
-			describeInstancesInput := &ec2.DescribeInstancesInput{
-				Filters: []ec2types.Filter{
-					{
-						Name:   aws.String("tag:aws:autoscaling:groupName"),
-						Values: []string{*asGroupName.Name},
-					},
-				},
-			}
-
-			describeInstancesOutput, err := ae.eksIC.DescribeInstances(context.TODO(), describeInstancesInput)
-			if err != nil {
-				return err
-			}
-
-			k8sNodeName := ""
-
-			for _, reservation := range describeInstancesOutput.Reservations {
-				for _, instance := range reservation.Instances {
-					k8sNodeName = getKubernetesNodeName(instance.Tags)
+			for _, tn := range ngOutput.Nodegroup.Taints {
+				if tn.Effect == types.TaintEffectNoSchedule {
+					taintFound = true
+					break
 				}
 			}
 
-			if k8sNodeName == "" {
-				return errors.New("failed to get aws eks node name")
+			if !taintFound {
+				taintKey := "key"
+				taintValue := "value"
+				taintEffect := types.TaintEffectNoSchedule
+
+				newTaints := append(ngOutput.Nodegroup.Taints,
+					types.Taint{Key: aws.String(taintKey), Value: aws.String(taintValue), Effect: taintEffect},
+				)
+
+				updateNodegroupInput := &awseks.UpdateNodegroupConfigInput{
+					ClusterName:   aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
+					NodegroupName: aws.String(node),
+					ScalingConfig: ngOutput.Nodegroup.ScalingConfig,
+					Taints: &types.UpdateTaintsPayload{
+						AddOrUpdateTaints: newTaints,
+					},
+				}
+
+				_, err = ae.eksIC.UpdateNodegroup(updateNodegroupInput)
+				if err != nil {
+					return err
+				}
 			}
 
 			clusterOutput, err := ae.eksIC.DescribeEks()
@@ -199,13 +191,23 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 				return err
 			}
 
-			kubeconfig := buildKubeconfig(clusterOutput.Cluster)
-
 			// Create a Kubernetes client
-			clientset, err := kubernetes.NewForConfig(kubeconfig)
+			clientset, err := newClientset(clusterOutput.Cluster)
 			if err != nil {
-				fmt.Println("Error creating Kubernetes client:", err)
-				os.Exit(1)
+				return err
+			}
+
+			nodeList, err := clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+			if err != nil {
+				return err
+			}
+
+			k8sNodeNames := make([]string, 0)
+
+			for _, n := range nodeList.Items {
+				if n.Labels["eks.amazonaws.com/nodegroup"] == node {
+					k8sNodeNames = append(k8sNodeNames, n.Name)
+				}
 			}
 
 			// Now you can use 'clientset' to interact with the Kubernetes API
@@ -216,7 +218,7 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 			}
 
 			for _, pod := range pods.Items {
-				if pod.Spec.NodeName == k8sNodeName {
+				if slices.Contains(k8sNodeNames, pod.Spec.NodeName) {
 					if err := clientset.CoreV1().Pods(pod.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{}); err != nil {
 						return err
 					}
@@ -232,27 +234,36 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 	return nil
 }
 
-func buildKubeconfig(cluster *types.Cluster) *rest.Config {
-	return &rest.Config{
-		Host:        aws.StringValue(cluster.Endpoint),
-		BearerToken: aws.StringValue(cluster.CertificateAuthority.Data),
-		TLSClientConfig: rest.TLSClientConfig{
-			Insecure: false,
+func newClientset(cluster *types.Cluster) (*kubernetes.Clientset, error) {
+	klog.Infof("%+v", cluster)
+	gen, err := token.NewGenerator(true, false)
+	if err != nil {
+		return nil, err
+	}
+	opts := &token.GetTokenOptions{
+		ClusterID: aws.StringValue(cluster.Name),
+	}
+	tok, err := gen.GetWithOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+	ca, err := base64.StdEncoding.DecodeString(aws.StringValue(cluster.CertificateAuthority.Data))
+	if err != nil {
+		return nil, err
+	}
+	clientset, err := kubernetes.NewForConfig(
+		&rest.Config{
+			Host:        aws.StringValue(cluster.Endpoint),
+			BearerToken: tok.Token,
+			TLSClientConfig: rest.TLSClientConfig{
+				CAData: ca,
+			},
 		},
+	)
+	if err != nil {
+		return nil, err
 	}
-}
-
-func getKubernetesNodeName(tags []ec2types.Tag) string {
-	for _, tag := range tags {
-		if aws.StringValue(tag.Key) == "kubernetes.io/hostname" {
-			return aws.StringValue(tag.Value)
-		}
-	}
-	return ""
-}
-
-func makeNodeName(nodeName, appType, size string) string {
-	return nodeName + "-" + appType + "-" + size
+	return clientset, nil
 }
 
 // func (ae *awsEnv) getNodeSpecForTenantSize(tenantConfig v1.TenantApplicationConfig) (*[]v1.MachineSpec, error) {
