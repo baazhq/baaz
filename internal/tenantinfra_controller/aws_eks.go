@@ -52,6 +52,13 @@ func getRandomSubnet(dp *v1.DataPlanes) string {
 }
 
 func getNodeGroupSubnet(tenants *v1.TenantsInfra, dp *v1.DataPlanes) string {
+	// bytebeam-medium:
+	// machinePool:
+	// - name: bytebeam-app1
+	//   #size: t2.small
+	//   size: t2.medium
+	// new name: bytebeam-medium-bytebeam-app1-t2-medium ()
+	// old name: bytebeam-medium-bytebeam-app1-t2-small (status)
 	// if len(tenants.Spec.TenantSizes) == len(tenants.Status.NodegroupStatus) {
 	// 	return ""
 	// }
@@ -95,25 +102,6 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 					}
 
 				}
-				// else {
-				// 	if describeNodegroupOutput != nil && describeNodegroupOutput.Nodegroup != nil &&
-				// 		len(describeNodegroupOutput.Nodegroup.InstanceTypes) > 0 &&
-				// 		describeNodegroupOutput.Nodegroup.InstanceTypes[0] != machineSpec.Size {
-				// 		fmt.Printf("node group size changed to %s", describeNodegroupOutput.Nodegroup.InstanceTypes[0])
-
-				// 		createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(ae.getNodegroupInput(fmt.Sprintf("%s-updated", nodeName), *describeNodegroupOutput.Nodegroup.NodeRole, &machineSpec))
-				// 		if err != nil {
-				// 			return err
-				// 		}
-				// 		if createNodeGroupOutput != nil && createNodeGroupOutput.Nodegroup != nil {
-				// 			klog.Infof("Initated NodeGroup Launch [%s]", *createNodeGroupOutput.Nodegroup.NodegroupName)
-				// 			if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, string(createNodeGroupOutput.Nodegroup.Status)); err != nil {
-				// 				return err
-				// 			}
-				// 		}
-
-				// 	}
-				// }
 
 				if describeNodegroupOutput != nil && describeNodegroupOutput.Nodegroup != nil {
 					if err := ae.patchStatus(*describeNodegroupOutput.Nodegroup.NodegroupName, string(describeNodegroupOutput.Nodegroup.Status)); err != nil {
