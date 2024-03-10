@@ -17,6 +17,7 @@ require (
 	github.com/hashicorp/go-uuid v1.0.3
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.10
+	github.com/parseablehq/parseable-sdk-go v0.0.0-20240310064233-64d4876365b5
 	github.com/pkg/errors v0.9.1
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.12.0

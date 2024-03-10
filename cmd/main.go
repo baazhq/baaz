@@ -10,10 +10,11 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 
 	"github.com/gorilla/handlers"
+	"github.com/parseablehq/parseable-sdk-go/parseable"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	khota "github.com/baazhq/baaz/internal/khota_handler"
-	"github.com/baazhq/baaz/pkg/parseable"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
