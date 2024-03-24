@@ -81,6 +81,10 @@ spec:
                 additionalProperties:
                   type: string
                 type: object
+              ngSubnet:
+                additionalProperties:
+                  type: string
+                type: object
               phase:
                 type: string
             type: object

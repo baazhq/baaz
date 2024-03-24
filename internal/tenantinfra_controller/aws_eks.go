@@ -62,7 +62,26 @@ func getNodeGroupSubnet(tenants *v1.TenantsInfra, dp *v1.DataPlanes) string {
 	// if len(tenants.Spec.TenantSizes) == len(tenants.Status.NodegroupStatus) {
 	// 	return ""
 	// }
+	specFlags := make(map[string]bool)
+	for tenantName, machineSpecs := range tenants.Spec.TenantSizes {
+		for _, machineSpec := range machineSpecs.MachineSpec {
+			node := getNodeName(tenantName, machineSpec)
+			specFlags[node] = true
+		}
+	}
+
+	for k, v := range tenants.Status.NgSubnet {
+		if _, found := specFlags[k]; !found {
+			return v
+		}
+	}
 	return getRandomSubnet(dp)
+}
+
+func getNodeName(tenantName string, machineSpec v1.MachineSpec) string {
+	nodeName := fmt.Sprintf("%s-%s-%s", tenantName, machineSpec.Name, machineSpec.Size)
+	nodeName = strings.ReplaceAll(nodeName, ".", "-")
+	return nodeName
 }
 
 func (ae *awsEnv) ReconcileInfraTenants() error {
@@ -73,8 +92,7 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 		for _, machineSpec := range machineSpecs.MachineSpec {
 
 			if ae.dp.Status.NodegroupStatus[tenantName] != "DELETING" {
-				nodeName := fmt.Sprintf("%s-%s-%s", tenantName, machineSpec.Name, machineSpec.Size)
-				nodeName = strings.ReplaceAll(nodeName, ".", "-")
+				nodeName := getNodeName(tenantName, machineSpec)
 				describeNodegroupOutput, found, err := ae.eksIC.DescribeNodegroup(nodeName)
 				if err != nil {
 					return err
@@ -99,8 +117,10 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 						if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, string(createNodeGroupOutput.Nodegroup.Status)); err != nil {
 							return err
 						}
+						if err := ae.patchNgSubnet(*createNodeGroupOutput.Nodegroup.NodegroupName, subnet); err != nil {
+							return err
+						}
 					}
-
 				}
 
 				if describeNodegroupOutput != nil && describeNodegroupOutput.Nodegroup != nil {
@@ -227,6 +247,9 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 			if err := ae.patchStatus(node, ""); err != nil {
 				return err
 			}
+			if err := ae.patchNgSubnet(node, ""); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -350,6 +373,22 @@ func (ae *awsEnv) patchStatus(name, status string) error {
 		}
 		in.Status.NodegroupStatus[name] = status
 		in.Status.Phase = v1.TenantPhase(status)
+		return in
+	})
+	return err
+}
+
+func (ae *awsEnv) patchNgSubnet(name, subnet string) error {
+	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.tenantsInfra, func(obj client.Object) client.Object {
+		in := obj.(*v1.TenantsInfra)
+		if in.Status.NgSubnet == nil {
+			in.Status.NgSubnet = make(map[string]string)
+		}
+		if subnet == "" {
+			delete(in.Status.NgSubnet, name)
+			return in
+		}
+		in.Status.NgSubnet[name] = subnet
 		return in
 	})
 	return err

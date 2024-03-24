@@ -25,6 +25,7 @@ type MachineSpec struct {
 type TenantsInfraStatus struct {
 	Phase           TenantPhase       `json:"phase,omitempty"`
 	NodegroupStatus map[string]string `json:"machinePoolStatus,omitempty"`
+	NgSubnet        map[string]string `json:"ngSubnet,omitempty"`
 }
 
 //+kubebuilder:object:root=true
