@@ -70,9 +70,9 @@ func getNodeGroupSubnet(tenants *v1.TenantsInfra, dp *v1.DataPlanes) string {
 		}
 	}
 
-	for k, v := range tenants.Status.NgSubnet {
+	for k, v := range tenants.Status.NodegroupStatus {
 		if _, found := specFlags[k]; !found {
-			return v
+			return v.Subnet
 		}
 	}
 	return getRandomSubnet(dp)
@@ -114,17 +114,22 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 					}
 					if createNodeGroupOutput != nil && createNodeGroupOutput.Nodegroup != nil {
 						klog.Infof("Initated NodeGroup Launch [%s]", *createNodeGroupOutput.Nodegroup.NodegroupName)
-						if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, string(createNodeGroupOutput.Nodegroup.Status)); err != nil {
-							return err
-						}
-						if err := ae.patchNgSubnet(*createNodeGroupOutput.Nodegroup.NodegroupName, subnet); err != nil {
+						if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, &v1.NodegroupStatus{
+							Status: string(createNodeGroupOutput.Nodegroup.Status),
+							Subnet: subnet,
+						}); err != nil {
 							return err
 						}
 					}
 				}
 
-				if describeNodegroupOutput != nil && describeNodegroupOutput.Nodegroup != nil {
-					if err := ae.patchStatus(*describeNodegroupOutput.Nodegroup.NodegroupName, string(describeNodegroupOutput.Nodegroup.Status)); err != nil {
+				if describeNodegroupOutput != nil &&
+					describeNodegroupOutput.Nodegroup != nil &&
+					len(describeNodegroupOutput.Nodegroup.Subnets) > 0 {
+					if err := ae.patchStatus(*describeNodegroupOutput.Nodegroup.NodegroupName, &v1.NodegroupStatus{
+						Status: string(describeNodegroupOutput.Nodegroup.Status),
+						Subnet: describeNodegroupOutput.Nodegroup.Subnets[0],
+					}); err != nil {
 						return err
 					}
 				}
@@ -139,7 +144,7 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 	cleanupNodes := make(map[string]bool)
 	for node, status := range ae.tenantsInfra.Status.NodegroupStatus {
-		if status != "ACTIVE" {
+		if status.Status != "ACTIVE" {
 			return errors.New("nodegroups are not in ready state, clean up will happen later")
 		}
 		cleanupNodes[node] = true
@@ -162,7 +167,7 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 			}
 
 			if !found {
-				if err := ae.patchStatus(node, ""); err != nil {
+				if err := ae.patchStatus(node, nil); err != nil {
 					return err
 				}
 				continue
@@ -244,10 +249,7 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 			if err != nil {
 				return err
 			}
-			if err := ae.patchStatus(node, ""); err != nil {
-				return err
-			}
-			if err := ae.patchNgSubnet(node, ""); err != nil {
+			if err := ae.patchStatus(node, nil); err != nil {
 				return err
 			}
 		}
@@ -360,35 +362,18 @@ func makeTaints(value string) *[]types.Taint {
 	}
 }
 
-func (ae *awsEnv) patchStatus(name, status string) error {
+func (ae *awsEnv) patchStatus(name string, status *v1.NodegroupStatus) error {
 	// update status with current nodegroup status
 	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.tenantsInfra, func(obj client.Object) client.Object {
 		in := obj.(*v1.TenantsInfra)
 		if in.Status.NodegroupStatus == nil {
-			in.Status.NodegroupStatus = make(map[string]string)
+			in.Status.NodegroupStatus = make(map[string]v1.NodegroupStatus)
 		}
-		if status == "" {
+		if status == nil {
 			delete(in.Status.NodegroupStatus, name)
 			return in
 		}
-		in.Status.NodegroupStatus[name] = status
-		in.Status.Phase = v1.TenantPhase(status)
-		return in
-	})
-	return err
-}
-
-func (ae *awsEnv) patchNgSubnet(name, subnet string) error {
-	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.tenantsInfra, func(obj client.Object) client.Object {
-		in := obj.(*v1.TenantsInfra)
-		if in.Status.NgSubnet == nil {
-			in.Status.NgSubnet = make(map[string]string)
-		}
-		if subnet == "" {
-			delete(in.Status.NgSubnet, name)
-			return in
-		}
-		in.Status.NgSubnet[name] = subnet
+		in.Status.NodegroupStatus[name] = *status
 		return in
 	})
 	return err

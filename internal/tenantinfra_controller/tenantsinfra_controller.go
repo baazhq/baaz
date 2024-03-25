@@ -5,6 +5,11 @@ import (
 	"os"
 	"time"
 
+	v1 "github.com/baazhq/baaz/api/v1/types"
+	"github.com/baazhq/baaz/internal/predicates"
+	"github.com/baazhq/baaz/pkg/aws/eks"
+	"github.com/baazhq/baaz/pkg/store"
+	"github.com/baazhq/baaz/pkg/utils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -14,12 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
-	v1 "github.com/baazhq/baaz/api/v1/types"
-	"github.com/baazhq/baaz/internal/predicates"
-	"github.com/baazhq/baaz/pkg/aws/eks"
-	"github.com/baazhq/baaz/pkg/store"
-	"github.com/baazhq/baaz/pkg/utils"
 )
 
 var tenantsFinalizer = "tenantsinfra.datainfra.io/finalizer"
@@ -155,7 +154,7 @@ func (r *TenantsInfraReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error
 
 	for ng, ngStatus := range ae.tenantsInfra.Status.NodegroupStatus {
 
-		if ngStatus != "DELETING" {
+		if ngStatus.Status != "DELETING" {
 			_, err := ae.eksIC.DeleteNodeGroup(ng)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -164,9 +163,9 @@ func (r *TenantsInfraReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error
 			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.tenantsInfra, func(obj client.Object) client.Object {
 				in := obj.(*v1.TenantsInfra)
 				if in.Status.NodegroupStatus == nil {
-					in.Status.NodegroupStatus = make(map[string]string)
+					in.Status.NodegroupStatus = make(map[string]v1.NodegroupStatus)
 				}
-				in.Status.NodegroupStatus[ng] = "DELETING"
+				in.Status.NodegroupStatus[ng] = v1.NodegroupStatus{Status: "DELETING"}
 				return in
 			})
 			if err != nil {

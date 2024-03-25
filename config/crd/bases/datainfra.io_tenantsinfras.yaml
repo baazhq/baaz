@@ -79,11 +79,12 @@ spec:
             properties:
               machinePoolStatus:
                 additionalProperties:
-                  type: string
-                type: object
-              ngSubnet:
-                additionalProperties:
-                  type: string
+                  properties:
+                    status:
+                      type: string
+                    subnet:
+                      type: string
+                  type: object
                 type: object
               phase:
                 type: string

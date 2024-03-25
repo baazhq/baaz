@@ -23,9 +23,13 @@ type MachineSpec struct {
 
 // TenantsStatus defines the observed state of Tenants
 type TenantsInfraStatus struct {
-	Phase           TenantPhase       `json:"phase,omitempty"`
-	NodegroupStatus map[string]string `json:"machinePoolStatus,omitempty"`
-	NgSubnet        map[string]string `json:"ngSubnet,omitempty"`
+	Phase           TenantPhase                `json:"phase,omitempty"`
+	NodegroupStatus map[string]NodegroupStatus `json:"machinePoolStatus,omitempty"`
+}
+
+type NodegroupStatus struct {
+	Status string `json:"status,omitempty"`
+	Subnet string `json:"subnet,omitempty"`
 }
 
 //+kubebuilder:object:root=true
