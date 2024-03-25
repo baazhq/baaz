@@ -20,20 +20,41 @@ func makeTenantInfraPath(dataplaneName string) string {
 	return common.GetBzUrl() + common.BaazPath + common.DataplanePath + "/" + dataplaneName + common.TenantInfraPath
 }
 
+// tenantsInfra:
+//   bytebeam-small:
+//     machinePool:
+//     - name: bytebeam-app1
+//       size: t2.small
+//       min: 1
+//       max: 3
+//       labels:
+//         app: iot
+//         size: small
+//   bytebeam-medium:
+//     machinePool:
+//     - name: bytebeam-app1
+//       size: t2.medium
+//       min: 1
+//       max: 3
+//       labels:
+//         app: iot
+//         size: small
+
+type TiMachine struct {
+	MachinePool []struct {
+		Name   string `yaml:"name" json:"name"`
+		Size   string `yaml:"size" json:"size"`
+		Min    int    `yaml:"min" json:"min"`
+		Max    int    `yaml:"max" json:"max"`
+		Labels struct {
+			App  string `yaml:"app" json:"app"`
+			Size string `yaml:"size" json:"size"`
+		} `yaml:"labels" json:"labels"`
+	} `yaml:"machinePool" json:"machine_pool"`
+}
+
 type Ti struct {
-	TenantsInfra []struct {
-		Name        string `yaml:"name" json:"name"`
-		MachinePool []struct {
-			Name   string `yaml:"name" json:"name"`
-			Size   string `yaml:"size" json:"size"`
-			Min    int    `yaml:"min" json:"min"`
-			Max    int    `yaml:"max" json:"max"`
-			Labels struct {
-				App  string `yaml:"app" json:"app"`
-				Size string `yaml:"size" json:"size"`
-			} `yaml:"labels" json:"labels"`
-		} `yaml:"machinePool" json:"machine_pool"`
-	} `yaml:"tenantsInfra"`
+	TenantsInfra map[string]TiMachine `yaml:"tenantsInfra"`
 }
 
 type tiResp []struct {

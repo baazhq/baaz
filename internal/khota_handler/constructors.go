@@ -170,14 +170,22 @@ func makeApplicationConfig(apps []v1.HTTPApplication, dataplaneName, tenantName,
 	}
 }
 
-func makeTenantsInfra(dataplaneName string, tenantSizes *[]v1.HTTPTenantSizes, labels map[string]string) *unstructured.Unstructured {
+// type TenantsInfraSpec struct {
+// 	Dataplane   string                 `json:"dataplane"`
+// 	TenantSizes map[string]TenantSizes `json:"tenantSizes"`
+// }
 
-	var allTenantSizes []map[string]interface{}
-	for _, tenantSize := range *tenantSizes {
-		allTenantSizes = append(allTenantSizes, map[string]interface{}{
-			"name":        tenantSize.Name,
+// type TenantSizes struct {
+// 	MachineSpec []MachineSpec `json:"machinePool"`
+// }
+
+func makeTenantsInfra(dataplaneName string, tenantSizes map[string]v1.HTTPTenantSizes, labels map[string]string) *unstructured.Unstructured {
+
+	allTenantSizes := make(map[string]interface{})
+	for tName, tenantSize := range tenantSizes {
+		allTenantSizes[tName] = map[string][]v1.MachineSpec{
 			"machinePool": tenantSize.MachineSpec,
-		})
+		}
 	}
 
 	return &unstructured.Unstructured{

@@ -37,7 +37,7 @@ spec:
               dataplane:
                 type: string
               tenantSizes:
-                items:
+                additionalProperties:
                   properties:
                     machinePool:
                       items:
@@ -66,13 +66,10 @@ spec:
                         - size
                         type: object
                       type: array
-                    name:
-                      type: string
                   required:
                   - machinePool
-                  - name
                   type: object
-                type: array
+                type: object
             required:
             - dataplane
             - tenantSizes
@@ -82,7 +79,12 @@ spec:
             properties:
               machinePoolStatus:
                 additionalProperties:
-                  type: string
+                  properties:
+                    status:
+                      type: string
+                    subnet:
+                      type: string
+                  type: object
                 type: object
               phase:
                 type: string
