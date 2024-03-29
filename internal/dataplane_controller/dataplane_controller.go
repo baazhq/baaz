@@ -5,23 +5,19 @@ import (
 	"os"
 	"time"
 
+	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/baazhq/baaz/internal/predicates"
 	"github.com/baazhq/baaz/pkg/aws/eks"
 	"github.com/baazhq/baaz/pkg/store"
-
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
+	"github.com/baazhq/baaz/pkg/utils"
 	"github.com/go-logr/logr"
-	"k8s.io/klog/v2"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	v1 "github.com/baazhq/baaz/api/v1/types"
-	"github.com/baazhq/baaz/pkg/utils"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
 const (
@@ -153,6 +149,12 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 		return ctrl.Result{RequeueAfter: time.Second * 10}, err
 	}
 
+	if ae.dp.Spec.CloudInfra.ProvisionNetwork {
+		if err := deleteNetworkComponent(ae); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// remove our finalizer from the list and update it.
 	controllerutil.RemoveFinalizer(ae.dp, dataplaneFinalizer)
 	klog.Infof("Deleted Dataplane [%s]", ae.dp.GetName())
@@ -160,6 +162,25 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
+}
+
+func deleteNetworkComponent(ae *awsEnv) error {
+	if ae.dp.Status.CloudInfraStatus.InternetGatewayId != "" {
+		if err := ae.network.DetachInternetGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc,
+			ae.dp.Status.CloudInfraStatus.InternetGatewayId); err != nil {
+			return err
+		}
+
+		if err := ae.network.DeleteInternetGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.InternetGatewayId); err != nil {
+			return err
+		}
+	}
+	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" {
+		if err := ae.network.DeleteNatGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.NATGatewayId); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

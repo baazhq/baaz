@@ -22,6 +22,9 @@ type Network interface {
 	CreateRouteTable(ctx context.Context, vpcId string) (*awsec2.CreateRouteTableOutput, error)
 	CreateRoute(ctx context.Context, input *awsec2.CreateRouteInput) (*awsec2.CreateRouteOutput, error)
 	AssociateRTWithSubnet(ctx context.Context, rtId, subnetId string) error
+	DeleteNatGateway(ctx context.Context, id string) error
+	DetachInternetGateway(ctx context.Context, id, vpcId string) error
+	DeleteInternetGateway(ctx context.Context, id string) error
 }
 
 func NewProvisioner(ctx context.Context, region string) (Network, error) {

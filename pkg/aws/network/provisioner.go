@@ -54,8 +54,24 @@ func (p *provisioner) CreateNAT(ctx context.Context, dp *v1.DataPlanes) (*awsec2
 	return p.awsec2Client.CreateNatGateway(ctx, input)
 }
 
+func (p *provisioner) DeleteNatGateway(ctx context.Context, id string) error {
+	input := &awsec2.DeleteNatGatewayInput{
+		NatGatewayId: aws.String(id),
+	}
+
+	_, err := p.awsec2Client.DeleteNatGateway(ctx, input)
+	return err
+}
+
 func (p *provisioner) CreateInternetGateway(ctx context.Context) (*awsec2.CreateInternetGatewayOutput, error) {
 	return p.awsec2Client.CreateInternetGateway(ctx, &awsec2.CreateInternetGatewayInput{})
+}
+
+func (p *provisioner) DeleteInternetGateway(ctx context.Context, id string) error {
+	_, err := p.awsec2Client.DeleteInternetGateway(ctx, &awsec2.DeleteInternetGatewayInput{
+		InternetGatewayId: aws.String(id),
+	})
+	return err
 }
 
 func (p *provisioner) AttachInternetGateway(ctx context.Context, igId, vpcId string) (*awsec2.AttachInternetGatewayOutput, error) {
@@ -63,6 +79,14 @@ func (p *provisioner) AttachInternetGateway(ctx context.Context, igId, vpcId str
 		InternetGatewayId: &igId,
 		VpcId:             &vpcId,
 	})
+}
+
+func (p *provisioner) DetachInternetGateway(ctx context.Context, id, vpcId string) error {
+	_, err := p.awsec2Client.DetachInternetGateway(ctx, &awsec2.DetachInternetGatewayInput{
+		InternetGatewayId: aws.String(id),
+		VpcId:             aws.String(id),
+	})
+	return err
 }
 
 func (p *provisioner) CreateElasticIP(ctx context.Context) (*awsec2.AllocateAddressOutput, error) {
