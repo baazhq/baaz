@@ -2,13 +2,15 @@ package controller
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
+	mrand "math/rand"
 	"os"
 	"time"
 
 	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
@@ -213,20 +215,50 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 }
 
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyz"
+	randomString := make([]byte, length)
+	randomBytes := make([]byte, length+(length/4)) // Add extra length for randomness
+
+	// Fill randomBytes with random data
+	if _, err := rand.Read(randomBytes); err != nil {
+		panic(err)
+	}
+
+	// Generate randomString using randomBytes and charset
+	charsetLength := byte(len(charset))
+	for i, b := range randomBytes {
+		randomString[i] = charset[b%charsetLength]
+	}
+
+	return string(randomString)
+}
+
 func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 	if !ae.dp.Spec.CloudInfra.ProvisionNetwork {
 		return nil
 	}
 
 	// Generate a random number between 0 and 253
-	cidrRandom := rand.Intn(254)
+	cidrRandom := mrand.Intn(254)
 
 	vpcId := ae.dp.Status.CloudInfraStatus.Vpc
 
 	if vpcId == "" {
+		vpcName := fmt.Sprintf("%s-%s-%s", ae.dp.Name, ae.dp.Namespace, generateRandomString(5))
 		vpcCidr := fmt.Sprintf("10.%d.0.0/16", cidrRandom)
 		vpc, err := ae.network.CreateVPC(ctx, &awsec2.CreateVpcInput{
 			CidrBlock: &vpcCidr,
+			TagSpecifications: []ec2types.TagSpecification{
+				{
+					Tags: []ec2types.Tag{
+						{
+							Key:   aws.String("Name"),
+							Value: aws.String(vpcName),
+						},
+					},
+				},
+			},
 		})
 		if err != nil {
 			return err
