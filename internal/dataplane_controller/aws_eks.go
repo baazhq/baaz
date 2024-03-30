@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	mrand "math/rand"
@@ -215,25 +214,6 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 }
 
-func generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyz"
-	randomString := make([]byte, length)
-	randomBytes := make([]byte, length+(length/4)) // Add extra length for randomness
-
-	// Fill randomBytes with random data
-	if _, err := rand.Read(randomBytes); err != nil {
-		panic(err)
-	}
-
-	// Generate randomString using randomBytes and charset
-	charsetLength := byte(len(charset))
-	for i, b := range randomBytes {
-		randomString[i] = charset[b%charsetLength]
-	}
-
-	return string(randomString)
-}
-
 func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 	if !ae.dp.Spec.CloudInfra.ProvisionNetwork {
 		return nil
@@ -245,12 +225,13 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 	vpcId := ae.dp.Status.CloudInfraStatus.Vpc
 
 	if vpcId == "" {
-		vpcName := fmt.Sprintf("%s-%s-%s", ae.dp.Name, ae.dp.Namespace, generateRandomString(5))
+		vpcName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
 		vpcCidr := fmt.Sprintf("10.%d.0.0/16", cidrRandom)
 		vpc, err := ae.network.CreateVPC(ctx, &awsec2.CreateVpcInput{
 			CidrBlock: &vpcCidr,
 			TagSpecifications: []ec2types.TagSpecification{
 				{
+					ResourceType: ec2types.ResourceTypeVpc,
 					Tags: []ec2types.Tag{
 						{
 							Key:   aws.String("Name"),
