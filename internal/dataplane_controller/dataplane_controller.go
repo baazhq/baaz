@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"os"
 	"time"
 
@@ -54,6 +55,35 @@ func NewDataplaneReconciler(mgr ctrl.Manager, enablePrivate bool, customerName s
 
 }
 
+func (r *DataPlaneReconciler) initCloudAuth(ctx context.Context, dp *v1.DataPlanes) error {
+	awsSecret, err := getSecret(ctx, r.Client, client.ObjectKey{
+		Name:      dp.Spec.CloudInfra.AuthSecretRef.SecretName,
+		Namespace: dp.Namespace,
+	})
+	if err != nil {
+		return err
+	}
+
+	accessKey, found := awsSecret.Data[dp.Spec.CloudInfra.AuthSecretRef.AccessKeyName]
+	if !found {
+		return errors.New("access key not found in the secret")
+	}
+
+	if err := os.Setenv(aws_access_key, string(accessKey)); err != nil {
+		return err
+	}
+
+	secretKey, found := awsSecret.Data[dp.Spec.CloudInfra.AuthSecretRef.SecretKeyName]
+	if !found {
+		return errors.New("secret key not found in the secret")
+	}
+
+	if err := os.Setenv(aws_secret_key, string(secretKey)); err != nil {
+		return err
+	}
+	return nil
+}
+
 // +kubebuilder:rbac:groups=datainfra.io,resources=dataplanes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=datainfra.io,resources=dataplanes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=datainfra.io,resources=dataplanes/finalizers,verbs=update
@@ -63,6 +93,10 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	err := r.Get(ctx, req.NamespacedName, desiredObj)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if err := r.initCloudAuth(ctx, desiredObj); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	klog.Infof("Reconciling Dataplane: %s/%s", desiredObj.Namespace, desiredObj.Name)
@@ -147,7 +181,7 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	if ae.dp.Status.CloudInfraStatus.EksStatus.OIDCProviderArn != "" {
 		_, err := ae.eksIC.DeleteOIDCProvider(ae.dp.Status.CloudInfraStatus.EksStatus.OIDCProviderArn)
 		if err != nil {
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+			return ctrl.Result{RequeueAfter: time.Second * 10}, err
 		}
 	}
 
@@ -175,8 +209,8 @@ func deleteNetworkComponent(ae *awsEnv) error {
 		return err
 	}
 	if ae.dp.Status.CloudInfraStatus.InternetGatewayId != "" {
-		if err := ae.network.DetachInternetGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc,
-			ae.dp.Status.CloudInfraStatus.InternetGatewayId); err != nil {
+		if err := ae.network.DetachInternetGateway(ae.ctx,
+			ae.dp.Status.CloudInfraStatus.InternetGatewayId, ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
 			return err
 		}
 
@@ -186,7 +220,7 @@ func deleteNetworkComponent(ae *awsEnv) error {
 	}
 	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" {
 		if err := ae.network.DeleteNatGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.NATGatewayId); err != nil {
-			return err
+			klog.Error(err)
 		}
 	}
 	return ae.network.DeleteVPC(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc)

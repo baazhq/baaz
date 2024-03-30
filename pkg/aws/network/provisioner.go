@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	v1 "github.com/baazhq/baaz/api/v1/types"
 )
@@ -22,10 +23,14 @@ func (p *provisioner) CreateVPC(ctx context.Context, params *awsec2.CreateVpcInp
 }
 
 func (p *provisioner) DeleteVPC(ctx context.Context, vpcId string) error {
+	var notFoundErr *types.ResourceNotFoundException
 	_, err := p.awsec2Client.DeleteVpc(ctx, &awsec2.DeleteVpcInput{
 		VpcId: aws.String(vpcId),
 	})
-	return err
+	if err != nil && !errors.As(err, &notFoundErr) {
+		return err
+	}
+	return nil
 }
 
 func (p *provisioner) CreateSubnet(ctx context.Context, params *awsec2.CreateSubnetInput) (*awsec2.CreateSubnetOutput, error) {
@@ -117,7 +122,7 @@ func (p *provisioner) AttachInternetGateway(ctx context.Context, igId, vpcId str
 func (p *provisioner) DetachInternetGateway(ctx context.Context, id, vpcId string) error {
 	_, err := p.awsec2Client.DetachInternetGateway(ctx, &awsec2.DetachInternetGatewayInput{
 		InternetGatewayId: aws.String(id),
-		VpcId:             aws.String(id),
+		VpcId:             aws.String(vpcId),
 	})
 	return err
 }
@@ -234,6 +239,8 @@ func (p *provisioner) DeleteVpcLBs(ctx context.Context, vpcId string) error {
 	}
 
 	for _, lb := range lbs.LoadBalancers {
+		fmt.Println("================================")
+		fmt.Println(*lb.LoadBalancerArn)
 		if aws.ToString(lb.VpcId) == vpcId {
 			_, err := p.elbv2Client.DeleteLoadBalancer(ctx, &elbv2.DeleteLoadBalancerInput{
 				LoadBalancerArn: lb.LoadBalancerArn,
