@@ -165,6 +165,9 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 }
 
 func deleteNetworkComponent(ae *awsEnv) error {
+	if err := ae.network.DeleteVpcLBs(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
+		return err
+	}
 	if ae.dp.Status.CloudInfraStatus.InternetGatewayId != "" {
 		if err := ae.network.DetachInternetGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc,
 			ae.dp.Status.CloudInfraStatus.InternetGatewayId); err != nil {
@@ -180,7 +183,7 @@ func deleteNetworkComponent(ae *awsEnv) error {
 			return err
 		}
 	}
-	return nil
+	return ae.network.DeleteVPC(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc)
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -8,15 +8,24 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 type provisioner struct {
 	awsec2Client *awsec2.Client
+	elbv2Client  *elbv2.Client
 }
 
 func (p *provisioner) CreateVPC(ctx context.Context, params *awsec2.CreateVpcInput) (*awsec2.CreateVpcOutput, error) {
 	return p.awsec2Client.CreateVpc(ctx, params)
+}
+
+func (p *provisioner) DeleteVPC(ctx context.Context, vpcId string) error {
+	_, err := p.awsec2Client.DeleteVpc(ctx, &awsec2.DeleteVpcInput{
+		VpcId: aws.String(vpcId),
+	})
+	return err
 }
 
 func (p *provisioner) CreateSubnet(ctx context.Context, params *awsec2.CreateSubnetInput) (*awsec2.CreateSubnetOutput, error) {
@@ -55,12 +64,36 @@ func (p *provisioner) CreateNAT(ctx context.Context, dp *v1.DataPlanes) (*awsec2
 }
 
 func (p *provisioner) DeleteNatGateway(ctx context.Context, id string) error {
+	nats, err := p.awsec2Client.DescribeNatGateways(ctx, &awsec2.DescribeNatGatewaysInput{
+		NatGatewayIds: []string{id},
+	})
+	if err != nil {
+		return err
+	}
+
 	input := &awsec2.DeleteNatGatewayInput{
 		NatGatewayId: aws.String(id),
 	}
 
-	_, err := p.awsec2Client.DeleteNatGateway(ctx, input)
-	return err
+	_, err = p.awsec2Client.DeleteNatGateway(ctx, input)
+	if err != nil {
+		return err
+	}
+
+	if len(nats.NatGateways) == 1 {
+		eips := nats.NatGateways[0].NatGatewayAddresses
+		for _, ip := range eips {
+			if ip.AllocationId != nil {
+				_, err := p.awsec2Client.ReleaseAddress(ctx, &awsec2.ReleaseAddressInput{
+					AllocationId: ip.AllocationId,
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func (p *provisioner) CreateInternetGateway(ctx context.Context) (*awsec2.CreateInternetGatewayOutput, error) {
@@ -192,4 +225,23 @@ func (p *provisioner) AssociateRTWithSubnet(ctx context.Context, rtId, subnetId 
 
 	_, err := p.awsec2Client.AssociateRouteTable(ctx, input)
 	return err
+}
+
+func (p *provisioner) DeleteVpcLBs(ctx context.Context, vpcId string) error {
+	lbs, err := p.elbv2Client.DescribeLoadBalancers(ctx, &elbv2.DescribeLoadBalancersInput{})
+	if err != nil {
+		return err
+	}
+
+	for _, lb := range lbs.LoadBalancers {
+		if aws.ToString(lb.VpcId) == vpcId {
+			_, err := p.elbv2Client.DeleteLoadBalancer(ctx, &elbv2.DeleteLoadBalancerInput{
+				LoadBalancerArn: lb.LoadBalancerArn,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }

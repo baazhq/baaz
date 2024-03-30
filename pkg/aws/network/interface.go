@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
@@ -25,6 +26,8 @@ type Network interface {
 	DeleteNatGateway(ctx context.Context, id string) error
 	DetachInternetGateway(ctx context.Context, id, vpcId string) error
 	DeleteInternetGateway(ctx context.Context, id string) error
+	DeleteVpcLBs(ctx context.Context, vpcId string) error
+	DeleteVPC(ctx context.Context, vpcId string) error
 }
 
 func NewProvisioner(ctx context.Context, region string) (Network, error) {
@@ -35,5 +38,6 @@ func NewProvisioner(ctx context.Context, region string) (Network, error) {
 
 	return &provisioner{
 		awsec2Client: awsec2.NewFromConfig(config),
+		elbv2Client:  elbv2.NewFromConfig(config),
 	}, nil
 }
