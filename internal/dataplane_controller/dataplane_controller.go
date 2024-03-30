@@ -8,6 +8,7 @@ import (
 	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/baazhq/baaz/internal/predicates"
 	"github.com/baazhq/baaz/pkg/aws/eks"
+	"github.com/baazhq/baaz/pkg/aws/network"
 	"github.com/baazhq/baaz/pkg/store"
 	"github.com/baazhq/baaz/pkg/utils"
 	"github.com/go-logr/logr"
@@ -65,15 +66,20 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	klog.Infof("Reconciling Dataplane: %s/%s", desiredObj.Namespace, desiredObj.Name)
+	networkMgr, err := network.NewProvisioner(ctx, desiredObj.Spec.CloudInfra.Region)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	// check for deletion time stamp
 	if desiredObj.DeletionTimestamp != nil {
 		// object is going to be deleted
 		awsEnv := awsEnv{
-			ctx:    ctx,
-			dp:     desiredObj,
-			eksIC:  eks.NewEks(ctx, desiredObj),
-			client: r.Client,
-			store:  r.NgStore,
+			ctx:     ctx,
+			dp:      desiredObj,
+			eksIC:   eks.NewEks(ctx, desiredObj),
+			client:  r.Client,
+			store:   r.NgStore,
+			network: networkMgr,
 		}
 
 		return r.reconcileDelete(&awsEnv)
