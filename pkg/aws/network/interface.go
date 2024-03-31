@@ -29,7 +29,7 @@ type Network interface {
 	DeleteVpcLBs(ctx context.Context, vpcId string) error
 	DeleteVPC(ctx context.Context, vpcId string) error
 	DeleteSubnets(ctx context.Context, subnetIds []string) error
-	DeleteSGs(ctx context.Context, sgIds []string) error
+	DeleteSGs(ctx context.Context, vpcId string) error
 	DeleteRouteTables(ctx context.Context, vpcId string) error
 }
 

@@ -229,7 +229,7 @@ func deleteNetworkComponent(ae *awsEnv) error {
 	if err := ae.network.DeleteSubnets(ae.ctx, ae.dp.Status.CloudInfraStatus.SubnetIds); err != nil {
 		klog.Warning(err)
 	}
-	if err := ae.network.DeleteSGs(ae.ctx, ae.dp.Status.CloudInfraStatus.SecurityGroupIds); err != nil {
+	if err := ae.network.DeleteSGs(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
 		klog.Warning(err)
 	}
 	return ae.network.DeleteVPC(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc)

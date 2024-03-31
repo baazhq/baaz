@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	v1 "github.com/baazhq/baaz/api/v1/types"
+	"k8s.io/klog/v2"
 )
 
 type provisioner struct {
@@ -53,10 +54,21 @@ func (p *provisioner) CreateSG(ctx context.Context, params *awsec2.CreateSecurit
 	return p.awsec2Client.CreateSecurityGroup(ctx, params)
 }
 
-func (p *provisioner) DeleteSGs(ctx context.Context, sgIds []string) error {
-	for _, id := range sgIds {
+func (p *provisioner) DeleteSGs(ctx context.Context, vpcId string) error {
+	sGroups, err := p.awsec2Client.DescribeSecurityGroups(ctx, &awsec2.DescribeSecurityGroupsInput{
+		Filters: []ec2types.Filter{
+			{
+				Name:   aws.String("vpc-id"),
+				Values: []string{vpcId},
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	for _, sg := range sGroups.SecurityGroups {
 		if _, err := p.awsec2Client.DeleteSecurityGroup(ctx, &awsec2.DeleteSecurityGroupInput{
-			GroupId: aws.String(id),
+			GroupId: sg.GroupId,
 		}); err != nil {
 			return err
 		}
@@ -253,12 +265,25 @@ func (p *provisioner) DeleteRouteTables(ctx context.Context, vpcId string) error
 	if err != nil {
 		return err
 	}
+
 	for _, rt := range routes.RouteTables {
-		_, err := p.awsec2Client.DeleteRouteTable(ctx, &awsec2.DeleteRouteTableInput{
+		for _, r := range rt.Routes {
+			_, err := p.awsec2Client.DeleteRoute(ctx, &awsec2.DeleteRouteInput{
+				RouteTableId:         rt.RouteTableId,
+				DestinationCidrBlock: r.DestinationCidrBlock,
+			})
+			if err != nil {
+				klog.Error(err)
+				continue
+			}
+		}
+
+		_, err = p.awsec2Client.DeleteRouteTable(ctx, &awsec2.DeleteRouteTableInput{
 			RouteTableId: rt.RouteTableId,
 		})
 		if err != nil {
-			return err
+			klog.Error(err)
+			continue
 		}
 	}
 	return nil
