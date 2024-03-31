@@ -26,9 +26,9 @@ dataplane:
     version: "1.9.4"
     values:
     - controller.nodeSelector.nodeType=system
-  - name:  "monitoring-stack"
-    namespace: monitoring
-    chartName: "kube-prometheus-stack"
-    repoName: "prometheus-community"
-    repoUrl: "https://prometheus-community.github.io/helm-charts"
-    version: "55.5.0"
+  # - name:  "monitoring-stack"
+  #   namespace: monitoring
+  #   chartName: "kube-prometheus-stack"
+  #   repoName: "prometheus-community"
+  #   repoUrl: "https://prometheus-community.github.io/helm-charts"
+  #   version: "55.5.0"

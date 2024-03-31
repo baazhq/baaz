@@ -28,6 +28,9 @@ type Network interface {
 	DeleteInternetGateway(ctx context.Context, id string) error
 	DeleteVpcLBs(ctx context.Context, vpcId string) error
 	DeleteVPC(ctx context.Context, vpcId string) error
+	DeleteSubnets(ctx context.Context, subnetIds []string) error
+	DeleteSGs(ctx context.Context, sgIds []string) error
+	DeleteRouteTables(ctx context.Context, vpcId string) error
 }
 
 func NewProvisioner(ctx context.Context, region string) (Network, error) {

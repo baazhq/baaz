@@ -37,8 +37,31 @@ func (p *provisioner) CreateSubnet(ctx context.Context, params *awsec2.CreateSub
 	return p.awsec2Client.CreateSubnet(ctx, params)
 }
 
-func (ec *provisioner) CreateSG(ctx context.Context, params *awsec2.CreateSecurityGroupInput) (*awsec2.CreateSecurityGroupOutput, error) {
-	return ec.awsec2Client.CreateSecurityGroup(ctx, params)
+func (p *provisioner) DeleteSubnets(ctx context.Context, subnetIds []string) error {
+	for _, id := range subnetIds {
+		_, err := p.awsec2Client.DeleteSubnet(ctx, &awsec2.DeleteSubnetInput{
+			SubnetId: aws.String(id),
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *provisioner) CreateSG(ctx context.Context, params *awsec2.CreateSecurityGroupInput) (*awsec2.CreateSecurityGroupOutput, error) {
+	return p.awsec2Client.CreateSecurityGroup(ctx, params)
+}
+
+func (p *provisioner) DeleteSGs(ctx context.Context, sgIds []string) error {
+	for _, id := range sgIds {
+		if _, err := p.awsec2Client.DeleteSecurityGroup(ctx, &awsec2.DeleteSecurityGroupInput{
+			GroupId: aws.String(id),
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p *provisioner) CreateNAT(ctx context.Context, dp *v1.DataPlanes) (*awsec2.CreateNatGatewayOutput, error) {
@@ -216,6 +239,29 @@ func (p *provisioner) CreateRouteTable(ctx context.Context, vpcId string) (*awse
 	}
 
 	return p.awsec2Client.CreateRouteTable(ctx, input)
+}
+
+func (p *provisioner) DeleteRouteTables(ctx context.Context, vpcId string) error {
+	routes, err := p.awsec2Client.DescribeRouteTables(ctx, &awsec2.DescribeRouteTablesInput{
+		Filters: []ec2types.Filter{
+			{
+				Name:   aws.String("vpc-id"),
+				Values: []string{vpcId},
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	for _, rt := range routes.RouteTables {
+		_, err := p.awsec2Client.DeleteRouteTable(ctx, &awsec2.DeleteRouteTableInput{
+			RouteTableId: rt.RouteTableId,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p *provisioner) CreateRoute(ctx context.Context, input *awsec2.CreateRouteInput) (*awsec2.CreateRouteOutput, error) {
