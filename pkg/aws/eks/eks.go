@@ -1,6 +1,8 @@
 package eks
 
 import (
+	"errors"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
@@ -127,7 +129,14 @@ func (ec *eks) UpdateAwsEksDataPlane(clusterResult *awseks.DescribeClusterOutput
 
 func (ec *eks) DeleteEKS() (*awseks.DeleteClusterOutput, error) {
 	klog.Infof("Deleting EKS Control Plane [%s]", ec.dp.Spec.CloudInfra.Eks.Name)
-	return ec.awsClient.DeleteCluster(ec.ctx, &awseks.DeleteClusterInput{
+	out, err := ec.awsClient.DeleteCluster(ec.ctx, &awseks.DeleteClusterInput{
 		Name: &ec.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
 	})
+	if err != nil {
+		var notFoundErr *types.ResourceNotFoundException
+		if errors.As(err, &notFoundErr) {
+			return out, nil
+		}
+	}
+	return out, err
 }

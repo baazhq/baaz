@@ -1,11 +1,12 @@
 package eks
 
 import (
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"k8s.io/klog/v2"
+	"errors"
 
-	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/iam/types"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -43,13 +44,13 @@ func (ec *eks) CreateOIDCProvider(param *CreateOIDCProviderInput) (*awsiam.Creat
 
 func (ec *eks) DeleteOIDCProvider(providerArn string) (*awsiam.DeleteOpenIDConnectProviderOutput, error) {
 	klog.Infof("Deleting Oidc Provider [%s]", providerArn)
+	var notFoundErr *types.NoSuchEntityException
 
-	output, err := ec.awsIamClient.DeleteOpenIDConnectProvider(ec.ctx, &iam.DeleteOpenIDConnectProviderInput{
+	output, err := ec.awsIamClient.DeleteOpenIDConnectProvider(ec.ctx, &awsiam.DeleteOpenIDConnectProviderInput{
 		OpenIDConnectProviderArn: &providerArn,
 	})
-	if err != nil {
-		klog.Infof("Response Deleting Oidc Provider [%s]", err.Error())
-		return output, nil
+	if err != nil && !errors.As(err, &notFoundErr) {
+		return nil, err
 	}
 
 	return output, nil

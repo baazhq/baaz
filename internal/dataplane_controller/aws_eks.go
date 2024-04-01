@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
+	mrand "math/rand"
 	"os"
 	"time"
 
 	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
+	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
@@ -219,14 +220,26 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 	}
 
 	// Generate a random number between 0 and 253
-	cidrRandom := rand.Intn(254)
+	cidrRandom := mrand.Intn(254)
 
 	vpcId := ae.dp.Status.CloudInfraStatus.Vpc
 
 	if vpcId == "" {
+		vpcName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
 		vpcCidr := fmt.Sprintf("10.%d.0.0/16", cidrRandom)
 		vpc, err := ae.network.CreateVPC(ctx, &awsec2.CreateVpcInput{
 			CidrBlock: &vpcCidr,
+			TagSpecifications: []ec2types.TagSpecification{
+				{
+					ResourceType: ec2types.ResourceTypeVpc,
+					Tags: []ec2types.Tag{
+						{
+							Key:   aws.String("Name"),
+							Value: aws.String(vpcName),
+						},
+					},
+				},
+			},
 		})
 		if err != nil {
 			return err
