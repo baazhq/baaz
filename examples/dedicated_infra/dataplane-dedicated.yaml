@@ -1,0 +1,30 @@
+dataplane:
+  cloudType: aws
+  cloudRegion: us-east-1
+  customerName: foo
+  saasType: dedicated
+  cloudAuth:
+    awsAuth:
+      awsAccessKey: AKIAWLZK4B6AOP67T7OA
+      awsSecretKey: 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
+  provisionNetwork: true
+  kubernetesConfig:
+    eks:
+      version: '1.27'
+  applicationConfig:
+  - name:  "druid-operator"
+    namespace: druid-operator
+    chartName: "druid-operator"
+    repoName: "datainfra"
+    repoUrl: "https://charts.datainfra.io"
+    version: "1.2.1"
+    values:
+     - nodeSelector.nodeType=system
+  - name: "nginx"
+    namespace: nginx-ingress
+    chartName: "ingress-nginx"
+    repoName: "ingress-nginx"
+    repoUrl: "https://kubernetes.github.io/ingress-nginx"
+    version: "1.9.4"
+    values:
+    - controller.nodeSelector.nodeType=system

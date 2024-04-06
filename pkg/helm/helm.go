@@ -10,12 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/restmapper"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	"github.com/gofrs/flock"
@@ -67,9 +62,8 @@ func NewHelm(
 func (h *Helm) List(rest *rest.Config) (status string, exists bool) {
 
 	settings := cli.New()
-	restGetter := NewRESTClientGetter(rest, h.Namespace)
 
-	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return "", false
 	}
 
@@ -96,9 +90,7 @@ func (h *Helm) Uninstall(rest *rest.Config) error {
 
 	settings := cli.New()
 
-	restGetter := NewRESTClientGetter(rest, h.Namespace)
-
-	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return err
 	}
 
@@ -125,9 +117,7 @@ func (h *Helm) Apply(rest *rest.Config) error {
 
 	settings := cli.New()
 
-	restGetter := NewRESTClientGetter(rest, h.Namespace)
-
-	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return err
 	}
 
@@ -159,7 +149,6 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	client.Timeout = 120 * time.Second
 
 	client.WaitForJobs = true
-	//client.IncludeCRDs = true
 
 	values := values.Options{
 		Values: h.Values,
@@ -186,9 +175,7 @@ func (h *Helm) Upgrade(rest *rest.Config) error {
 
 	settings := cli.New()
 
-	restGetter := NewRESTClientGetter(rest, h.Namespace)
-
-	if err := h.Action.Init(&restGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return err
 	}
 
@@ -335,52 +322,4 @@ func repoAdd(name, url string) {
 	if err := f.WriteFile(repoFile, 0644); err != nil {
 		klog.Error(err)
 	}
-}
-
-type simpleRESTClientGetter struct {
-	config    *rest.Config
-	namespace string
-}
-
-func NewRESTClientGetter(config *rest.Config, namespace string) simpleRESTClientGetter {
-	return simpleRESTClientGetter{
-		namespace: namespace,
-		config:    config,
-	}
-}
-
-func (c *simpleRESTClientGetter) ToRESTConfig() (*rest.Config, error) {
-	return c.config, nil
-}
-
-func (c *simpleRESTClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
-	config, err := c.ToRESTConfig()
-	if err != nil {
-		return nil, err
-	}
-	config.Burst = 100
-
-	discoveryClient, _ := discovery.NewDiscoveryClientForConfig(config)
-	return memory.NewMemCacheClient(discoveryClient), nil
-}
-
-func (c *simpleRESTClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
-	discoveryClient, err := c.ToDiscoveryClient()
-	if err != nil {
-		return nil, err
-	}
-
-	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient)
-	expander := restmapper.NewShortcutExpander(mapper, discoveryClient)
-	return expander, nil
-}
-
-func (c *simpleRESTClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
-	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
-
-	overrides := &clientcmd.ConfigOverrides{ClusterDefaults: clientcmd.ClusterDefaults}
-	overrides.Context.Namespace = c.namespace
-
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, overrides)
 }

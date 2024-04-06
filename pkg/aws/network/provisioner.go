@@ -309,6 +309,8 @@ func (p *provisioner) DeleteVpcLBs(ctx context.Context, vpcId string) error {
 		return err
 	}
 
+	fmt.Println(lbs.LoadBalancers)
+
 	for _, lb := range lbs.LoadBalancers {
 		fmt.Println("================================")
 		fmt.Println(*lb.LoadBalancerArn)

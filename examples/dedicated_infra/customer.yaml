@@ -1,0 +1,7 @@
+customer:
+  name: foo
+  saas_type: dedicated
+  cloud_type: aws
+  labels: 
+    tier: buisness
+    region: us-east-1

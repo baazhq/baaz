@@ -1,0 +1,7 @@
+customer:
+  name: parseable
+  saas_type: "private"
+  cloud_type: "aws"
+  labels: 
+    tier: "enterprise"
+    region:  "us-east-1"

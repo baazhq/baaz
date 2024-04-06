@@ -21,7 +21,7 @@ var (
 			case "customer":
 				return nil
 			case "dataplane":
-				resp, err := dataplanes.DeleteDataplane(customer_name)
+				resp, err := dataplanes.DeleteDataplane(dataplane_name)
 				if err != nil {
 					return err
 				}
@@ -36,5 +36,5 @@ var (
 
 func init() {
 	rootCmd.AddCommand(deleteCmd)
-	deleteCmd.Flags().StringVar(&customer_name, "customer", "", "name of the entity to be deleted")
+	deleteCmd.Flags().StringVar(&dataplane_name, "dataplane", "", "name of the dataplane to be deleted")
 }

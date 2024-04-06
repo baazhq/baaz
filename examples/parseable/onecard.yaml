@@ -1,0 +1,7 @@
+customer:
+  name: grafana
+  saas_type: "shared"
+  cloud_type: "aws"
+  labels: 
+    tier: "free"
+    region:  "us-east-1"

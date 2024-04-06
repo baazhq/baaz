@@ -465,26 +465,12 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 
 			_, exists := helm.List(restConfig)
 
-			// if _, _, err := utils.PatchStatus(
-			// 	ae.ctx, ae.client, ae.App, func(obj client.Object) client.Object {
-			// 	in := obj.(*v1.Applications)
-			// 	in.Status.Phase = v1.ApplicationPhase(result)
-			// 	in.Status.ApplicationCurrentSpec = a.App.Spec
-			// 	return in
-			// }); err != nil {
-			// 	return err
-			// }
-
-			if exists == false {
-				go func() error {
-					err = helm.Apply(restConfig)
-					if err != nil {
-						fmt.Println(err)
-						return err
-					}
-					return nil
-				}()
-				return err
+			if !exists {
+				err = helm.Apply(restConfig)
+				if err != nil {
+					fmt.Println(err)
+					return err
+				}
 			}
 
 		}
