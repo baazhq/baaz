@@ -13,6 +13,9 @@
 </div>
 Organisations seeking to build an infra SaaS or managed services product require a centralised control plane to deploy software to data planes located either within the customer premises or at the SAAS provider network. BaaZ is control plane which provides unified management for building Shared Infra, Dedicated Infra and BYOC/Private Infra.
 
+## Architecture
+![baazdark](https://github.com/baazhq/baaz/assets/34169002/f2b47879-6ac8-4517-994b-20c4d16a72b9)
+
 
 ## :rocket: Features
 
@@ -22,7 +25,7 @@ Organisations seeking to build an infra SaaS or managed services product require
 - Tailored Infrastructure with tenant expansion. Ex: Move customers from Plan A to Plan B.
 - Stateless, built on kubernetes API.
 
-## :newspaper: Newsletter - Frequent Updates on building infra SaaS and managed services.
+## :newspaper: Newsletter 
 - [SaaS Infra](https://saasinfra.substack.com/)
 
 ## :stethoscope: Contact Us
