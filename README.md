@@ -1,6 +1,6 @@
 <h2 align="center">
   <picture>
-    <img alt="DataInfra Logo" src="https://raw.githubusercontent.com/datainfrahq/.github/main/images/Group.png" width="200" height="200">
+    <img alt="DataInfra Logo" src="https://raw.githubusercontent.com/datainfrahq/.github/main/images/Group.png" width="300" height="200">
   </picture>
   <br>
   Baaz ( ਬਾਜ਼ )
