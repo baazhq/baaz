@@ -65,8 +65,8 @@ func makeDataplaneUrl() string {
 	return common.GetBzUrl() + common.BaazPath + common.DataplanePath
 }
 
-func makeListDataplaneUrl() string {
-	return common.GetBzUrl() + common.BaazPath + common.DataplanePath
+func makeDataplaneDeleteUrl(dataplaneName string) string {
+	return makeDataplaneUrl() + "/" + dataplaneName
 }
 
 func makeAddRemoveDataplaneUrl(customerName, dataplaneName string) string {
@@ -118,7 +118,7 @@ func listDataplanes() ([]dpList, error) {
 
 	req, err := http.NewRequest(
 		http.MethodGet,
-		makeListDataplaneUrl(),
+		makeDataplaneUrl(),
 		nil,
 	)
 	if err != nil {
@@ -133,6 +133,9 @@ func listDataplanes() ([]dpList, error) {
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
 	if resp.StatusCode > 299 {
 		return nil, fmt.Errorf("%s", string(body))
 	}
@@ -146,12 +149,12 @@ func listDataplanes() ([]dpList, error) {
 	return dp, nil
 }
 
-func DeleteDataplane(customerName string) (string, error) {
+func DeleteDataplane(dataplaneName string) (string, error) {
 	client := &http.Client{}
 
 	req, err := http.NewRequest(
 		http.MethodDelete,
-		makeDataplaneUrl(),
+		makeDataplaneDeleteUrl(dataplaneName),
 		nil,
 	)
 	if err != nil {

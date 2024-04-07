@@ -207,11 +207,13 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 func deleteNetworkComponent(ae *awsEnv) error {
 	if err := ae.network.DeleteVpcLBs(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
 		klog.Warning(err)
+		return err
 	}
 	if ae.dp.Status.CloudInfraStatus.InternetGatewayId != "" {
 		if err := ae.network.DetachInternetGateway(ae.ctx,
 			ae.dp.Status.CloudInfraStatus.InternetGatewayId, ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
 			klog.Warning(err)
+			return err
 		}
 
 		if err := ae.network.DeleteInternetGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.InternetGatewayId); err != nil {
