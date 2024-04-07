@@ -1,6 +1,6 @@
 <h2 align="center">
   <picture>
-    <img alt="DataInfra Logo" src="https://raw.githubusercontent.com/datainfrahq/.github/main/images/Group.png" width="300" height="200">
+    <img alt="BaaZ Logo" src="https://raw.githubusercontent.com/datainfrahq/.github/main/images/Group.png" width="300" height="200">
   </picture>
   <br>
   Baaz ( ਬਾਜ਼ )
@@ -11,26 +11,23 @@
 <div align="center">
 
 </div>
-Organisations seeking to build a SAAS product require a centralised control plane to deploy software to data planes located either within the customer premises or at the SAAS provider. Gabey is control plane which simplfyes infrastructure provisioning for applications with built in multi-tenancy and state management. 
+Organisations seeking to build an infra SaaS or managed services product require a centralised control plane to deploy software to data planes located either within the customer premises or at the SAAS provider network. BaaZ is control plane which provides unified management for building Shared Infra, Dedicated Infra and BYOC/Private Infra.
 
 
 ## :rocket: Features
 
-- Multi Tenancy - Physical and Logical Separation
-- Multi Cloud - Portable Infrastructure
-- Capacity Planning - Define Sizes for Tenant’s
-- Security and Data Isolation 
-- BYOA - Bring Your Own Application
+- A single system design to build Shared, Dedicated and BYOC/Private Infra.
+- Enhanced Security to access customer networks. 
+- Supports a Pull based model for BYOC/Private Infra.
+- Tailored Infrastructure with tenant expansion. Ex: Move customers from Plan A to Plan B.
+- Stateless, built on kubernetes API.
 
+## :newspaper: Newsletter - Frequent Updates on building infra SaaS and managed services.
+- [SaaS Infra](https://saasinfra.substack.com/)
 
-## :stethoscope: Support
+## :stethoscope: Contact Us
 
-- For questions and feedback please feel free to reach out to us on [Slack ↗︎](https://launchpass.com/datainfra-workspace).
-- For bugs, please create issue on [GitHub ↗︎](https://github.com/datainfrahq/gabey/issues).
-- For commercial support and consultation, please reach out to us at [`hi@datainfra.io` ↗︎](mailto:hi@datainfra.io).
+- For questions and feedback please feel free to reach out to us on [linkedin](https://www.linkedin.com/in/adheipsingh/) directly
 
-## :trophy: Contributing
-
-### Contributors
-
-<a href="https://github.com/datainfrahq/baaz/graphs/contributors"><img src="https://contrib.rocks/image?repo=datainfrahq/gabey" /></a>
+## Project Status
+- This project is currently in beta state. We are working towards a product release by end of 2024.
