@@ -110,11 +110,6 @@ spec:
                         type: array
                       version:
                         type: string
-                    required:
-                    - name
-                    - securityGroupIds
-                    - subnetIds
-                    - version
                     type: object
                   provisionNetwork:
                     type: boolean
@@ -123,8 +118,6 @@ spec:
                 required:
                 - authSecretRef
                 - cloudType
-                - eks
-                - provisionNetwork
                 - region
                 type: object
             required:

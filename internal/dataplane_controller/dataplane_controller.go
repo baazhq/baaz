@@ -186,12 +186,14 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	}
 
 	if _, err := ae.eksIC.DeleteEKS(); err != nil {
-		return ctrl.Result{RequeueAfter: time.Second * 10}, err
+		klog.Infof("waiting for EKS to be deleted, current state: %s", err.Error())
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
 	if ae.dp.Spec.CloudInfra.ProvisionNetwork {
 		if err := deleteNetworkComponent(ae); err != nil {
-			return ctrl.Result{RequeueAfter: time.Second * 10}, err
+			klog.Infof("waiting for network components to be deleted, current state: %s", err.Error())
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
 	}
 
@@ -205,36 +207,81 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 }
 
 func deleteNetworkComponent(ae *awsEnv) error {
+	if ae.dp.Status.CloudInfraStatus.Vpc == "" {
+		return nil
+	}
+
 	if err := ae.network.DeleteVpcLBs(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
-		klog.Warning(err)
 		return err
+	}
+	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" {
+		if err := ae.network.DeleteNatGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.NATGatewayId); err != nil {
+			return err
+		}
+
+		_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.NATGatewayId = ""
+			return in
+		})
+		if err != nil {
+			return err
+		}
 	}
 	if ae.dp.Status.CloudInfraStatus.InternetGatewayId != "" {
 		if err := ae.network.DetachInternetGateway(ae.ctx,
 			ae.dp.Status.CloudInfraStatus.InternetGatewayId, ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
-			klog.Warning(err)
 			return err
 		}
 
 		if err := ae.network.DeleteInternetGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.InternetGatewayId); err != nil {
-			klog.Warning(err)
+			return err
+		}
+
+		_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.InternetGatewayId = ""
+			return in
+		})
+		if err != nil {
+			return err
 		}
 	}
-	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" {
-		if err := ae.network.DeleteNatGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.NATGatewayId); err != nil {
-			klog.Warning(err)
+	if len(ae.dp.Status.CloudInfraStatus.SubnetIds) > 0 {
+		if err := ae.network.DeleteSubnets(ae.ctx, ae.dp.Status.CloudInfraStatus.SubnetIds); err != nil {
+			return err
+		}
+		_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.SubnetIds = []string{}
+			return in
+		})
+		if err != nil {
+			return err
 		}
 	}
+
 	if err := ae.network.DeleteRouteTables(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
-		klog.Warning(err)
+		return err
 	}
-	if err := ae.network.DeleteSubnets(ae.ctx, ae.dp.Status.CloudInfraStatus.SubnetIds); err != nil {
-		klog.Warning(err)
-	}
+
 	if err := ae.network.DeleteSGs(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
-		klog.Warning(err)
+		return err
 	}
-	return ae.network.DeleteVPC(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc)
+	if ae.dp.Status.CloudInfraStatus.Vpc != "" {
+		if err := ae.network.DeleteVPC(ae.ctx, ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
+			return err
+		}
+		_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.CloudInfraStatus.Vpc = ""
+			return in
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

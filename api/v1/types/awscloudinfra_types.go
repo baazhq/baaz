@@ -4,8 +4,8 @@ type AwsCloudInfraConfig struct {
 	// AuthSecretRef holds the secret info which contains aws secret key & access key info
 	// Secret must be in the same namespace as dataplane
 	AuthSecretRef    AWSAuthSecretRef `json:"authSecretRef"`
-	ProvisionNetwork bool             `json:"provisionNetwork"`
-	Eks              EksConfig        `json:"eks"`
+	ProvisionNetwork bool             `json:"provisionNetwork,omitempty"`
+	Eks              EksConfig        `json:"eks,omitempty"`
 }
 
 type AWSAuthSecretRef struct {
@@ -15,10 +15,10 @@ type AWSAuthSecretRef struct {
 }
 
 type EksConfig struct {
-	Name             string   `json:"name"`
-	SubnetIds        []string `json:"subnetIds"`
-	SecurityGroupIds []string `json:"securityGroupIds"`
-	Version          string   `json:"version"`
+	Name             string   `json:"name,omitempty"`
+	SubnetIds        []string `json:"subnetIds,omitempty"`
+	SecurityGroupIds []string `json:"securityGroupIds,omitempty"`
+	Version          string   `json:"version,omitempty"`
 }
 
 type AwsCloudInfraConfigStatus struct {

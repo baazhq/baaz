@@ -11,7 +11,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	elbv2 "github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2"
 	v1 "github.com/baazhq/baaz/api/v1/types"
-	"k8s.io/klog/v2"
+)
+
+const (
+	ResourceDafault = "default"
 )
 
 type provisioner struct {
@@ -67,6 +70,9 @@ func (p *provisioner) DeleteSGs(ctx context.Context, vpcId string) error {
 		return err
 	}
 	for _, sg := range sGroups.SecurityGroups {
+		if aws.ToString(sg.GroupName) == ResourceDafault {
+			continue
+		}
 		if _, err := p.awsec2Client.DeleteSecurityGroup(ctx, &awsec2.DeleteSecurityGroupInput{
 			GroupId: sg.GroupId,
 		}); err != nil {
@@ -266,14 +272,19 @@ func (p *provisioner) DeleteRouteTables(ctx context.Context, vpcId string) error
 		return err
 	}
 
+	var errs []error
+
 	for _, rt := range routes.RouteTables {
+		if len(rt.Associations) > 0 && *rt.Associations[0].Main {
+			continue
+		}
 		for _, r := range rt.Routes {
 			_, err := p.awsec2Client.DeleteRoute(ctx, &awsec2.DeleteRouteInput{
 				RouteTableId:         rt.RouteTableId,
 				DestinationCidrBlock: r.DestinationCidrBlock,
 			})
 			if err != nil {
-				klog.Error(err)
+				errs = append(errs, err)
 				continue
 			}
 		}
@@ -282,11 +293,11 @@ func (p *provisioner) DeleteRouteTables(ctx context.Context, vpcId string) error
 			RouteTableId: rt.RouteTableId,
 		})
 		if err != nil {
-			klog.Error(err)
+			errs = append(errs, err)
 			continue
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func (p *provisioner) CreateRoute(ctx context.Context, input *awsec2.CreateRouteInput) (*awsec2.CreateRouteOutput, error) {
@@ -309,11 +320,7 @@ func (p *provisioner) DeleteVpcLBs(ctx context.Context, vpcId string) error {
 		return err
 	}
 
-	fmt.Println(lbs.LoadBalancers)
-
 	for _, lb := range lbs.LoadBalancers {
-		fmt.Println("================================")
-		fmt.Println(*lb.LoadBalancerArn)
 		if aws.ToString(lb.VpcId) == vpcId {
 			_, err := p.elbv2Client.DeleteLoadBalancer(ctx, &elbv2.DeleteLoadBalancerInput{
 				LoadBalancerArn: lb.LoadBalancerArn,

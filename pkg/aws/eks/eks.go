@@ -128,6 +128,20 @@ func (ec *eks) UpdateAwsEksDataPlane(clusterResult *awseks.DescribeClusterOutput
 }
 
 func (ec *eks) DeleteEKS() (*awseks.DeleteClusterOutput, error) {
+	cluster, err := ec.awsClient.DescribeCluster(ec.ctx, &awseks.DescribeClusterInput{
+		Name: &ec.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
+	})
+	if err != nil {
+		var notFoundErr *types.ResourceNotFoundException
+		if errors.As(err, &notFoundErr) {
+			return nil, nil
+		}
+	}
+
+	if cluster.Cluster.Status == types.ClusterStatusDeleting {
+		return nil, errors.New("cluster in deleting state")
+	}
+
 	klog.Infof("Deleting EKS Control Plane [%s]", ec.dp.Spec.CloudInfra.Eks.Name)
 	out, err := ec.awsClient.DeleteCluster(ec.ctx, &awseks.DeleteClusterInput{
 		Name: &ec.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name,
