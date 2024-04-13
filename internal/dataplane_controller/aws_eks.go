@@ -506,7 +506,7 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 				if in.Status.AppStatus == nil {
 					in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
 				}
-				in.Status.AppStatus[app.Name] = v1.InstallingA
+				in.Status.AppStatus[getChartName(app)] = v1.InstallingA
 				return in
 			})
 			if err != nil {
