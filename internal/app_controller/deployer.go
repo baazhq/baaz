@@ -2,6 +2,7 @@ package app_controller
 
 import (
 	"context"
+	"errors"
 
 	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/baazhq/baaz/pkg/aws/eks"
@@ -41,6 +42,9 @@ func NewApplication(
 // Deployer is responsible for deploying apps
 func (a *Application) ReconcileApplicationDeployer() error {
 
+	ch := make(chan error, len(a.App.Spec.Applications))
+	count := 0
+
 	for _, app := range a.App.Spec.Applications {
 
 		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
@@ -71,27 +75,34 @@ func (a *Application) ReconcileApplicationDeployer() error {
 			}
 		}
 
-		if exists == false {
-			//go func() error {
-			err = helm.Apply(restConfig)
-			if err != nil {
-				return err
-			}
-			//	return err
-			//}()
-			if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
-				in := obj.(*v1.Applications)
-				in.Status.Phase = v1.ApplicationPhase(result)
-				in.Status.ApplicationCurrentSpec = a.App.Spec
-				return in
-			}); err != nil {
-				return err
-			}
+		if !exists {
+			klog.Infof("installing application: %s", app.Name)
+			count += 1
+			go func(ch chan error) {
+				if err := helm.Apply(restConfig); err != nil {
+					ch <- err
+				}
+				ch <- nil
+			}(ch)
+			// if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
+			// 	in := obj.(*v1.Applications)
+			// 	in.Status.Phase = v1.ApplicationPhase(result)
+			// 	in.Status.ApplicationCurrentSpec = a.App.Spec
+			// 	return in
+			// }); err != nil {
+			// 	return err
+			// }
 		}
 
 	}
+	var errs []error
+	for i := 0; i < count; i += 1 {
+		if err := <-ch; err != nil {
+			errs = append(errs, err)
+		}
+	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 func (a *Application) UninstallApplications() error {

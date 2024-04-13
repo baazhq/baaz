@@ -58,6 +58,12 @@ type DataPlaneStatus struct {
 	//    aws-ebs-csi-driver: CREATING
 	//    coredns:            READY
 	AddonStatus map[string]string `json:"addonStatus,omitempty"`
+	// AppStatus holds a map of app helm chart name and thier current status
+	// Example:
+	// appStatus:
+	// 	  nginx: Deployed
+	//    druid: Installing
+	AppStatus map[string]ApplicationPhase `json:"appStatus,omitempty"`
 }
 
 type DataPlaneConditionType string

@@ -9,6 +9,9 @@ type ApplicationPhase string
 const (
 	PendingA      ApplicationPhase = "Pending"
 	UninstallingA ApplicationPhase = "Uninstall"
+	DeployedA     ApplicationPhase = "Deployed"
+	InstallingA   ApplicationPhase = "Installing"
+	FailedA       ApplicationPhase = "Failed"
 )
 
 type ApplicationType string
