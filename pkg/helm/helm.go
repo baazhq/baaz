@@ -10,9 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
-
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -22,6 +19,9 @@ import (
 	"helm.sh/helm/v3/pkg/cli/values"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/repo"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 )
 
 var settings *cli.EnvSettings
@@ -34,26 +34,34 @@ type HelmAct interface {
 }
 
 type Helm struct {
-	Action      *action.Configuration
-	ReleaseName string
-	Namespace   string
-	Values      []string
-	RepoName    string
-	ChartName   string
-	RepoUrl     string
+	Action       *action.Configuration
+	ReleaseName  string
+	Namespace    string
+	Values       []string
+	RepoName     string
+	ChartName    string
+	RepoUrl      string
+	clientGetter genericclioptions.RESTClientGetter
 }
 
 func NewHelm(
 	releaseName, namespace, chartName, repoName, repoUrl string,
+	rest *rest.Config,
 	values []string) HelmAct {
+	insecure := true
+	clientGetter := genericclioptions.NewConfigFlags(false)
+	clientGetter.APIServer = &rest.Host
+	clientGetter.BearerToken = &rest.BearerToken
+	clientGetter.Insecure = &insecure
 	return &Helm{
-		Action:      new(action.Configuration),
-		ReleaseName: releaseName,
-		Namespace:   namespace,
-		RepoName:    repoName,
-		RepoUrl:     repoUrl,
-		ChartName:   chartName,
-		Values:      values,
+		Action:       new(action.Configuration),
+		ReleaseName:  releaseName,
+		Namespace:    namespace,
+		RepoName:     repoName,
+		RepoUrl:      repoUrl,
+		ChartName:    chartName,
+		Values:       values,
+		clientGetter: clientGetter,
 	}
 }
 
@@ -61,15 +69,13 @@ func NewHelm(
 // https://helm.sh/docs/topics/advanced/#simple-example
 func (h *Helm) List(rest *rest.Config) (status string, exists bool) {
 
-	settings := cli.New()
+	settings = cli.New()
 
-	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	if err := h.Action.Init(h.clientGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return "", false
 	}
 
 	clientList := action.NewList(h.Action)
-
-	settings.EnvVars()
 
 	// Only list deployed
 	clientList.Deployed = true
@@ -88,9 +94,9 @@ func (h *Helm) List(rest *rest.Config) (status string, exists bool) {
 
 func (h *Helm) Uninstall(rest *rest.Config) error {
 
-	settings := cli.New()
+	settings = cli.New()
 
-	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	if err := h.Action.Init(h.clientGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return err
 	}
 
@@ -115,9 +121,9 @@ func (h *Helm) Uninstall(rest *rest.Config) error {
 // ref: https://github.com/PrasadG193/helm-clientgo-example/tree/master
 func (h *Helm) Apply(rest *rest.Config) error {
 
-	settings := cli.New()
+	settings = cli.New()
 
-	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	if err := h.Action.Init(h.clientGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return err
 	}
 
@@ -173,9 +179,9 @@ func (h *Helm) Apply(rest *rest.Config) error {
 // ref: https://github.com/PrasadG193/helm-clientgo-example/tree/master
 func (h *Helm) Upgrade(rest *rest.Config) error {
 
-	settings := cli.New()
+	settings = cli.New()
 
-	if err := h.Action.Init(settings.RESTClientGetter(), h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
+	if err := h.Action.Init(h.clientGetter, h.Namespace, os.Getenv("HELM_DRIVER"), klog.Infof); err != nil {
 		return err
 	}
 

@@ -470,19 +470,20 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 			continue
 		}
 
+		restConfig, err := ae.eksIC.GetRestConfig()
+		if err != nil {
+			return err
+		}
+
 		helm := helm.NewHelm(
 			app.Name,
 			app.Namespace,
 			app.Spec.ChartName,
 			app.Spec.RepoName,
 			app.Spec.RepoUrl,
+			restConfig,
 			app.Spec.Values,
 		)
-
-		restConfig, err := ae.eksIC.GetRestConfig()
-		if err != nil {
-			return err
-		}
 
 		_, exists := helm.List(restConfig)
 

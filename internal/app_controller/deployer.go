@@ -47,12 +47,12 @@ func (a *Application) ReconcileApplicationDeployer() error {
 
 	for _, app := range a.App.Spec.Applications {
 
-		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
-
 		restConfig, err := a.EksIC.GetRestConfig()
 		if err != nil {
 			return err
 		}
+
+		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, restConfig, app.Spec.Values)
 
 		result, exists := helm.List(restConfig)
 		if exists {
@@ -107,9 +107,14 @@ func (a *Application) ReconcileApplicationDeployer() error {
 
 func (a *Application) UninstallApplications() error {
 
+	restConfig, err := a.EksIC.GetRestConfig()
+	if err != nil {
+		return err
+	}
+
 	for _, app := range a.App.Spec.Applications {
 
-		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
+		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, restConfig, app.Spec.Values)
 
 		restConfig, err := a.EksIC.GetRestConfig()
 		if err != nil {
@@ -117,6 +122,9 @@ func (a *Application) UninstallApplications() error {
 		}
 
 		err = helm.Uninstall(restConfig)
+		if err != nil {
+			return err
+		}
 		if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
 			in := obj.(*v1.Applications)
 			in.Status.Phase = v1.ApplicationPhase(v1.UninstallingA)
