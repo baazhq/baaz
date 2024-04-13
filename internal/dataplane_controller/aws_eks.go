@@ -464,7 +464,9 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 
 	for _, app := range ae.dp.Spec.Applications {
 
-		if ae.dp.Status.AppStatus[getChartName(app)] == v1.InstallingA {
+		chartStatus := ae.dp.Status.AppStatus[getChartName(app)]
+
+		if chartStatus == v1.InstallingA || chartStatus == v1.DeployedA {
 			continue
 		}
 
@@ -498,8 +500,19 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 				}
 				ch <- c
 			}(ch, app)
-		}
 
+			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
+				if in.Status.AppStatus == nil {
+					in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
+				}
+				in.Status.AppStatus[app.Name] = v1.InstallingA
+				return in
+			})
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	for i := 0; i < count; i += 1 {
@@ -524,7 +537,6 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 			return err
 		}
 	}
-
 	return nil
 }
 
