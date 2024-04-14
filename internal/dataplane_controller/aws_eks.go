@@ -6,6 +6,7 @@ import (
 	"fmt"
 	mrand "math/rand"
 	"os"
+	"strings"
 	"time"
 
 	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -208,10 +209,47 @@ func (ae *awsEnv) reconcileAwsEks() error {
 		if err := ae.reconcilePhase(); err != nil {
 			return err
 		}
+
+		if err := ae.reconcileLBPhase(); err != nil {
+			return err
+		}
 	}
 
 	return nil
 
+}
+
+func (ae *awsEnv) reconcileLBPhase() error {
+	eksClient, err := ae.eksIC.GetEksClientSet()
+	if err != nil {
+		return err
+	}
+
+	services, err := eksClient.CoreV1().Services(corev1.NamespaceAll).List(ae.ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	lbArns := []string{}
+	for _, svc := range services.Items {
+		if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+			for _, in := range svc.Status.LoadBalancer.Ingress {
+				if strings.Contains(in.Hostname, ".amazonaws.com") {
+					data := strings.Split(in.Hostname, "-")
+					if len(data) >= 2 {
+						lbArns = append(lbArns, data[0])
+					}
+				}
+			}
+		}
+	}
+
+	_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+		in := obj.(*v1.DataPlanes)
+		in.Status.CloudInfraStatus.LBArns = lbArns
+		return in
+	})
+	return err
 }
 
 func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {

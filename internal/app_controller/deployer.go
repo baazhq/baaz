@@ -2,7 +2,7 @@ package app_controller
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/baazhq/baaz/pkg/aws/eks"
@@ -39,10 +39,19 @@ func NewApplication(
 	}
 }
 
+func getChartName(app v1.AppSpec) string {
+	return fmt.Sprintf("%s-%s", app.Name, app.Namespace)
+}
+
+type InstallChart struct {
+	Name string
+	Err  error
+}
+
 // Deployer is responsible for deploying apps
 func (a *Application) ReconcileApplicationDeployer() error {
 
-	ch := make(chan error, len(a.App.Spec.Applications))
+	ch := make(chan InstallChart, len(a.App.Spec.Applications))
 	count := 0
 
 	for _, app := range a.App.Spec.Applications {
@@ -76,33 +85,58 @@ func (a *Application) ReconcileApplicationDeployer() error {
 		}
 
 		if !exists {
-			klog.Infof("installing application: %s", app.Name)
+			klog.Infof("installing chart: %s", app.Name)
+
 			count += 1
-			go func(ch chan error) {
-				if err := helm.Apply(restConfig); err != nil {
-					ch <- err
+			go func(ch chan InstallChart, app v1.AppSpec) {
+				c := InstallChart{
+					Name: getChartName(app),
+					Err:  nil,
 				}
-				ch <- nil
-			}(ch)
-			// if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
-			// 	in := obj.(*v1.Applications)
-			// 	in.Status.Phase = v1.ApplicationPhase(result)
-			// 	in.Status.ApplicationCurrentSpec = a.App.Spec
-			// 	return in
-			// }); err != nil {
-			// 	return err
-			// }
+				if err := helm.Apply(restConfig); err != nil {
+					c.Err = err
+				}
+				ch <- c
+			}(ch, app)
+
+			_, _, err = utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
+				in := obj.(*v1.Applications)
+				if in.Status.AppStatus == nil {
+					in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
+				}
+				in.Status.AppStatus[getChartName(app)] = v1.InstallingA
+				return in
+			})
+			if err != nil {
+				return err
+			}
 		}
 
 	}
-	var errs []error
+
 	for i := 0; i < count; i += 1 {
-		if err := <-ch; err != nil {
-			errs = append(errs, err)
+		chartCh := <-ch
+		var latestState v1.ApplicationPhase
+		if chartCh.Err != nil {
+			klog.Errorf("installing chart %s failed, reason: %s", chartCh.Name, chartCh.Err.Error())
+			latestState = v1.FailedA
+		} else {
+			latestState = v1.DeployedA
+		}
+
+		_, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
+			in := obj.(*v1.Applications)
+			if in.Status.AppStatus == nil {
+				in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
+			}
+			in.Status.AppStatus[chartCh.Name] = latestState
+			return in
+		})
+		if err != nil {
+			return err
 		}
 	}
-
-	return errors.Join(errs...)
+	return nil
 }
 
 func (a *Application) UninstallApplications() error {

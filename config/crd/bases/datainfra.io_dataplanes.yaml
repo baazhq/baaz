@@ -150,6 +150,10 @@ spec:
                     type: object
                   internetGatewayId:
                     type: string
+                  lbArns:
+                    items:
+                      type: string
+                    type: array
                   natAttchedWithRT:
                     type: boolean
                   natGatewayId:

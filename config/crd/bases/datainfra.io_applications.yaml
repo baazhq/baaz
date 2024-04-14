@@ -78,6 +78,10 @@ spec:
             type: object
           status:
             properties:
+              appStatus:
+                additionalProperties:
+                  type: string
+                type: object
               applicationCurrentSpec:
                 description: ApplicationSpec defines the desired state of Application
                 properties:

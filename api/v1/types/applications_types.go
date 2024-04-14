@@ -38,8 +38,9 @@ type ChartSpec struct {
 }
 
 type ApplicationStatus struct {
-	Phase                  ApplicationPhase `json:"phase,omitempty"`
-	ApplicationCurrentSpec ApplicationSpec  `json:"applicationCurrentSpec,omitempty"`
+	Phase                  ApplicationPhase            `json:"phase,omitempty"`
+	ApplicationCurrentSpec ApplicationSpec             `json:"applicationCurrentSpec,omitempty"`
+	AppStatus              map[string]ApplicationPhase `json:"appStatus,omitempty"`
 }
 
 //+kubebuilder:object:root=true
