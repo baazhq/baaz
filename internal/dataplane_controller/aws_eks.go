@@ -6,6 +6,7 @@ import (
 	"fmt"
 	mrand "math/rand"
 	"os"
+	"strings"
 	"time"
 
 	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
@@ -208,10 +209,47 @@ func (ae *awsEnv) reconcileAwsEks() error {
 		if err := ae.reconcilePhase(); err != nil {
 			return err
 		}
+
+		if err := ae.reconcileLBPhase(); err != nil {
+			return err
+		}
 	}
 
 	return nil
 
+}
+
+func (ae *awsEnv) reconcileLBPhase() error {
+	eksClient, err := ae.eksIC.GetEksClientSet()
+	if err != nil {
+		return err
+	}
+
+	services, err := eksClient.CoreV1().Services(corev1.NamespaceAll).List(ae.ctx, metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	lbArns := []string{}
+	for _, svc := range services.Items {
+		if svc.Spec.Type == corev1.ServiceTypeLoadBalancer {
+			for _, in := range svc.Status.LoadBalancer.Ingress {
+				if strings.Contains(in.Hostname, ".amazonaws.com") {
+					data := strings.Split(in.Hostname, "-")
+					if len(data) >= 2 {
+						lbArns = append(lbArns, data[0])
+					}
+				}
+			}
+		}
+	}
+
+	_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+		in := obj.(*v1.DataPlanes)
+		in.Status.CloudInfraStatus.LBArns = lbArns
+		return in
+	})
+	return err
 }
 
 func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
@@ -440,39 +478,102 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 	return nil
 }
 
+func getChartName(app v1.AppSpec) string {
+	return fmt.Sprintf("%s-%s", app.Name, app.Namespace)
+}
+
+type InstallChart struct {
+	Name string
+	Err  error
+}
+
 // bootstrap applications for aws eks dataplanes
 // check if system nodepool is active
 // once its active install applications
 func (ae *awsEnv) reconcileAwsApplications() error {
+	klog.Info("reconciling dataplane applications")
 
-	if ae.dp.Status.NodegroupStatus[ae.dp.Spec.CloudInfra.Eks.Name+"-system"] == string(types.NodegroupStatusActive) {
+	if ae.dp.Status.NodegroupStatus[ae.dp.Spec.CloudInfra.Eks.Name+"-system"] != string(types.NodegroupStatusActive) {
+		return errors.New("waiting for system nodegroup to be active")
+	}
 
-		for _, app := range ae.dp.Spec.Applications {
+	count := 0
+	ch := make(chan InstallChart, len(ae.dp.Spec.Applications))
 
-			helm := helm.NewHelm(
-				app.Name,
-				app.Namespace,
-				app.Spec.ChartName,
-				app.Spec.RepoName,
-				app.Spec.RepoUrl,
-				app.Spec.Values,
-			)
+	for _, app := range ae.dp.Spec.Applications {
 
-			restConfig, err := ae.eksIC.GetRestConfig()
+		chartStatus := ae.dp.Status.AppStatus[getChartName(app)]
+
+		if chartStatus == v1.InstallingA || chartStatus == v1.DeployedA {
+			continue
+		}
+
+		restConfig, err := ae.eksIC.GetRestConfig()
+		if err != nil {
+			return err
+		}
+
+		helm := helm.NewHelm(
+			app.Name,
+			app.Namespace,
+			app.Spec.ChartName,
+			app.Spec.RepoName,
+			app.Spec.RepoUrl,
+			restConfig,
+			app.Spec.Values,
+		)
+
+		_, exists := helm.List(restConfig)
+
+		if !exists {
+			klog.Infof("installing chart: %s", app.Name)
+
+			count += 1
+			go func(ch chan InstallChart, app v1.AppSpec) {
+				c := InstallChart{
+					Name: getChartName(app),
+					Err:  nil,
+				}
+				if err := helm.Apply(restConfig); err != nil {
+					c.Err = err
+				}
+				ch <- c
+			}(ch, app)
+
+			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
+				if in.Status.AppStatus == nil {
+					in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
+				}
+				in.Status.AppStatus[getChartName(app)] = v1.InstallingA
+				return in
+			})
 			if err != nil {
 				return err
 			}
+		}
+	}
 
-			_, exists := helm.List(restConfig)
+	for i := 0; i < count; i += 1 {
+		chartCh := <-ch
+		var latestState v1.ApplicationPhase
+		if chartCh.Err != nil {
+			klog.Errorf("installing chart %s failed, reason: %s", chartCh.Name, chartCh.Err.Error())
+			latestState = v1.FailedA
+		} else {
+			latestState = v1.DeployedA
+		}
 
-			if !exists {
-				err = helm.Apply(restConfig)
-				if err != nil {
-					fmt.Println(err)
-					return err
-				}
+		_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			if in.Status.AppStatus == nil {
+				in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
 			}
-
+			in.Status.AppStatus[chartCh.Name] = latestState
+			return in
+		})
+		if err != nil {
+			return err
 		}
 	}
 	return nil

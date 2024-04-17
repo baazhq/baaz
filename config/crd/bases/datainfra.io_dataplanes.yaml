@@ -133,6 +133,12 @@ spec:
                 description: 'AddonStatus holds a map of addon name & their current
                   status Example: addonStatus: aws-ebs-csi-driver: CREATING coredns:            READY'
                 type: object
+              appStatus:
+                additionalProperties:
+                  type: string
+                description: 'AppStatus holds a map of app helm chart name and thier
+                  current status Example: appStatus: nginx: Deployed druid: Installing'
+                type: object
               cloudInfraStatus:
                 properties:
                   eksStatus:
@@ -144,6 +150,10 @@ spec:
                     type: object
                   internetGatewayId:
                     type: string
+                  lbArns:
+                    items:
+                      type: string
+                    type: array
                   natAttchedWithRT:
                     type: boolean
                   natGatewayId:

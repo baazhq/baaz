@@ -26,7 +26,7 @@ type Network interface {
 	DeleteNatGateway(ctx context.Context, id string) error
 	DetachInternetGateway(ctx context.Context, id, vpcId string) error
 	DeleteInternetGateway(ctx context.Context, id string) error
-	DeleteVpcLBs(ctx context.Context, vpcId string) error
+	DeleteLBs(ctx context.Context, names []string) error
 	DeleteVPC(ctx context.Context, vpcId string) error
 	DeleteSubnets(ctx context.Context, subnetIds []string) error
 	DeleteSGs(ctx context.Context, vpcId string) error

@@ -1,4 +1,4 @@
-package helm
+package helmchartpath
 
 import (
 	"context"
@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/klog/v2"
-
 	"github.com/gofrs/flock"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -20,6 +18,7 @@ import (
 	"helm.sh/helm/v3/pkg/cli/values"
 	"helm.sh/helm/v3/pkg/getter"
 	"helm.sh/helm/v3/pkg/repo"
+	"k8s.io/klog/v2"
 )
 
 var settings *cli.EnvSettings

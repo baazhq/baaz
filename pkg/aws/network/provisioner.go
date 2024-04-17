@@ -314,21 +314,22 @@ func (p *provisioner) AssociateRTWithSubnet(ctx context.Context, rtId, subnetId 
 	return err
 }
 
-func (p *provisioner) DeleteVpcLBs(ctx context.Context, vpcId string) error {
-	lbs, err := p.elbv2Client.DescribeLoadBalancers(ctx, &elbv2.DescribeLoadBalancersInput{})
+func (p *provisioner) DeleteLBs(ctx context.Context, names []string) error {
+	lbs, err := p.elbv2Client.DescribeLoadBalancers(ctx, &elbv2.DescribeLoadBalancersInput{
+		Names: names,
+	})
 	if err != nil {
 		return err
 	}
 
 	for _, lb := range lbs.LoadBalancers {
-		if aws.ToString(lb.VpcId) == vpcId {
-			_, err := p.elbv2Client.DeleteLoadBalancer(ctx, &elbv2.DeleteLoadBalancerInput{
-				LoadBalancerArn: lb.LoadBalancerArn,
-			})
-			if err != nil {
-				return err
-			}
+		_, err := p.elbv2Client.DeleteLoadBalancer(ctx, &elbv2.DeleteLoadBalancerInput{
+			LoadBalancerArn: lb.LoadBalancerArn,
+		})
+		if err != nil {
+			return err
 		}
+
 	}
 	return nil
 }

@@ -30,6 +30,7 @@ type AwsCloudInfraConfigStatus struct {
 	SGInboundRuleAdded bool      `json:"sgInboundRuleAdded,omitempty"`
 	InternetGatewayId  string    `json:"internetGatewayId,omitempty"`
 	PublicRTId         string    `json:"publicRTId,omitempty"`
+	LBArns             []string  `json:"lbArns,omitempty"`
 	EksStatus          EksStatus `json:"eksStatus,omitempty"`
 }
 

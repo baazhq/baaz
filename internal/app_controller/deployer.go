@@ -2,6 +2,7 @@ package app_controller
 
 import (
 	"context"
+	"fmt"
 
 	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/baazhq/baaz/pkg/aws/eks"
@@ -38,17 +39,29 @@ func NewApplication(
 	}
 }
 
+func getChartName(app v1.AppSpec) string {
+	return fmt.Sprintf("%s-%s", app.Name, app.Namespace)
+}
+
+type InstallChart struct {
+	Name string
+	Err  error
+}
+
 // Deployer is responsible for deploying apps
 func (a *Application) ReconcileApplicationDeployer() error {
 
-	for _, app := range a.App.Spec.Applications {
+	ch := make(chan InstallChart, len(a.App.Spec.Applications))
+	count := 0
 
-		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
+	for _, app := range a.App.Spec.Applications {
 
 		restConfig, err := a.EksIC.GetRestConfig()
 		if err != nil {
 			return err
 		}
+
+		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, restConfig, app.Spec.Values)
 
 		result, exists := helm.List(restConfig)
 		if exists {
@@ -71,34 +84,71 @@ func (a *Application) ReconcileApplicationDeployer() error {
 			}
 		}
 
-		if exists == false {
-			//go func() error {
-			err = helm.Apply(restConfig)
-			if err != nil {
-				return err
-			}
-			//	return err
-			//}()
-			if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
+		if !exists {
+			klog.Infof("installing chart: %s", app.Name)
+
+			count += 1
+			go func(ch chan InstallChart, app v1.AppSpec) {
+				c := InstallChart{
+					Name: getChartName(app),
+					Err:  nil,
+				}
+				if err := helm.Apply(restConfig); err != nil {
+					c.Err = err
+				}
+				ch <- c
+			}(ch, app)
+
+			_, _, err = utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
 				in := obj.(*v1.Applications)
-				in.Status.Phase = v1.ApplicationPhase(result)
-				in.Status.ApplicationCurrentSpec = a.App.Spec
+				if in.Status.AppStatus == nil {
+					in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
+				}
+				in.Status.AppStatus[getChartName(app)] = v1.InstallingA
 				return in
-			}); err != nil {
+			})
+			if err != nil {
 				return err
 			}
 		}
 
 	}
 
+	for i := 0; i < count; i += 1 {
+		chartCh := <-ch
+		var latestState v1.ApplicationPhase
+		if chartCh.Err != nil {
+			klog.Errorf("installing chart %s failed, reason: %s", chartCh.Name, chartCh.Err.Error())
+			latestState = v1.FailedA
+		} else {
+			latestState = v1.DeployedA
+		}
+
+		_, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
+			in := obj.(*v1.Applications)
+			if in.Status.AppStatus == nil {
+				in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
+			}
+			in.Status.AppStatus[chartCh.Name] = latestState
+			return in
+		})
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func (a *Application) UninstallApplications() error {
 
+	restConfig, err := a.EksIC.GetRestConfig()
+	if err != nil {
+		return err
+	}
+
 	for _, app := range a.App.Spec.Applications {
 
-		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, app.Spec.Values)
+		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, restConfig, app.Spec.Values)
 
 		restConfig, err := a.EksIC.GetRestConfig()
 		if err != nil {
@@ -106,6 +156,9 @@ func (a *Application) UninstallApplications() error {
 		}
 
 		err = helm.Uninstall(restConfig)
+		if err != nil {
+			return err
+		}
 		if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
 			in := obj.(*v1.Applications)
 			in.Status.Phase = v1.ApplicationPhase(v1.UninstallingA)
