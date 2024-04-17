@@ -1,5 +1,5 @@
 tenantsInfra:
-  - name: druid-small
+  druid-small:
     machinePool:
     - name: druid-dataservers
       size: t2.medium
@@ -22,26 +22,3 @@ tenantsInfra:
       labels:
         app: druid
         size: small
-  - name: druid-medium
-    machinePool:
-    - name: druid-dataservers
-      size: t2.large
-      min: 0
-      max: 3
-      labels:
-        app: druid
-        size: medium
-    - name: druid-queryservers
-      size: t2.large
-      min: 0
-      max: 3
-      labels:
-        app: druid
-        size: medium
-    - name: druid-masterservers
-      size: t2.large
-      min: 0
-      max: 3
-      labels:
-        app: druid
-        size: medium

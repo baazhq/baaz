@@ -315,21 +315,31 @@ func (p *provisioner) AssociateRTWithSubnet(ctx context.Context, rtId, subnetId 
 }
 
 func (p *provisioner) DeleteLBs(ctx context.Context, names []string) error {
-	lbs, err := p.elbv2Client.DescribeLoadBalancers(ctx, &elbv2.DescribeLoadBalancersInput{
-		Names: names,
-	})
-	if err != nil {
-		return err
-	}
-
-	for _, lb := range lbs.LoadBalancers {
-		_, err := p.elbv2Client.DeleteLoadBalancer(ctx, &elbv2.DeleteLoadBalancerInput{
-			LoadBalancerArn: lb.LoadBalancerArn,
+	for _, name := range names {
+		lbs, err := p.elbv2Client.DescribeLoadBalancers(ctx, &elbv2.DescribeLoadBalancersInput{
+			//Names:            []string{name},
+			//LoadBalancerArns: []string{name},
 		})
 		if err != nil {
 			return err
 		}
+		fmt.Println(name)
+		fmt.Println(lbs.LoadBalancers)
+		for _, lb := range lbs.LoadBalancers {
+			fmt.Println(lb.LoadBalancerName)
 
+			_, err := p.elbv2Client.DeleteLoadBalancer(ctx, &elbv2.DeleteLoadBalancerInput{
+				LoadBalancerArn: lb.LoadBalancerArn,
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }

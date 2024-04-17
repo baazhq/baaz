@@ -211,9 +211,10 @@ func deleteNetworkComponent(ae *awsEnv) error {
 		return nil
 	}
 
-	// if err := ae.network.DeleteLBs(ae.ctx, ae.dp.Status.CloudInfraStatus.LBArns); err != nil {
-	// 	return err
-	// }
+	if err := ae.network.DeleteLBs(ae.ctx, ae.dp.Status.CloudInfraStatus.LBArns); err != nil {
+		return err
+	}
+
 	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" {
 		if err := ae.network.DeleteNatGateway(ae.ctx, ae.dp.Status.CloudInfraStatus.NATGatewayId); err != nil {
 			return err

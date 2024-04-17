@@ -10,7 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strconv"
+	"strings"
 
 	"github.com/olekukonko/tablewriter"
 	"gopkg.in/yaml.v3"
@@ -20,62 +20,31 @@ func makeTenantInfraPath(dataplaneName string) string {
 	return common.GetBzUrl() + common.BaazPath + common.DataplanePath + "/" + dataplaneName + common.TenantInfraPath
 }
 
-// tenantsInfra:
-//   bytebeam-small:
-//     machinePool:
-//     - name: bytebeam-app1
-//       size: t2.small
-//       min: 1
-//       max: 3
-//       labels:
-//         app: iot
-//         size: small
-//   bytebeam-medium:
-//     machinePool:
-//     - name: bytebeam-app1
-//       size: t2.medium
-//       min: 1
-//       max: 3
-//       labels:
-//         app: iot
-//         size: small
-
-type TiMachine struct {
-	MachinePool []struct {
-		Name   string `yaml:"name" json:"name"`
-		Size   string `yaml:"size" json:"size"`
-		Min    int    `yaml:"min" json:"min"`
-		Max    int    `yaml:"max" json:"max"`
-		Labels struct {
-			App  string `yaml:"app" json:"app"`
-			Size string `yaml:"size" json:"size"`
-		} `yaml:"labels" json:"labels"`
-	} `yaml:"machinePool" json:"machine_pool"`
+type MachinePoolStatus struct {
+	Status string `json:"status"`
+	Subnet string `json:"subnet"`
 }
 
-type Ti struct {
-	TenantsInfra map[string]TiMachine `yaml:"tenantsInfra"`
+type MachinePool struct {
+	Labels map[string]string `json:"labels"`
+	Max    int               `json:"max"`
+	Min    int               `json:"min"`
+	Name   string            `json:"name"`
+	Size   string            `json:"size"`
 }
 
-type tiResp []struct {
-	Name              string            `json:"name"`
-	Dataplane         string            `json:"dataplane"`
-	MachinePoolStatus map[string]string `json:"machine_pool_status"`
-	TenantSizes       []struct {
-		MachinePool []struct {
-			Labels map[string]string `json:"labels"`
-			Max    int               `json:"max"`
-			Min    int               `json:"min"`
-			Name   string            `json:"name"`
-			Size   string            `json:"size"`
-		} `json:"machinePool"`
-		Name string `json:"name"`
+type TenantInfra struct {
+	Name              string                       `json:"name"`
+	DataPlane         string                       `json:"dataplane"`
+	MachinePoolStatus map[string]MachinePoolStatus `json:"machine_pool_status"`
+	TenantSizes       map[string]struct {
+		MachinePool []MachinePool `json:"machinePool"`
 	} `json:"tenant_sizes"`
 	Status string `json:"status"`
 }
 
 func GetTenantsInfra(dataplane string) error {
-	ts, err := getTenantsInfra(dataplane)
+	ti, err := getTenantsInfra(dataplane)
 	if err != nil {
 		return err
 	}
@@ -84,13 +53,6 @@ func GetTenantsInfra(dataplane string) error {
 	table.SetHeader([]string{
 		"Name",
 		"Machine_Pool",
-	},
-	)
-
-	table.SetRowLine(true)
-	table.Append([]string{
-		"",
-		"Name",
 		"Size",
 		"Min",
 		"Max",
@@ -98,39 +60,50 @@ func GetTenantsInfra(dataplane string) error {
 		"Status",
 	})
 
-	for _, tsSize := range ts {
+	var uniqueNamePrinted bool
 
-		for _, tenantSize := range tsSize.TenantSizes {
-			var row []string
-			for _, mp := range tenantSize.MachinePool {
-				row = []string{
-					tenantSize.Name,
+	for tenantSize, details := range ti.TenantSizes {
+		for _, mp := range details.MachinePool {
+			labels := []string{}
+			for k, v := range mp.Labels {
+				labels = append(labels, fmt.Sprintf("%s: %s", k, v))
+			}
+			status := ti.MachinePoolStatus[tenantSize+"-"+mp.Name+"-"+strings.ReplaceAll(mp.Size, ".", "-")].Status
+			fmt.Println(status)
+			fmt.Println(tenantSize + "-" + mp.Name + "-" + mp.Size)
+			if !uniqueNamePrinted {
+				table.Append([]string{
+					ti.Name,
 					mp.Name,
 					mp.Size,
-					strconv.Itoa(mp.Min),
-					strconv.Itoa(mp.Max),
-					common.CreateKeyValuePairs(mp.Labels),
-					tsSize.MachinePoolStatus[tenantSize.Name+"-"+mp.Name],
-				}
-				table.SetRowLine(true)
-				table.Append(row)
-				table.SetAutoMergeCellsByColumnIndex([]int{0})
-
-				table.SetAlignment(1)
+					fmt.Sprintf("%d", mp.Min),
+					fmt.Sprintf("%d", mp.Max),
+					strings.Join(labels, ", "),
+					status,
+				})
+				uniqueNamePrinted = true
+			} else {
+				table.Append([]string{
+					"",
+					mp.Name,
+					mp.Size,
+					fmt.Sprintf("%d", mp.Min),
+					fmt.Sprintf("%d", mp.Max),
+					strings.Join(labels, ", "),
+					status,
+				})
 			}
-
 		}
 	}
-	table.SetAlignment(1)
 
 	table.Render()
 	return nil
 }
 
-func getTenantsInfra(dataplane string) (tiResp, error) {
+func getTenantsInfra(dataplane string) (TenantInfra, error) {
 	response, err := http.Get(makeTenantInfraPath(dataplane))
 	if err != nil {
-		return tiResp{}, err
+		return TenantInfra{}, err
 	}
 
 	defer response.Body.Close()
@@ -140,21 +113,25 @@ func getTenantsInfra(dataplane string) (tiResp, error) {
 		log.Fatalf("Response failed with status code: %d and\nbody: %s\n", response.StatusCode, body)
 	}
 	if err != nil {
-		return tiResp{}, err
+		return TenantInfra{}, err
 	}
 
-	var ti tiResp
+	var ti []TenantInfra
 
 	if string(body) == "[]" {
-		return tiResp{}, nil
+		return TenantInfra{}, nil
 	}
 
 	err = json.Unmarshal(body, &ti)
 	if err != nil {
-		return tiResp{}, err
+		return TenantInfra{}, err
 	}
 
-	return ti, nil
+	if len(ti) == 0 {
+		return TenantInfra{}, nil
+	}
+
+	return ti[0], nil
 }
 
 func CreateTenantsInfra(filePath string, dataplane string) (string, error) {
@@ -164,14 +141,14 @@ func CreateTenantsInfra(filePath string, dataplane string) (string, error) {
 		return "", err
 	}
 
-	var ti Ti
+	var ti TenantInfra
 
 	err = yaml.Unmarshal(yamlFile, &ti)
 	if err != nil {
 		return "", err
 	}
 
-	tiByte, err := json.Marshal(ti.TenantsInfra)
+	tiByte, err := json.Marshal(ti)
 	if err != nil {
 		return "", err
 	}
@@ -200,20 +177,4 @@ func CreateTenantsInfra(filePath string, dataplane string) (string, error) {
 	}
 
 	return "", nil
-}
-
-func convert(i interface{}) interface{} {
-	switch x := i.(type) {
-	case map[interface{}]interface{}:
-		m2 := map[string]interface{}{}
-		for k, v := range x {
-			m2[k.(string)] = convert(v)
-		}
-		return m2
-	case []interface{}:
-		for i, v := range x {
-			x[i] = convert(v)
-		}
-	}
-	return i
 }

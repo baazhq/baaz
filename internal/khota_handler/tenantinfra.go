@@ -158,11 +158,11 @@ func GetTenantInfra(w http.ResponseWriter, req *http.Request) {
 	}
 
 	type tenantInfraResp struct {
-		Name              string            `json:"name"`
-		DataplaneName     string            `json:"dataplane"`
-		MachinePoolStatus map[string]string `json:"machine_pool_status"`
-		TenantSizes       interface{}       `json:"tenant_sizes"`
-		Status            string            `json:"status"`
+		Name              string                 `json:"name"`
+		DataplaneName     string                 `json:"dataplane"`
+		MachinePoolStatus map[string]interface{} `json:"machine_pool_status"`
+		TenantSizes       map[string]interface{} `json:"tenant_sizes"`
+		Status            string                 `json:"status"`
 	}
 
 	var tenantsInfrasResp []tenantInfraResp
@@ -170,9 +170,9 @@ func GetTenantInfra(w http.ResponseWriter, req *http.Request) {
 	for _, ti := range tenantsInfras.Items {
 		status, _, _ := unstructured.NestedString(ti.Object, "status", "phase")
 
-		machinePoolStatus, _, _ := unstructured.NestedStringMap(ti.Object, "status", "machinePoolStatus")
+		machinePoolStatus, _, _ := unstructured.NestedMap(ti.Object, "status", "machinePoolStatus")
 
-		tenantSizes, _, _ := unstructured.NestedSlice(ti.Object, "spec", "tenantSizes")
+		tenantSizes, _, _ := unstructured.NestedMap(ti.Object, "spec", "tenantSizes")
 
 		resp := tenantInfraResp{
 			Name:              ti.GetName(),
