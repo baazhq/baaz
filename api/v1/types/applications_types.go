@@ -8,7 +8,8 @@ type ApplicationPhase string
 
 const (
 	PendingA      ApplicationPhase = "Pending"
-	UninstallingA ApplicationPhase = "Uninstall"
+	UninstallingA ApplicationPhase = "Uninstalling"
+	Uninstalled   ApplicationPhase = "Uninstalled"
 	DeployedA     ApplicationPhase = "Deployed"
 	InstallingA   ApplicationPhase = "Installing"
 	FailedA       ApplicationPhase = "Failed"

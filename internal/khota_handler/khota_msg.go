@@ -63,6 +63,8 @@ const (
 	ApplicationGetFail        CustomMsg = "Application get fail"
 	ApplicationDeleteFail     CustomMsg = "Application delete fail"
 	ApplicationDeleteIntiated CustomMsg = "Application delete initiated"
+	ApplicationUpdateSuccess  CustomMsg = "Application update success"
+	ApplicationUpdateFail     CustomMsg = "Application update failed"
 )
 
 // Json

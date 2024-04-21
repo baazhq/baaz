@@ -10,6 +10,7 @@ import (
 	"github.com/baazhq/baaz/internal/predicates"
 	"github.com/baazhq/baaz/pkg/aws/eks"
 	"github.com/baazhq/baaz/pkg/aws/network"
+	"github.com/baazhq/baaz/pkg/helm"
 	"github.com/baazhq/baaz/pkg/store"
 	"github.com/baazhq/baaz/pkg/utils"
 	"github.com/go-logr/logr"
@@ -142,6 +143,49 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 }
 
+func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
+	restConfig, err := ae.eksIC.GetRestConfig()
+	if err != nil {
+		return err
+	}
+
+	for _, app := range ae.dp.Spec.Applications {
+		chartName := getChartName(app)
+
+		if ae.dp.Status.AppStatus[chartName] != v1.UninstallingA {
+			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
+				in.Status.AppStatus[chartName] = v1.UninstallingA
+				return in
+			})
+			if err != nil {
+				return err
+			}
+
+			helm := helm.NewHelm(
+				app.Name,
+				app.Namespace,
+				app.Spec.ChartName,
+				app.Spec.RepoName,
+				app.Spec.RepoUrl,
+				restConfig,
+				app.Spec.Values,
+			)
+
+			_, exists := helm.List(restConfig)
+
+			if !exists {
+				klog.Infof("uninstalling chart: %s", app.Name)
+				if err := helm.Uninstall(restConfig); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	// update phase to terminating
 	_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
@@ -152,6 +196,11 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	if err := r.uninstallCharts(ae); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	systemNodeGroupName := ae.dp.Spec.CloudInfra.Eks.Name + "-system"
 
 	_, found, _ := ae.eksIC.DescribeNodegroup(systemNodeGroupName)

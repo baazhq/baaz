@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -70,17 +71,57 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 	}
 	appDeploy := makeApplicationConfig(applications, dataplaneName, tenantName, applicationName, labels)
 
-	_, err = dc.Resource(applicationGVK).Namespace(customerName).Create(context.TODO(), appDeploy, metav1.CreateOptions{})
-	if err != nil {
-		res := NewResponse(ApplicationCreateFail, internal_error, err, http.StatusInternalServerError)
+	existingObj, err := dc.Resource(applicationGVK).Namespace(customerName).Get(context.TODO(), appDeploy.GetName(), metav1.GetOptions{})
+	if err == nil {
+		ob := &v1.Applications{}
+		if errCon := runtime.DefaultUnstructuredConverter.FromUnstructured(existingObj.Object, ob); errCon != nil {
+			res := NewResponse(ApplicationUpdateFail, req_error, errCon, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		inputAppMap := make(map[string]v1.HTTPApplication)
+		for _, app := range applications {
+			inputAppMap[app.ApplicationName] = app
+		}
+
+		for idx, app := range ob.Spec.Applications {
+			if inputApp, found := inputAppMap[app.Name]; found {
+				ob.Spec.Applications[idx].Spec.Version = inputApp.Version
+			}
+		}
+
+		upObj, errCon := runtime.DefaultUnstructuredConverter.ToUnstructured(ob)
+		if errCon != nil {
+			res := NewResponse(ApplicationUpdateFail, req_error, errCon, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		_, uperr := dc.Resource(applicationGVK).Namespace(customerName).Update(context.TODO(), &unstructured.Unstructured{Object: upObj}, metav1.UpdateOptions{})
+		if uperr != nil {
+			res := NewResponse(ApplicationUpdateFail, req_error, uperr, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+		res := NewResponse(ApplicationUpdateSuccess, success, nil, http.StatusOK)
 		res.SetResponse(&w)
 		res.LogResponse()
-		return
+	} else {
+		_, err = dc.Resource(applicationGVK).Namespace(customerName).Create(context.TODO(), appDeploy, metav1.CreateOptions{})
+		if err != nil {
+			res := NewResponse(ApplicationCreateFail, internal_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		res := NewResponse(ApplicationCreateIntiated, success, nil, http.StatusOK)
+		res.SetResponse(&w)
 	}
-
-	res := NewResponse(ApplicationCreateIntiated, success, nil, http.StatusOK)
-	res.SetResponse(&w)
-
 }
 
 func GetApplicationStatus(w http.ResponseWriter, req *http.Request) {
