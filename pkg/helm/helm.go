@@ -105,9 +105,9 @@ func (h *Helm) Uninstall(rest *rest.Config) error {
 	settings.EnvVars()
 
 	client.Wait = true
-	client.Timeout = 120 * time.Second
+	client.Timeout = 5 * time.Minute
 
-	release, err := client.Run(h.ChartName)
+	release, err := client.Run(h.ReleaseName)
 	if err != nil {
 		return err
 	}

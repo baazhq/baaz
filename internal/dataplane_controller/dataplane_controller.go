@@ -149,15 +149,6 @@ func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
 		chartName := getChartName(app)
 
 		if ae.dp.Status.AppStatus[chartName] != v1.UninstallingA {
-			_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
-				in := obj.(*v1.DataPlanes)
-				in.Status.AppStatus[chartName] = v1.UninstallingA
-				return in
-			})
-			if err != nil {
-				return err
-			}
-
 			restConfig, err := ae.eksIC.GetRestConfig()
 			if err != nil {
 				return err
@@ -178,6 +169,15 @@ func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
 			if exists {
 				klog.Infof("uninstalling chart: %s", app.Name)
 				if err := helm.Uninstall(restConfig); err != nil {
+					return err
+				}
+
+				_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+					in := obj.(*v1.DataPlanes)
+					in.Status.AppStatus[chartName] = v1.UninstallingA
+					return in
+				})
+				if err != nil {
 					return err
 				}
 			}
