@@ -504,7 +504,7 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 
 		chartStatus := ae.dp.Status.AppStatus[getChartName(app)]
 
-		if chartStatus == v1.InstallingA || chartStatus == v1.DeployedA {
+		if chartStatus == v1.DeployedA {
 			continue
 		}
 

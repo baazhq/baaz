@@ -152,7 +152,7 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	client.Namespace = h.Namespace
 	client.CreateNamespace = true
 	client.Wait = true
-	client.Timeout = 120 * time.Second
+	client.Timeout = 10 * time.Minute
 
 	client.WaitForJobs = true
 

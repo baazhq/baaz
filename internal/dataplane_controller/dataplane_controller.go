@@ -175,7 +175,7 @@ func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
 
 			_, exists := helm.List(restConfig)
 
-			if !exists {
+			if exists {
 				klog.Infof("uninstalling chart: %s", app.Name)
 				if err := helm.Uninstall(restConfig); err != nil {
 					return err
