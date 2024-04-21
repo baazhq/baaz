@@ -145,6 +145,9 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
 
+	count := 0
+	ch := make(chan ChartCh, len(ae.dp.Spec.Applications))
+
 	for _, app := range ae.dp.Spec.Applications {
 		chartName := getChartName(app)
 
@@ -167,10 +170,17 @@ func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
 			_, exists := helm.List(restConfig)
 
 			if exists {
+				count += 1
 				klog.Infof("uninstalling chart: %s", app.Name)
-				if err := helm.Uninstall(restConfig); err != nil {
-					return err
-				}
+				go func(ch chan ChartCh, app v1.AppSpec) {
+					c := ChartCh{
+						Name: app.Name,
+					}
+					if err := helm.Uninstall(restConfig); err != nil {
+						c.Err = err
+					}
+					ch <- c
+				}(ch, app)
 
 				_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 					in := obj.(*v1.DataPlanes)
@@ -180,11 +190,38 @@ func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
 				if err != nil {
 					return err
 				}
+
 			}
 		}
 	}
 
-	return nil
+	var errs []error
+
+	for i := 0; i < count; i += 1 {
+		chartCh := <-ch
+		var latestState v1.ApplicationPhase
+		if chartCh.Err != nil {
+			klog.Errorf("uninstalling chart %s failed, reason: %s", chartCh.Name, chartCh.Err.Error())
+			errs = append(errs, chartCh.Err)
+			latestState = v1.FailedA
+		} else {
+			latestState = v1.Uninstalled
+		}
+
+		_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			if in.Status.AppStatus == nil {
+				in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
+			}
+			in.Status.AppStatus[chartCh.Name] = latestState
+			return in
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return errors.Join(errs...)
 }
 
 func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
