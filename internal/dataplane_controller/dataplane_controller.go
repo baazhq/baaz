@@ -144,20 +144,21 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 }
 
 func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
-	restConfig, err := ae.eksIC.GetRestConfig()
-	if err != nil {
-		return err
-	}
 
 	for _, app := range ae.dp.Spec.Applications {
 		chartName := getChartName(app)
 
 		if ae.dp.Status.AppStatus[chartName] != v1.UninstallingA {
-			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 				in := obj.(*v1.DataPlanes)
 				in.Status.AppStatus[chartName] = v1.UninstallingA
 				return in
 			})
+			if err != nil {
+				return err
+			}
+
+			restConfig, err := ae.eksIC.GetRestConfig()
 			if err != nil {
 				return err
 			}
