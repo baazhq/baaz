@@ -130,6 +130,13 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	}
 
 	client := action.NewInstall(h.Action)
+	client.ReleaseName = h.ReleaseName
+	client.Namespace = h.Namespace
+	client.CreateNamespace = true
+	client.Wait = true
+	client.Timeout = 10 * time.Minute
+	client.ChartPathOptions.Version = h.Version
+	client.WaitForJobs = true
 
 	settings.EnvVars()
 
@@ -149,18 +156,6 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	if err != nil {
 		return err
 	}
-
-	client.ReleaseName = h.ReleaseName
-	client.Namespace = h.Namespace
-	client.CreateNamespace = true
-	client.Wait = true
-	client.Timeout = 10 * time.Minute
-	client.ChartPathOptions.Version = h.Version
-
-	klog.Info("============ Version ================")
-	klog.Info(h.Version)
-
-	client.WaitForJobs = true
 
 	values := values.Options{
 		Values: h.Values,
@@ -192,6 +187,12 @@ func (h *Helm) Upgrade(rest *rest.Config) error {
 	}
 
 	client := action.NewUpgrade(h.Action)
+	client.Namespace = h.Namespace
+	client.Wait = true
+	client.Timeout = 5 * time.Minute
+	client.ChartPathOptions.Version = h.Version
+
+	client.WaitForJobs = true
 
 	settings.EnvVars()
 
@@ -212,12 +213,6 @@ func (h *Helm) Upgrade(rest *rest.Config) error {
 		return err
 	}
 
-	client.Namespace = h.Namespace
-	client.Wait = true
-	client.Timeout = 5 * time.Minute
-	client.ChartPathOptions.Version = h.Version
-
-	client.WaitForJobs = true
 	//client.IncludeCRDs = true
 
 	values := values.Options{
