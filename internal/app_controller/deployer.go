@@ -2,6 +2,7 @@ package app_controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	v1 "github.com/baazhq/baaz/api/v1/types"
@@ -12,6 +13,11 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+type ChartCh struct {
+	Name string
+	Err  error
+}
 
 type Application struct {
 	Context      context.Context
@@ -148,6 +154,17 @@ func (a *Application) UninstallApplications() error {
 		return err
 	}
 
+	count := 0
+	ch := make(chan ChartCh, len(a.App.Spec.Applications))
+
+	if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
+		in := obj.(*v1.Applications)
+		in.Status.Phase = v1.ApplicationPhase(v1.UninstallingA)
+		return in
+	}); err != nil {
+		return err
+	}
+
 	for _, app := range a.App.Spec.Applications {
 
 		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName,
@@ -158,19 +175,47 @@ func (a *Application) UninstallApplications() error {
 			return err
 		}
 
-		err = helm.Uninstall(restConfig)
-		if err != nil {
-			return err
+		_, exists := helm.List(restConfig)
+
+		if exists {
+			count += 1
+			go func(ch chan ChartCh, app v1.AppSpec) {
+				c := ChartCh{
+					Name: app.Name,
+				}
+				if err := helm.Uninstall(restConfig); err != nil {
+					c.Err = err
+				}
+				ch <- c
+			}(ch, app)
 		}
-		if _, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
+	}
+
+	var errs []error
+
+	for i := 0; i < count; i += 1 {
+		chartCh := <-ch
+		var latestState v1.ApplicationPhase
+		if chartCh.Err != nil {
+			klog.Errorf("uninstalling chart %s failed, reason: %s", chartCh.Name, chartCh.Err.Error())
+			errs = append(errs, chartCh.Err)
+			latestState = v1.FailedA
+		} else {
+			latestState = v1.Uninstalled
+		}
+
+		_, _, err := utils.PatchStatus(a.Context, a.Client, a.App, func(obj client.Object) client.Object {
 			in := obj.(*v1.Applications)
-			in.Status.Phase = v1.ApplicationPhase(v1.UninstallingA)
-			in.Status.ApplicationCurrentSpec = a.App.Spec
+			if in.Status.AppStatus == nil {
+				in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
+			}
+			in.Status.AppStatus[chartCh.Name] = latestState
 			return in
-		}); err != nil {
+		})
+		if err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return errors.Join(errs...)
 }

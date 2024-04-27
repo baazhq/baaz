@@ -155,7 +155,10 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	client.CreateNamespace = true
 	client.Wait = true
 	client.Timeout = 10 * time.Minute
-	client.Version = h.Version
+	client.ChartPathOptions.Version = h.Version
+
+	klog.Info("============ Version ================")
+	klog.Info(h.Version)
 
 	client.WaitForJobs = true
 
@@ -211,8 +214,8 @@ func (h *Helm) Upgrade(rest *rest.Config) error {
 
 	client.Namespace = h.Namespace
 	client.Wait = true
-	client.Timeout = 120 * time.Second
-	client.Version = h.Version
+	client.Timeout = 5 * time.Minute
+	client.ChartPathOptions.Version = h.Version
 
 	client.WaitForJobs = true
 	//client.IncludeCRDs = true
