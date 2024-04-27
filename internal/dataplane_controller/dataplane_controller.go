@@ -163,6 +163,7 @@ func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
 				app.Spec.ChartName,
 				app.Spec.RepoName,
 				app.Spec.RepoUrl,
+				app.Spec.Version,
 				restConfig,
 				app.Spec.Values,
 			)

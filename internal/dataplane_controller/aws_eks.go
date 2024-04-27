@@ -519,6 +519,7 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 			app.Spec.ChartName,
 			app.Spec.RepoName,
 			app.Spec.RepoUrl,
+			app.Spec.Version,
 			restConfig,
 			app.Spec.Values,
 		)

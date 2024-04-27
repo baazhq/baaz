@@ -41,11 +41,12 @@ type Helm struct {
 	RepoName     string
 	ChartName    string
 	RepoUrl      string
+	Version      string
 	clientGetter genericclioptions.RESTClientGetter
 }
 
 func NewHelm(
-	releaseName, namespace, chartName, repoName, repoUrl string,
+	releaseName, namespace, chartName, repoName, repoUrl, version string,
 	rest *rest.Config,
 	values []string) HelmAct {
 	insecure := true
@@ -61,6 +62,7 @@ func NewHelm(
 		RepoUrl:      repoUrl,
 		ChartName:    chartName,
 		Values:       values,
+		Version:      version,
 		clientGetter: clientGetter,
 	}
 }
@@ -153,6 +155,7 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	client.CreateNamespace = true
 	client.Wait = true
 	client.Timeout = 10 * time.Minute
+	client.Version = h.Version
 
 	client.WaitForJobs = true
 
@@ -209,6 +212,7 @@ func (h *Helm) Upgrade(rest *rest.Config) error {
 	client.Namespace = h.Namespace
 	client.Wait = true
 	client.Timeout = 120 * time.Second
+	client.Version = h.Version
 
 	client.WaitForJobs = true
 	//client.IncludeCRDs = true

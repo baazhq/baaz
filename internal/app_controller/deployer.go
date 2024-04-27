@@ -61,7 +61,8 @@ func (a *Application) ReconcileApplicationDeployer() error {
 			return err
 		}
 
-		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, restConfig, app.Spec.Values)
+		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName,
+			app.Spec.RepoUrl, app.Spec.Version, restConfig, app.Spec.Values)
 
 		result, exists := helm.List(restConfig)
 		if exists {
@@ -105,6 +106,7 @@ func (a *Application) ReconcileApplicationDeployer() error {
 					in.Status.AppStatus = make(map[string]v1.ApplicationPhase)
 				}
 				in.Status.AppStatus[getChartName(app)] = v1.InstallingA
+				in.Status.ApplicationCurrentSpec = a.App.Spec
 				return in
 			})
 			if err != nil {
@@ -148,7 +150,8 @@ func (a *Application) UninstallApplications() error {
 
 	for _, app := range a.App.Spec.Applications {
 
-		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName, app.Spec.RepoUrl, restConfig, app.Spec.Values)
+		helm := helm.NewHelm(app.Name, a.App.Spec.Tenant, app.Spec.ChartName, app.Spec.RepoName,
+			app.Spec.RepoUrl, app.Spec.Version, restConfig, app.Spec.Values)
 
 		restConfig, err := a.EksIC.GetRestConfig()
 		if err != nil {
