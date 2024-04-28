@@ -482,7 +482,7 @@ func getChartName(app v1.AppSpec) string {
 	return fmt.Sprintf("%s-%s", app.Name, app.Namespace)
 }
 
-type InstallChart struct {
+type ChartCh struct {
 	Name string
 	Err  error
 }
@@ -498,13 +498,13 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 	}
 
 	count := 0
-	ch := make(chan InstallChart, len(ae.dp.Spec.Applications))
+	ch := make(chan ChartCh, len(ae.dp.Spec.Applications))
 
 	for _, app := range ae.dp.Spec.Applications {
 
 		chartStatus := ae.dp.Status.AppStatus[getChartName(app)]
 
-		if chartStatus == v1.InstallingA || chartStatus == v1.DeployedA {
+		if chartStatus == v1.DeployedA {
 			continue
 		}
 
@@ -519,6 +519,7 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 			app.Spec.ChartName,
 			app.Spec.RepoName,
 			app.Spec.RepoUrl,
+			app.Spec.Version,
 			restConfig,
 			app.Spec.Values,
 		)
@@ -529,8 +530,8 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 			klog.Infof("installing chart: %s", app.Name)
 
 			count += 1
-			go func(ch chan InstallChart, app v1.AppSpec) {
-				c := InstallChart{
+			go func(ch chan ChartCh, app v1.AppSpec) {
+				c := ChartCh{
 					Name: getChartName(app),
 					Err:  nil,
 				}

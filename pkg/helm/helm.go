@@ -41,11 +41,12 @@ type Helm struct {
 	RepoName     string
 	ChartName    string
 	RepoUrl      string
+	Version      string
 	clientGetter genericclioptions.RESTClientGetter
 }
 
 func NewHelm(
-	releaseName, namespace, chartName, repoName, repoUrl string,
+	releaseName, namespace, chartName, repoName, repoUrl, version string,
 	rest *rest.Config,
 	values []string) HelmAct {
 	insecure := true
@@ -61,6 +62,7 @@ func NewHelm(
 		RepoUrl:      repoUrl,
 		ChartName:    chartName,
 		Values:       values,
+		Version:      version,
 		clientGetter: clientGetter,
 	}
 }
@@ -105,9 +107,9 @@ func (h *Helm) Uninstall(rest *rest.Config) error {
 	settings.EnvVars()
 
 	client.Wait = true
-	client.Timeout = 120 * time.Second
+	client.Timeout = 5 * time.Minute
 
-	release, err := client.Run(h.ChartName)
+	release, err := client.Run(h.ReleaseName)
 	if err != nil {
 		return err
 	}
@@ -128,6 +130,13 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	}
 
 	client := action.NewInstall(h.Action)
+	client.ReleaseName = h.ReleaseName
+	client.Namespace = h.Namespace
+	client.CreateNamespace = true
+	client.Wait = true
+	client.Timeout = 10 * time.Minute
+	client.ChartPathOptions.Version = h.Version
+	client.WaitForJobs = true
 
 	settings.EnvVars()
 
@@ -147,14 +156,6 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	if err != nil {
 		return err
 	}
-
-	client.ReleaseName = h.ReleaseName
-	client.Namespace = h.Namespace
-	client.CreateNamespace = true
-	client.Wait = true
-	client.Timeout = 120 * time.Second
-
-	client.WaitForJobs = true
 
 	values := values.Options{
 		Values: h.Values,
@@ -186,6 +187,12 @@ func (h *Helm) Upgrade(rest *rest.Config) error {
 	}
 
 	client := action.NewUpgrade(h.Action)
+	client.Namespace = h.Namespace
+	client.Wait = true
+	client.Timeout = 5 * time.Minute
+	client.ChartPathOptions.Version = h.Version
+
+	client.WaitForJobs = true
 
 	settings.EnvVars()
 
@@ -206,11 +213,6 @@ func (h *Helm) Upgrade(rest *rest.Config) error {
 		return err
 	}
 
-	client.Namespace = h.Namespace
-	client.Wait = true
-	client.Timeout = 120 * time.Second
-
-	client.WaitForJobs = true
 	//client.IncludeCRDs = true
 
 	values := values.Options{
@@ -259,7 +261,7 @@ func (helm *Helm) RepoUpdate() error {
 		go func(re *repo.ChartRepository) {
 			defer wg.Done()
 			if _, err := re.DownloadIndexFile(); err != nil {
-				klog.Error("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
+				klog.Errorf("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
 				return
 			}
 		}(re)
