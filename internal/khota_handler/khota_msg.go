@@ -36,6 +36,8 @@ const (
 	DataplaneAddedSuccess                 CustomMsg = "Dataplane added success"
 	DataplaneRemoveSuccess                CustomMsg = "Dataplane remove success"
 	DataplanePatchFail                    CustomMsg = "Dataplane patch fail"
+	DataplaneUpdateSuccess                CustomMsg = "Dataplane updated successfully"
+	DataplaneUpdateFail                   CustomMsg = "Dataplane update fail"
 )
 
 // Tenant

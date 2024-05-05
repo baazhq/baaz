@@ -75,7 +75,6 @@ func makeDataPlaneName(cloudType v1.CloudType, customerName, region string) stri
 		return string(cloudType) + "-" + region + "-" + String(4)
 	}
 	return customerName + "-" + string(cloudType) + "-" + region + "-" + String(4)
-
 }
 
 func makeTenantName(appName, appSize string) string {

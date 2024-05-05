@@ -102,6 +102,12 @@ var routes = Routes{
 		CreateDataPlane,
 	},
 	Route{
+		"UPDATE DATA PLANE",
+		"PUT",
+		"/api/v1/dataplane/{dataplane_name}",
+		UpdateDataPlane,
+	},
+	Route{
 		"ADD DATA PLANE",
 		"PUT",
 		"/api/v1/dataplane/{dataplane_name}/customer/{customer_name}",
