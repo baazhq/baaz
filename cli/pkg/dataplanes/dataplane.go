@@ -65,6 +65,10 @@ func makeDataplaneUrl() string {
 	return common.GetBzUrl() + common.BaazPath + common.DataplanePath
 }
 
+func makeDataplaneUpdateUrl(dataplaneName string) string {
+	return makeDataplaneUrl() + "/" + dataplaneName
+}
+
 func makeDataplaneDeleteUrl(dataplaneName string) string {
 	return makeDataplaneUrl() + "/" + dataplaneName
 }
@@ -308,6 +312,54 @@ func CreateDataplane(filePath string) (string, error) {
 	}
 	if resp.StatusCode == http.StatusOK {
 		return "Dataplane Created Successfully", nil
+	}
+
+	return "", nil
+}
+
+func UpdateDataplane(filePath, dataplaneName string) (string, error) {
+
+	yamlByte, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	var dataplane Dataplane
+
+	err = yaml.Unmarshal(yamlByte, &dataplane)
+	if err != nil {
+		return "", err
+	}
+
+	dataplaneByte, err := json.Marshal(dataplane.Dataplane)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, makeDataplaneUpdateUrl(dataplaneName), bytes.NewBuffer(dataplaneByte))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("%s", string(respBody))
+	}
+
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == http.StatusOK {
+		return "Dataplane Updated Successfully", nil
 	}
 
 	return "", nil

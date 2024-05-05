@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
@@ -310,6 +311,124 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 	res.SetResponse(&w)
 	sendEventParseable(dataplanesEventStream, dataplaneInitiationSuccess, labels, map[string]string{"dataplane_name": dpName})
 
+}
+
+func UpdateDataPlane(w http.ResponseWriter, req *http.Request) {
+
+	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
+	if err != nil {
+		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	if err := req.Body.Close(); err != nil {
+		res := NewResponse(ServerBodyCloseError, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	var dp v1.DataPlane
+
+	if err := json.Unmarshal(body, &dp); err != nil {
+		res := NewResponse(ServerUnmarshallError, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	vars := mux.Vars(req)
+	dpName := vars["dataplane_name"]
+
+	dpNamespace := getNamespace(dp.CustomerName)
+
+	var appConfig []v1.HTTPApplication
+
+	for _, app := range dp.ApplicationConfig {
+		appConfig = append(appConfig, v1.HTTPApplication{
+			ApplicationName: app.ApplicationName,
+			Namespace:       app.Namespace,
+			ChartName:       app.ChartName,
+			RepoName:        app.RepoName,
+			RepoURL:         app.RepoURL,
+			Version:         app.Version,
+			Values:          app.Values,
+		})
+	}
+
+	dataplane := v1.DataPlane{
+		CustomerName: dp.CustomerName,
+		CloudType:    dp.CloudType,
+		CloudRegion:  dp.CloudRegion,
+		CloudAuth: v1.CloudAuth{
+			AwsAuth: v1.AwsAuth{
+				AwsAccessKey: dp.CloudAuth.AwsAuth.AwsAccessKey,
+				AwsSecretKey: dp.CloudAuth.AwsAuth.AwsSecretKey,
+			},
+		},
+		ProvisionNetwork: dp.ProvisionNetwork,
+		KubeConfig: v1.KubernetesConfig{
+			EKS: v1.EKSConfig{
+				Name:             dpName,
+				SubnetIds:        dp.KubeConfig.EKS.SubnetIds,
+				SecurityGroupIds: dp.KubeConfig.EKS.SecurityGroupIds,
+				Version:          dp.KubeConfig.EKS.Version,
+			},
+		},
+		ApplicationConfig: appConfig,
+	}
+
+	_, dc := getKubeClientset()
+
+	labels := map[string]string{
+		"version":      dataplane.KubeConfig.EKS.Version,
+		"cloud_type":   string(dataplane.CloudType),
+		"cloud_region": dataplane.CloudRegion,
+	}
+
+	dpDeploy := makeAwsEksConfig(dpName, dataplane, labels)
+
+	existingObj, err := dc.Resource(dpGVK).Namespace(dpNamespace).Get(context.TODO(), dpDeploy.GetName(), metav1.GetOptions{})
+	if err != nil {
+		res := NewResponse(DataplaneUpdateFail, req_error, err, http.StatusBadRequest)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	ob := &v1.DataPlanes{}
+	if errCon := runtime.DefaultUnstructuredConverter.FromUnstructured(existingObj.Object, ob); errCon != nil {
+		res := NewResponse(DataplaneUpdateFail, req_error, errCon, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+
+	}
+
+	// for now only k8s is updatable by user
+	ob.Spec.CloudInfra.Eks.Version = dataplane.KubeConfig.EKS.Version
+
+	upObj, errCon := runtime.DefaultUnstructuredConverter.ToUnstructured(ob)
+	if errCon != nil {
+		res := NewResponse(DataplaneUpdateFail, req_error, errCon, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	_, uperr := dc.Resource(dpGVK).Namespace(dpNamespace).Update(context.TODO(), &unstructured.Unstructured{Object: upObj}, metav1.UpdateOptions{})
+	if uperr != nil {
+		res := NewResponse(DataplaneUpdateFail, req_error, uperr, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+	res := NewResponse(DataplaneUpdateFail, success, nil, http.StatusOK)
+	res.SetResponse(&w)
+	res.LogResponse()
+	sendEventParseable(dataplanesEventStream, dataplaneInitiationSuccess, labels, map[string]string{"dataplane_name": dpName})
 }
 
 func GetDataPlaneStatus(w http.ResponseWriter, req *http.Request) {
