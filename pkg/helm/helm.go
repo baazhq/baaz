@@ -135,7 +135,6 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	client.CreateNamespace = true
 	client.Wait = true
 	client.Timeout = 10 * time.Minute
-	client.ChartPathOptions.Version = h.Version
 	client.WaitForJobs = true
 
 	settings.EnvVars()
@@ -165,6 +164,8 @@ func (h *Helm) Apply(rest *rest.Config) error {
 	if err != nil {
 		return err
 	}
+
+	client.ChartPathOptions.Version = h.Version
 
 	release, err := client.Run(chartRequested, vals)
 	if err != nil {
