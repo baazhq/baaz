@@ -3,5 +3,5 @@ tenants:
     interNamespaceTraffic: "Deny"
     allowedNamespaces: ["nginx-ingress"]
   application:
-    name: "parseable"
-    appSize: "parseable-small"
+    name: "druid"
+    appSize: "druid-small"

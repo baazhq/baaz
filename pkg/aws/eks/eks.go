@@ -13,7 +13,8 @@ type DataPlaneControllerReason string
 
 const (
 	EksControlPlaneCreationInitatedReason DataPlaneControllerReason = "EksControlPlaneCreationInitated"
-	EksControlPlaneCreatedReason          DataPlaneControllerReason = "EksControlPlaneCreated	"
+	EksControlPlaneCreatedReason          DataPlaneControllerReason = "EksControlPlaneCreated"
+	EksControlPlaneProvisioningReason     DataPlaneControllerReason = "EksControlPlaneProvisioning"
 	EksControlPlaneCreationUpgradedReason DataPlaneControllerReason = "EksControlUpgradeInitatedReason"
 	EksControlPlaneUpgradedReason         DataPlaneControllerReason = "EksControlPlaneUpgradeReason"
 )
@@ -23,6 +24,7 @@ type DataPlaneControllerMsg string
 const (
 	EksControlPlaneCreationInitatedMsg DataPlaneControllerMsg = "Initiated creation eks kubernetes control plane"
 	EksControlPlaneCreatedMsg          DataPlaneControllerMsg = "Created eks kubernetes control plane"
+	EksControlPlaneProvisioningMsg     DataPlaneControllerMsg = "Provisioning eks kubernetes control plane"
 	EksControlPlaneUpgradedIntiatedMsg DataPlaneControllerMsg = "Initaled upgrade eks kubernetes control plane"
 	EksControlPlaneUpgradedMsg         DataPlaneControllerMsg = "Upgraded eks kubernetes control plane"
 )

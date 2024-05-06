@@ -131,10 +131,7 @@ func (h *Helm) Apply() error {
 		return err
 	}
 
-	err = h.RepoUpdate()
-	if err != nil {
-		//	return err
-	}
+	_ = h.RepoUpdate()
 
 	chartRequested, err := loader.Load(cp)
 	if err != nil {
@@ -198,7 +195,7 @@ func (helm *Helm) RepoUpdate() error {
 		go func(re *repo.ChartRepository) {
 			defer wg.Done()
 			if _, err := re.DownloadIndexFile(); err != nil {
-				klog.Error("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
+				klog.Errorf("...Unable to get an update from the %q chart repository (%s):\n\t%s\n", re.Config.Name, re.Config.URL, err)
 				return
 			}
 		}(re)
@@ -268,51 +265,3 @@ func repoAdd(name, url string) {
 		klog.Error(err)
 	}
 }
-
-// type simpleRESTClientGetter struct {
-// 	config    *rest.Config
-// 	namespace string
-// }
-
-// func NewRESTClientGetter(config *rest.Config, namespace string) simpleRESTClientGetter {
-// 	return simpleRESTClientGetter{
-// 		namespace: namespace,
-// 		config:    config,
-// 	}
-// }
-
-// func (c *simpleRESTClientGetter) ToRESTConfig() (*rest.Config, error) {
-// 	return c.config, nil
-// }
-
-// func (c *simpleRESTClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
-// 	config, err := c.ToRESTConfig()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	config.Burst = 100
-
-// 	discoveryClient, _ := discovery.NewDiscoveryClientForConfig(config)
-// 	return memory.NewMemCacheClient(discoveryClient), nil
-// }
-
-// func (c *simpleRESTClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
-// 	discoveryClient, err := c.ToDiscoveryClient()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-
-// 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient)
-// 	expander := restmapper.NewShortcutExpander(mapper, discoveryClient)
-// 	return expander, nil
-// }
-
-// func (c *simpleRESTClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
-// 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
-// 	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
-
-// 	overrides := &clientcmd.ConfigOverrides{ClusterDefaults: clientcmd.ClusterDefaults}
-// 	overrides.Context.Namespace = c.namespace
-
-// 	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(loadingRules, overrides)
-// }

@@ -172,6 +172,22 @@ func (ae *awsEnv) reconcileAwsEks() error {
 
 		} else if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusCreating {
 			klog.Infof("EKS Cluster Control Plane [%s] in creating state", ae.dp.Spec.CloudInfra.Eks.Name)
+			if _, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
+				in.Status.Phase = v1.ActiveD
+				in.Status.Version = in.Spec.CloudInfra.Eks.Version
+				in.Status.Conditions = in.AddCondition(v1.DataPlaneCondition{
+					Type:               v1.DataPlaneConditionType(v1.ActiveD),
+					Status:             corev1.ConditionTrue,
+					LastUpdateTime:     metav1.Time{Time: time.Now()},
+					LastTransitionTime: metav1.Time{Time: time.Now()},
+					Reason:             string(eks.EksControlPlaneProvisioningMsg),
+					Message:            string(eks.EksControlPlaneProvisioningReason),
+				})
+				return in
+			}); err != nil {
+				return err
+			}
 		} else if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusUpdating {
 			klog.Infof("EKS Cluster Control Plane [%s] in updated state", ae.dp.Spec.CloudInfra.Eks.Name)
 		} else if eksDescribeClusterOutput.Cluster.Status == types.ClusterStatusDeleting {
@@ -479,7 +495,7 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 }
 
 func getChartName(app v1.AppSpec) string {
-	return fmt.Sprintf("%s-%s", app.Name, app.Namespace)
+	return app.Spec.ChartName
 }
 
 type ChartCh struct {
@@ -494,7 +510,7 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 	klog.Info("reconciling dataplane applications")
 
 	if ae.dp.Status.NodegroupStatus[ae.dp.Spec.CloudInfra.Eks.Name+"-system"] != string(types.NodegroupStatusActive) {
-		return errors.New("waiting for system nodegroup to be active")
+		return nil
 	}
 
 	count := 0
@@ -523,6 +539,8 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 			restConfig,
 			app.Spec.Values,
 		)
+
+		fmt.Println(helm)
 
 		_, exists := helm.List(restConfig)
 
