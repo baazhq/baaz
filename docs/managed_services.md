@@ -2,7 +2,7 @@
 
 Welcome to the Managed Services Infra SaaS documentation!
 
-A Managed Services infra SaaS is where the SaaS provider manages the applications, but they run on the customer's cloud infrastructure. Applications deployed are hosted at the customer's cloud infrastructure. The SaaS provider manages the application and its SLA.
+A Managed Services infra SaaS is where the SaaS provider manages the applications, but they run on the customer's cloud infrastructure. The SaaS provider manages the application and its SLA.
 
 ## Table of Contents
 
