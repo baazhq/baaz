@@ -7,8 +7,9 @@ A Managed Services infra SaaS is where the SaaS provider manages the application
 ## Table of Contents
 
 1. [The need for Managed Services Infra SaaS](#the-need-for-managed-services-infra-saas)
-2. [BaaZ Features for Managed Services Infra SaaS](#baaz-features-for-managed-services-infra-saas)
-3. [User Flow](#user-flow)
+2. [Architecture](#architecture)
+3. [BaaZ Features for Managed Services Infra SaaS](#baaz-features-for-managed-services-infra-saas)
+4. [User Flow](#user-flow)
 
 ## The need for Managed Services Infra SaaS
 
@@ -17,6 +18,10 @@ A Managed Services infra SaaS is where the SaaS provider manages the application
 - **Compliance:** Meet regulatory requirements by maintaining control over data location.
 - **Confidentiality:** Ensure proprietary information stays within trusted network boundaries.
 - **Control:** Customize and manage the SaaS environment according to specific needs.
+
+## Architecture
+
+![managed-services](https://github.com/baazhq/baaz/assets/34169002/ca216e2f-14e4-4431-945b-4af723514650)
 
 ## BaaZ Features for Managed Services Infra SaaS
 
