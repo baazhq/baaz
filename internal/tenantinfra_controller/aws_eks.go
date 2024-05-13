@@ -323,13 +323,18 @@ func (ae *awsEnv) getNodegroupInput(nodeName, roleArn, subnet string, machineSpe
 
 	taints = makeTaints(nodeName)
 
+	var capacityType types.CapacityTypes
+	if machineSpec.Type == v1.MachineTypeLowPriority {
+		capacityType = types.CapacityTypesSpot
+	}
+
 	return &awseks.CreateNodegroupInput{
 		ClusterName:        aws.String(ae.dp.Spec.CloudInfra.Eks.Name),
 		NodeRole:           aws.String(roleArn),
 		NodegroupName:      aws.String(nodeName),
 		Subnets:            []string{subnet},
 		AmiType:            "",
-		CapacityType:       "",
+		CapacityType:       capacityType,
 		ClientRequestToken: nil,
 		DiskSize:           nil,
 		InstanceTypes:      []string{machineSpec.Size},
@@ -349,7 +354,6 @@ func (ae *awsEnv) getNodegroupInput(nodeName, roleArn, subnet string, machineSpe
 		UpdateConfig: nil,
 		Version:      nil,
 	}
-
 }
 
 func makeTaints(value string) *[]types.Taint {

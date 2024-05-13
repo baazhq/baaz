@@ -58,12 +58,26 @@ spec:
                             type: string
                           size:
                             type: string
+                          strictScheduling:
+                            default: enable
+                            enum:
+                            - enable
+                            - disable
+                            type: string
+                          type:
+                            default: default-priority
+                            enum:
+                            - low-priority
+                            - default-priority
+                            type: string
                         required:
                         - labels
                         - max
                         - min
                         - name
                         - size
+                        - strictScheduling
+                        - type
                         type: object
                       type: array
                   required:
