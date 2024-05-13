@@ -133,7 +133,7 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 						}
 						if createNodeGroupOutput != nil && createNodeGroupOutput.Nodegroup != nil {
 							klog.Infof("Initated Dedicated NodeGroup Launch [%s]", *createNodeGroupOutput.Nodegroup.NodegroupName)
-							if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, &v1.NodegroupStatus{
+							if err := ae.patchStatus(fmt.Sprintf("%s-dedicated", *createNodeGroupOutput.Nodegroup.NodegroupName), &v1.NodegroupStatus{
 								Status: string(createNodeGroupOutput.Nodegroup.Status),
 								Subnet: subnet,
 							}); err != nil {
