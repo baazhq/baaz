@@ -121,6 +121,26 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 							return err
 						}
 					}
+
+					if machineSpec.StrictScheduling == v1.StrictSchedulingStatusEnable &&
+						machineSpec.Type == v1.MachineTypeDefaultPriority {
+						input := ae.getNodegroupInput(nodeName, *nodeRole.Role.Arn, subnet, &machineSpec)
+						input.CapacityType = ""
+						input.ScalingConfig.MinSize = aws.Int32(0)
+						createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(input)
+						if err != nil {
+							return err
+						}
+						if createNodeGroupOutput != nil && createNodeGroupOutput.Nodegroup != nil {
+							klog.Infof("Initated Dedicated NodeGroup Launch [%s]", *createNodeGroupOutput.Nodegroup.NodegroupName)
+							if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, &v1.NodegroupStatus{
+								Status: string(createNodeGroupOutput.Nodegroup.Status),
+								Subnet: subnet,
+							}); err != nil {
+								return err
+							}
+						}
+					}
 				}
 
 				if describeNodegroupOutput != nil &&
