@@ -121,24 +121,54 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 							return err
 						}
 					}
+				}
 
-					if machineSpec.StrictScheduling == v1.StrictSchedulingStatusEnable &&
-						machineSpec.Type == v1.MachineTypeDefaultPriority {
-						input := ae.getNodegroupInput(nodeName, *nodeRole.Role.Arn, subnet, &machineSpec)
+				if machineSpec.StrictScheduling == v1.StrictSchedulingStatusEnable &&
+					machineSpec.Type == v1.MachineTypeLowPriority {
+					dedicatedNodeName := fmt.Sprintf("%s-dedicated", nodeName)
+					describeNodegroupOutput, found, err := ae.eksIC.DescribeNodegroup(dedicatedNodeName)
+					if err != nil {
+						return err
+					}
+
+					if !found {
+						nodeRole, err := ae.eksIC.CreateNodeIamRole(dedicatedNodeName)
+						if err != nil {
+							return err
+						}
+						if nodeRole.Role == nil {
+							return errors.New("node role is nil")
+						}
+
+						subnet := getNodeGroupSubnet(ae.tenantsInfra, ae.dp)
+						input := ae.getNodegroupInput(dedicatedNodeName, *nodeRole.Role.Arn, subnet, &machineSpec)
 						input.CapacityType = ""
 						input.ScalingConfig.MinSize = aws.Int32(0)
+						input.ScalingConfig.MaxSize = aws.Int32(1)
+						input.ScalingConfig.DesiredSize = aws.Int32(0)
+
 						createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(input)
 						if err != nil {
 							return err
 						}
 						if createNodeGroupOutput != nil && createNodeGroupOutput.Nodegroup != nil {
-							klog.Infof("Initated Dedicated NodeGroup Launch [%s]", *createNodeGroupOutput.Nodegroup.NodegroupName)
-							if err := ae.patchStatus(fmt.Sprintf("%s-dedicated", *createNodeGroupOutput.Nodegroup.NodegroupName), &v1.NodegroupStatus{
+							klog.Infof("Initated NodeGroup Launch [%s]", *createNodeGroupOutput.Nodegroup.NodegroupName)
+							if err := ae.patchStatus(*createNodeGroupOutput.Nodegroup.NodegroupName, &v1.NodegroupStatus{
 								Status: string(createNodeGroupOutput.Nodegroup.Status),
 								Subnet: subnet,
 							}); err != nil {
 								return err
 							}
+						}
+					}
+					if describeNodegroupOutput != nil &&
+						describeNodegroupOutput.Nodegroup != nil &&
+						len(describeNodegroupOutput.Nodegroup.Subnets) > 0 {
+						if err := ae.patchStatus(*describeNodegroupOutput.Nodegroup.NodegroupName, &v1.NodegroupStatus{
+							Status: string(describeNodegroupOutput.Nodegroup.Status),
+							Subnet: describeNodegroupOutput.Nodegroup.Subnets[0],
+						}); err != nil {
+							return err
 						}
 					}
 				}
@@ -174,7 +204,9 @@ func (ae *awsEnv) cleanUpUnusedNodeGroup() error {
 		for _, machineSpec := range machineSpecs.MachineSpec {
 			nodeName := fmt.Sprintf("%s-%s-%s", tenantName, machineSpec.Name, machineSpec.Size)
 			nodeName = strings.ReplaceAll(nodeName, ".", "-")
+			dedicatedNodeName := fmt.Sprintf("%s-dedicated", nodeName)
 			cleanupNodes[nodeName] = false
+			cleanupNodes[dedicatedNodeName] = false
 		}
 	}
 
