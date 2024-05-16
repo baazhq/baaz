@@ -63,7 +63,8 @@ type DataPlaneStatus struct {
 	// appStatus:
 	// 	  nginx: Deployed
 	//    druid: Installing
-	AppStatus map[string]ApplicationPhase `json:"appStatus,omitempty"`
+	AppStatus               map[string]ApplicationPhase `json:"appStatus,omitempty"`
+	ClusterAutoScalerStatus ApplicationPhase            `json:"clusterAutoStatus,omitempty"`
 }
 
 type DataPlaneConditionType string

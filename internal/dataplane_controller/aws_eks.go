@@ -57,6 +57,10 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 		return fmt.Errorf("error in reconciling aws eks cluster: %s", err.Error())
 	}
 
+	if err := awsEnv.reconcileClusterAutoscaler(); err != nil {
+		return fmt.Errorf("error in reconciling aws eks cluster: %s", err.Error())
+	}
+
 	// bootstrap dataplane with apps
 	if err := awsEnv.reconcileAwsApplications(); err != nil {
 		return fmt.Errorf("error in reconciling applications: %s", err.Error())
@@ -72,6 +76,83 @@ type awsEnv struct {
 	client  client.Client
 	store   store.Store
 	network network.Network
+}
+
+func (ae *awsEnv) reconcileClusterAutoscaler() error {
+	klog.Info("reconciling cluster autoscaler")
+
+	if ae.dp.Status.NodegroupStatus[ae.dp.Spec.CloudInfra.Eks.Name+"-system"] != string(types.NodegroupStatusActive) {
+		return nil
+	}
+
+	restConfig, err := ae.eksIC.GetRestConfig()
+	if err != nil {
+		return err
+	}
+
+	ch := make(chan ChartCh)
+
+	chartValues := []string{fmt.Sprintf("autoDiscovery.clusterName=%s", ae.dp.Spec.CloudInfra.Eks.Name)}
+
+	if ae.dp.Status.ClusterAutoScalerStatus == v1.DeployedA || ae.dp.Status.ClusterAutoScalerStatus == v1.InstallingA {
+		return nil
+	}
+
+	if ae.dp.Status.ClusterAutoScalerStatus != v1.DeployedA {
+		helm := helm.NewHelm(
+			"cas",
+			"kube-system",
+			"cluster-autoscaler",
+			"autoscaler",
+			"https://kubernetes.github.io/autoscaler",
+			"9.37.0",
+			restConfig,
+			chartValues,
+		)
+
+		_, exists := helm.List(restConfig)
+
+		if !exists {
+			go func(ch chan ChartCh) {
+				c := ChartCh{
+					Name: "cas",
+					Err:  nil,
+				}
+				if err := helm.Apply(restConfig); err != nil {
+					c.Err = err
+				}
+				ch <- c
+			}(ch)
+
+			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
+				in.Status.ClusterAutoScalerStatus = v1.InstallingA
+				return in
+			})
+			if err != nil {
+				return err
+			}
+
+			chartCh := <-ch
+			var latestState v1.ApplicationPhase
+			if chartCh.Err != nil {
+				klog.Errorf("installing chart %s failed, reason: %s", chartCh.Name, chartCh.Err.Error())
+				latestState = v1.FailedA
+			} else {
+				latestState = v1.DeployedA
+			}
+
+			_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
+				in.Status.ClusterAutoScalerStatus = latestState
+				return in
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (ae *awsEnv) reconcileAwsEks() error {

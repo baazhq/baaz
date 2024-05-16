@@ -154,5 +154,5 @@ func (ec *eks) DeleteEKS() (*awseks.DeleteClusterOutput, error) {
 			return out, nil
 		}
 	}
-	return out, err
+	return out, nil
 }

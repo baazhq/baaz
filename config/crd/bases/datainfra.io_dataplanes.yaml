@@ -175,6 +175,8 @@ spec:
                   vpc:
                     type: string
                 type: object
+              clusterAutoStatus:
+                type: string
               conditions:
                 items:
                   description: DataPlaneCondition describes the state of a deployment

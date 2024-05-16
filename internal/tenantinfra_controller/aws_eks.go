@@ -144,7 +144,6 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 						input := ae.getNodegroupInput(dedicatedNodeName, *nodeRole.Role.Arn, subnet, &machineSpec)
 						input.CapacityType = ""
 						input.ScalingConfig.MinSize = aws.Int32(0)
-						input.ScalingConfig.MaxSize = aws.Int32(1)
 						input.ScalingConfig.DesiredSize = aws.Int32(0)
 
 						createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(input)
