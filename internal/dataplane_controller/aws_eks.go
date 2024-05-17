@@ -13,6 +13,7 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go/aws"
 	v1 "github.com/baazhq/baaz/api/v1/types"
@@ -57,9 +58,9 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 		return fmt.Errorf("error in reconciling aws eks cluster: %s", err.Error())
 	}
 
-	if err := awsEnv.reconcileClusterAutoscaler(); err != nil {
-		return fmt.Errorf("error in reconciling aws eks cluster: %s", err.Error())
-	}
+	// if err := awsEnv.reconcileClusterAutoscaler(); err != nil {
+	// 	return fmt.Errorf("error in reconciling aws eks cluster: %s", err.Error())
+	// }
 
 	// bootstrap dataplane with apps
 	if err := awsEnv.reconcileAwsApplications(); err != nil {
@@ -78,11 +79,66 @@ type awsEnv struct {
 	network network.Network
 }
 
+var (
+	casIamPolicy = `
+	{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Action": [
+					"autoscaling:DescribeAutoScalingGroups",
+					"autoscaling:DescribeAutoScalingInstances",
+					"autoscaling:DescribeLaunchConfigurations",
+					"autoscaling:DescribeScalingActivities",
+					"ec2:DescribeInstanceTypes",
+					"ec2:DescribeLaunchTemplateVersions"
+				],
+				"Resource": ["*"]
+			},
+			{
+				"Effect": "Allow",
+				"Action": [
+					"autoscaling:SetDesiredCapacity",
+					"autoscaling:TerminateInstanceInAutoScalingGroup"
+				],
+				"Resource": ["*"]
+			}
+		]
+	}
+	`
+)
+
+const (
+	CASPolicyName = "cas-policy"
+)
+
 func (ae *awsEnv) reconcileClusterAutoscaler() error {
 	klog.Info("reconciling cluster autoscaler")
 
 	if ae.dp.Status.NodegroupStatus[ae.dp.Spec.CloudInfra.Eks.Name+"-system"] != string(types.NodegroupStatusActive) {
 		return nil
+	}
+
+	if ae.dp.Status.ClusterAutoScalerPolicyArn == "" {
+		policyInput := &iam.CreatePolicyInput{
+			PolicyDocument: aws.String(casIamPolicy),
+			PolicyName:     aws.String("cas-policy"),
+		}
+
+		policyOutput, err := ae.eksIC.CreateIAMPolicy(ae.ctx, policyInput)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.ClusterAutoScalerPolicyArn = *policyOutput.Policy.Arn
+			return in
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	restConfig, err := ae.eksIC.GetRestConfig()

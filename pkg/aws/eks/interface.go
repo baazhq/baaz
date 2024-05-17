@@ -31,6 +31,7 @@ type Eks interface {
 	// iam role
 	CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error)
 	CreateClusterIamRole() (*awsiam.GetRoleOutput, error)
+	GetClusterIamRole() (*awsiam.GetRoleOutput, error)
 	// addons
 	CreateAddon(ctx context.Context, params *awseks.CreateAddonInput) (*awseks.CreateAddonOutput, error)
 	DescribeAddon(addonName string) (*awseks.DescribeAddonOutput, error)
@@ -41,6 +42,8 @@ type Eks interface {
 	CreateEbsCSIRole(ctx context.Context) (*awsiam.CreateRoleOutput, error)
 	CreateVpcCniRole(ctx context.Context) (roleOutput *awsiam.CreateRoleOutput, arn string, err error)
 	DescribeInstances(ctx context.Context, input *awsec2.DescribeInstancesInput) (*awsec2.DescribeInstancesOutput, error)
+	CreateIAMPolicy(ctx context.Context, input *awsiam.CreatePolicyInput) (*awsiam.CreatePolicyOutput, error)
+	AttachRolePolicy(ctx context.Context, input *awsiam.AttachRolePolicyInput) (*awsiam.AttachRolePolicyOutput, error)
 }
 
 type eks struct {

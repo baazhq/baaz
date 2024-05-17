@@ -175,7 +175,9 @@ spec:
                   vpc:
                     type: string
                 type: object
-              clusterAutoStatus:
+              clusterAutoScalerPolicyArn:
+                type: string
+              clusterAutoScalerStatus:
                 type: string
               conditions:
                 items:
