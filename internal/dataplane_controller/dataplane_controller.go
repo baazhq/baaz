@@ -151,7 +151,8 @@ func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
 	for _, app := range ae.dp.Spec.Applications {
 		chartName := getChartName(app)
 
-		if ae.dp.Status.AppStatus[chartName] != v1.UninstallingA {
+		if ae.dp.Status.AppStatus[chartName] != v1.UninstallingA &&
+			ae.dp.Status.AppStatus[chartName] != v1.Uninstalled {
 			restConfig, err := ae.eksIC.GetRestConfig()
 			if err != nil {
 				return err
