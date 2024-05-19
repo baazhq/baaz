@@ -3,7 +3,6 @@ package eks
 import (
 	"context"
 	"errors"
-	"log"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -185,7 +184,7 @@ func (ec *eks) GetClusterNodeRoles() ([]string, error) {
 		}
 		describeNodeGroupOutput, err := ec.awsClient.DescribeNodegroup(ec.ctx, describeNodeGroupInput)
 		if err != nil {
-			log.Fatalf("unable to describe node group %s, %v", nodeGroupName, err)
+			return nil, err
 		}
 
 		nodeGroup := describeNodeGroupOutput.Nodegroup
