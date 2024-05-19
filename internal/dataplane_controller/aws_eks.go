@@ -58,9 +58,9 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 		return fmt.Errorf("error in reconciling aws eks cluster: %s", err.Error())
 	}
 
-	// if err := awsEnv.reconcileClusterAutoscaler(); err != nil {
-	// 	return fmt.Errorf("error in reconciling aws eks cluster: %s", err.Error())
-	// }
+	if err := awsEnv.reconcileClusterAutoscaler(); err != nil {
+		return fmt.Errorf("error in reconciling cluster autoscaler: %s", err.Error())
+	}
 
 	// bootstrap dataplane with apps
 	if err := awsEnv.reconcileAwsApplications(); err != nil {
@@ -80,8 +80,7 @@ type awsEnv struct {
 }
 
 var (
-	casIamPolicy = `
-	{
+	casIamPolicy = `{
 		"Version": "2012-10-17",
 		"Statement": [
 			{
@@ -105,13 +104,21 @@ var (
 				"Resource": ["*"]
 			}
 		]
-	}
-	`
+	}`
 )
 
 const (
 	CASPolicyName = "cas-policy"
 )
+
+/* Error faced
+
+E0519 09:29:10.091183       1 aws_manager.go:128] Failed to regenerate ASG cache: AccessDenied: User: arn:aws:sts::437639712640:assumed-role/aws-us-east-1-owkb-system-node-role/i-06bb159e4a93c9753 is not authorized to perform: autoscaling:DescribeAutoScalingGroups because no identity-based policy allows the autoscaling:DescribeAutoScalingGroups action
+	status code: 403, request id: 6a1b2526-8012-4f05-a5f5-4fb783a352b3
+F0519 09:29:10.091232       1 aws_cloud_provider.go:460] Failed to create AWS Manager: AccessDenied: User: arn:aws:sts::437639712640:assumed-role/aws-us-east-1-owkb-system-node-role/i-06bb159e4a93c9753 is not authorized to perform: autoscaling:DescribeAutoScalingGroups because no identity-based policy allows the autoscaling:DescribeAutoScalingGroups action
+	status code: 403, request id: 6a1b2526-8012-4f05-a5f5-4fb783a352b3
+
+*/
 
 func (ae *awsEnv) reconcileClusterAutoscaler() error {
 	klog.Info("reconciling cluster autoscaler")
@@ -138,6 +145,25 @@ func (ae *awsEnv) reconcileClusterAutoscaler() error {
 		})
 		if err != nil {
 			return err
+		}
+	}
+
+	if ae.dp.Status.ClusterAutoScalerPolicyArn != "" {
+		roles, err := ae.eksIC.GetClusterNodeRoles()
+		if err != nil {
+			return err
+		}
+
+		for _, r := range roles {
+			attachRolePolicyInput := &iam.AttachRolePolicyInput{
+				PolicyArn: &ae.dp.Status.ClusterAutoScalerPolicyArn,
+				RoleName:  &r,
+			}
+
+			_, err = ae.eksIC.AttachRolePolicy(ae.ctx, attachRolePolicyInput)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

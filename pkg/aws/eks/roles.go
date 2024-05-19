@@ -141,12 +141,6 @@ func (ec *eks) CreateClusterIamRole() (*awsiam.GetRoleOutput, error) {
 	return awsIamGetRoleOutput, nil
 }
 
-func (ec *eks) GetClusterIamRole() (*awsiam.GetRoleOutput, error) {
-	return ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
-		RoleName: aws.String(MakeEksClusterRoleName(ec.dp.Spec.CloudInfra.Eks.Name)),
-	})
-}
-
 func (ec *eks) CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error) {
 
 	result, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{

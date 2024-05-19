@@ -136,7 +136,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}); upErr != nil {
 			return ctrl.Result{}, upErr
 		}
-		klog.Errorf("failed to reconcile environment: reason: %s", err.Error())
+		klog.Errorf("failed to reconcile dataplane: reason: %s", err.Error())
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else {
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil

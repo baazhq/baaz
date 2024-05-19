@@ -31,7 +31,7 @@ type Eks interface {
 	// iam role
 	CreateNodeIamRole(name string) (*awsiam.GetRoleOutput, error)
 	CreateClusterIamRole() (*awsiam.GetRoleOutput, error)
-	GetClusterIamRole() (*awsiam.GetRoleOutput, error)
+	GetClusterNodeRoles() ([]string, error)
 	// addons
 	CreateAddon(ctx context.Context, params *awseks.CreateAddonInput) (*awseks.CreateAddonOutput, error)
 	DescribeAddon(addonName string) (*awseks.DescribeAddonOutput, error)
