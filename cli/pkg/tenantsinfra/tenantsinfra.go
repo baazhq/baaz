@@ -41,11 +41,13 @@ func makeTenantInfraPath(dataplaneName string) string {
 
 type TiMachine struct {
 	MachinePool []struct {
-		Name   string `yaml:"name" json:"name"`
-		Size   string `yaml:"size" json:"size"`
-		Min    int    `yaml:"min" json:"min"`
-		Max    int    `yaml:"max" json:"max"`
-		Labels struct {
+		Name             string `yaml:"name" json:"name"`
+		Size             string `yaml:"size" json:"size"`
+		Min              int    `yaml:"min" json:"min"`
+		Max              int    `yaml:"max" json:"max"`
+		StrictScheduling string `yaml:"strictScheduling" json:"strictScheduling"`
+		Type             string `yaml:"type" json:"type"`
+		Labels           struct {
 			App  string `yaml:"app" json:"app"`
 			Size string `yaml:"size" json:"size"`
 		} `yaml:"labels" json:"labels"`

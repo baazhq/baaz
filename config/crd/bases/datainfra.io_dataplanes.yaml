@@ -175,6 +175,10 @@ spec:
                   vpc:
                     type: string
                 type: object
+              clusterAutoScalerPolicyArn:
+                type: string
+              clusterAutoScalerStatus:
+                type: string
               conditions:
                 items:
                   description: DataPlaneCondition describes the state of a deployment

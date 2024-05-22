@@ -1,7 +1,9 @@
 package eks
 
 import (
+	"context"
 	"errors"
+	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
@@ -154,5 +156,44 @@ func (ec *eks) DeleteEKS() (*awseks.DeleteClusterOutput, error) {
 			return out, nil
 		}
 	}
-	return out, err
+	return out, nil
+}
+
+func (ec *eks) GetClusterNodeRoles() ([]string, error) {
+	clusterName := ec.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.Name
+	// List node groups for the cluster
+	listNodeGroupsInput := &awseks.ListNodegroupsInput{
+		ClusterName: aws.String(clusterName),
+	}
+	listNodeGroupsOutput, err := ec.awsClient.ListNodegroups(context.TODO(), listNodeGroupsInput)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(listNodeGroupsOutput.Nodegroups) == 0 {
+		return nil, nil
+	}
+
+	nodeRoles := make([]string, 0)
+
+	// Describe each node group and get the IAM role
+	for _, nodeGroupName := range listNodeGroupsOutput.Nodegroups {
+		describeNodeGroupInput := &awseks.DescribeNodegroupInput{
+			ClusterName:   aws.String(clusterName),
+			NodegroupName: aws.String(nodeGroupName),
+		}
+		describeNodeGroupOutput, err := ec.awsClient.DescribeNodegroup(ec.ctx, describeNodeGroupInput)
+		if err != nil {
+			return nil, err
+		}
+
+		nodeGroup := describeNodeGroupOutput.Nodegroup
+		if nodeGroup.NodeRole != nil {
+			_, roleName, found := strings.Cut(*nodeGroup.NodeRole, "/")
+			if found {
+				nodeRoles = append(nodeRoles, roleName)
+			}
+		}
+	}
+	return nodeRoles, nil
 }
