@@ -9,10 +9,9 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/viper"
 	log "k8s.io/klog/v2"
-
-	"github.com/olekukonko/tablewriter"
 )
 
 var customersUrlPath = "/api/v1/customer"
@@ -95,7 +94,7 @@ func getCustomerList() ([]customerList, error) {
 
 }
 
-func CreateCustomer(filePath string) (string, error) {
+func CreateCustomer(filePath string, privateMode bool) (string, error) {
 
 	viper.SetConfigFile(filePath)
 	viper.SetConfigType("yaml")
@@ -120,6 +119,10 @@ func CreateCustomer(filePath string) (string, error) {
 		SaaSType:  viper.GetString("customer.saas_type"),
 		CloudType: viper.GetString("customer.cloud_type"),
 		Labels:    viper.GetStringMapString("customer.labels"),
+	}
+
+	if privateMode {
+		newCreateCustomer.Labels["private_mode"] = "true"
 	}
 
 	ccByte, err := json.Marshal(newCreateCustomer)

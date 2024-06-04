@@ -6,7 +6,6 @@ import (
 	"bz/pkg/dataplanes"
 	"bz/pkg/tenants"
 	"bz/pkg/tenantsinfra"
-
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -19,7 +18,7 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch args[0] {
 			case "customer", "customers":
-				resp, err := customers.CreateCustomer(file)
+				resp, err := customers.CreateCustomer(file, private_mode)
 				if err != nil {
 					return err
 				}
@@ -32,7 +31,7 @@ var (
 				fmt.Println(resp)
 			case "tenantinfra", "tenantsinfra":
 				if dataplane_name == "" {
-					return fmt.Errorf("Dataplane named cannot be nil")
+					return fmt.Errorf("dataplane named cannot be nil")
 				}
 				resp, err := tenantsinfra.CreateTenantsInfra(file, dataplane_name)
 				if err != nil {
@@ -41,7 +40,7 @@ var (
 				fmt.Println(resp)
 			case "tenants", "tenant":
 				if tenant_name == "" || customer_name == "" {
-					return fmt.Errorf("Tenant and Customer name is required")
+					return fmt.Errorf("tenant and Customer name is required")
 				}
 				resp, err := tenants.CreateTenant(
 					file,
@@ -54,7 +53,7 @@ var (
 				fmt.Println(resp)
 			case "application", "applications", "app", "apps":
 				if tenant_name == "" || customer_name == "" {
-					return fmt.Errorf("Tenant and Customer name is required")
+					return fmt.Errorf("tenant and Customer name is required")
 				}
 				resp, err := applications.CreateApplication(
 					file,
@@ -79,5 +78,5 @@ func init() {
 	createCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
 	createCmd.Flags().StringVarP(&customer_name, "customer", "", "", "customer name")
 	createCmd.Flags().StringVarP(&tenant_name, "tenant", "", "", "tenant name")
-
+	createCmd.Flags().BoolVarP(&private_mode, "private_mode", "", false, "saas mode public/private")
 }

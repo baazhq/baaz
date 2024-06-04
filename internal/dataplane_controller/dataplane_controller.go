@@ -14,6 +14,7 @@ import (
 	"github.com/baazhq/baaz/pkg/store"
 	"github.com/baazhq/baaz/pkg/utils"
 	"github.com/go-logr/logr"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
@@ -50,10 +51,9 @@ func NewDataplaneReconciler(mgr ctrl.Manager, enablePrivate bool, customerName s
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
 		Recorder:      mgr.GetEventRecorderFor("dataplane-controller"),
-		Predicates:    predicates.GetPredicates(enablePrivate, customerName),
+		Predicates:    predicates.GetPredicates(enablePrivate, customerName, mgr.GetClient()),
 		NgStore:       store.NewInternalStore(),
 	}
-
 }
 
 func (r *DataPlaneReconciler) initCloudAuth(ctx context.Context, dp *v1.DataPlanes) error {
@@ -291,6 +291,19 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	klog.Infof("Deleted Dataplane [%s]", ae.dp.GetName())
 	if err := ae.client.Update(ae.ctx, ae.dp.DeepCopyObject().(*v1.DataPlanes)); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// update namespace level
+	customerNs := &core.Namespace{}
+	if err := ae.client.Get(ae.ctx, client.ObjectKey{Name: ae.dp.Namespace}, customerNs); err != nil {
+		return ctrl.Result{}, err
+	}
+	if customerNs.GetLabels()["dataplane"] != "unavailable" {
+		customerNs.Labels["dataplane"] = "unabailable"
+
+		if err := ae.client.Update(ae.ctx, customerNs); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 	return ctrl.Result{}, nil
 }
