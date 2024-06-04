@@ -51,10 +51,9 @@ func NewDataplaneReconciler(mgr ctrl.Manager, enablePrivate bool, customerName s
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
 		Recorder:      mgr.GetEventRecorderFor("dataplane-controller"),
-		Predicates:    predicates.GetPredicates(enablePrivate, customerName),
+		Predicates:    predicates.GetPredicates(enablePrivate, customerName, mgr.GetClient()),
 		NgStore:       store.NewInternalStore(),
 	}
-
 }
 
 func (r *DataPlaneReconciler) initCloudAuth(ctx context.Context, dp *v1.DataPlanes) error {

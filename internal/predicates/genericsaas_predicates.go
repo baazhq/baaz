@@ -1,8 +1,9 @@
 package predicates
 
 import (
-	"fmt"
+	"context"
 
+	core "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -12,30 +13,31 @@ import (
 // GenericSaaSPredicates to be passed to manager
 type GenericSaaSPredicates struct {
 	predicate.Funcs
+	C client.Client
 }
 
 // create() to filter create events
-func (GenericSaaSPredicates) Create(e event.CreateEvent) bool {
-	return IgnorePrivateSaaSCustomer(e.Object)
+func (g GenericSaaSPredicates) Create(e event.CreateEvent) bool {
+	return IgnorePrivateSaaSCustomer(e.Object, g.C)
 }
 
 // update() to filter update events
-func (GenericSaaSPredicates) Update(e event.UpdateEvent) bool {
-	return IgnorePrivateSaaSCustomer(e.ObjectNew)
+func (g GenericSaaSPredicates) Update(e event.UpdateEvent) bool {
+	return IgnorePrivateSaaSCustomer(e.ObjectNew, g.C)
 }
 
 // delete() to filter delete events
-func (GenericSaaSPredicates) Delete(e event.DeleteEvent) bool {
-	return IgnorePrivateSaaSCustomer(e.Object)
+func (g GenericSaaSPredicates) Delete(e event.DeleteEvent) bool {
+	return IgnorePrivateSaaSCustomer(e.Object, g.C)
 }
 
-func IgnorePrivateSaaSCustomer(obj client.Object) bool {
+func IgnorePrivateSaaSCustomer(obj client.Object, c client.Client) bool {
+	ns := &core.Namespace{}
 
-	if obj.GetLabels()["private_object"] == "true" {
-		msg := fmt.Sprintf("baaz controllers will not renconcile private saas %s", obj.GetNamespace())
-		klog.Info(msg)
+	if err := c.Get(context.TODO(), client.ObjectKey{Name: obj.GetNamespace()}, ns); err != nil {
+		klog.Error(err)
 		return false
 	}
 
-	return true
+	return ns.Labels["private_mode"] != "true"
 }

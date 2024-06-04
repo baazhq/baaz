@@ -7,13 +7,12 @@ import (
 	"net/http"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	v1 "github.com/baazhq/baaz/api/v1/types"
 	helm "github.com/baazhq/baaz/pkg/helmchartpath"
 	"github.com/gorilla/mux"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
@@ -99,6 +98,9 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 			"customer_name": string(customerName),
 			"dataplane":     dataplaneUnavailable,
 			"controlplane":  "baaz",
+		}
+		if customer.Labels["private_mode"] == "true" {
+			labels["private_mode"] = "true"
 		}
 
 		allLabels := mergeMaps(labels, setLabelPrefix(customer.Labels))
