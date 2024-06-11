@@ -4,8 +4,8 @@ dataplane:
   saasType: shared
   cloudAuth:
     awsAuth:
-      awsAccessKey: AKIAWLZK4B6AKHFOGXUH
-      awsSecretKey: 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
+      awsAccessKey: <>
+      awsSecretKey: <>
   provisionNetwork: true
   kubernetesConfig:
     eks:
