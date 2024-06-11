@@ -130,7 +130,7 @@ func main() {
 		Metrics: server.Options{
 			BindAddress: saasInit.MetricServerPort,
 		},
-		LeaderElectionID: "72b9bc85.datainfra.io",
+		LeaderElectionID: "72b9bc85.baaz.dev",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

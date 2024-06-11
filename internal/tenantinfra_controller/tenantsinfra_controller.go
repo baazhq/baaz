@@ -21,7 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 )
 
-var tenantsFinalizer = "tenantsinfra.datainfra.io/finalizer"
+var tenantsFinalizer = "tenantsinfra.baaz.dev/finalizer"
 
 // TenantsInfraReconciler reconciles a Tenants object
 type TenantsInfraReconciler struct {
@@ -50,9 +50,9 @@ func NewTenantsInfraReconciler(mgr ctrl.Manager, enablePrivate bool, customerNam
 	}
 }
 
-//+kubebuilder:rbac:groups=datainfra.io,resources=tenantsinfra,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=datainfra.io,resources=tenantsinfra/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=datainfra.io,resources=tenantsinfra/finalizers,verbs=update
+//+kubebuilder:rbac:groups=baaz.dev,resources=tenantsinfra,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=baaz.dev,resources=tenantsinfra/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=baaz.dev,resources=tenantsinfra/finalizers,verbs=update
 
 func (r *TenantsInfraReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 

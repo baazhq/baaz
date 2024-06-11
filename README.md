@@ -25,6 +25,14 @@ Organisations seeking to build an infra SaaS or managed services product require
 - Tailored Infrastructure with tenant expansion. Ex: Move customers from Plan A to Plan B.
 - Stateless, built on kubernetes API.
 
+## Usecases
+
+Monetize your infra by leveraging BaaZ to provides
+- Managed Services 
+- Infra SaaS.
+- Infra Serverless SaaS.
+
+
 ## :newspaper: Newsletter 
 - [SaaS Infra](https://saasinfra.substack.com/)
 

@@ -1,7 +1,7 @@
 dataplane:
   cloudType: aws
   cloudRegion: us-east-1
-  saasType: dedicated
+  saasType: shared
   cloudAuth:
     awsAuth:
       awsAccessKey: <>

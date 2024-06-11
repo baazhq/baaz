@@ -14,13 +14,13 @@ type Network interface {
 	CreateSubnet(ctx context.Context, params *awsec2.CreateSubnetInput) (*awsec2.CreateSubnetOutput, error)
 	CreateSG(ctx context.Context, params *awsec2.CreateSecurityGroupInput) (*awsec2.CreateSecurityGroupOutput, error)
 	CreateNAT(ctx context.Context, dp *v1.DataPlanes) (*awsec2.CreateNatGatewayOutput, error)
-	CreateElasticIP(ctx context.Context) (*awsec2.AllocateAddressOutput, error)
+	CreateElasticIP(ctx context.Context, params *awsec2.AllocateAddressInput) (*awsec2.AllocateAddressOutput, error)
 	AssociateNATWithRT(ctx context.Context, dp *v1.DataPlanes) error
-	CreateInternetGateway(ctx context.Context) (*awsec2.CreateInternetGatewayOutput, error)
+	CreateInternetGateway(ctx context.Context, params *awsec2.CreateInternetGatewayInput) (*awsec2.CreateInternetGatewayOutput, error)
 	AttachInternetGateway(ctx context.Context, igId, vpcId string) (*awsec2.AttachInternetGatewayOutput, error)
 	AddSGInboundRule(ctx context.Context, sgGroupId, vpcId string) (*awsec2.AuthorizeSecurityGroupIngressOutput, error)
 	SubnetAutoAssignPublicIP(ctx context.Context, subnetId string) (*awsec2.ModifySubnetAttributeOutput, error)
-	CreateRouteTable(ctx context.Context, vpcId string) (*awsec2.CreateRouteTableOutput, error)
+	CreateRouteTable(ctx context.Context, vpcId string, params *awsec2.CreateRouteTableInput) (*awsec2.CreateRouteTableOutput, error)
 	CreateRoute(ctx context.Context, input *awsec2.CreateRouteInput) (*awsec2.CreateRouteOutput, error)
 	AssociateRTWithSubnet(ctx context.Context, rtId, subnetId string) error
 	DeleteNatGateway(ctx context.Context, id string) error

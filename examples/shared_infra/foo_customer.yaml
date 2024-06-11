@@ -3,5 +3,5 @@ customer:
   saas_type: shared
   cloud_type: aws
   labels: 
-    tier: buisness
+    tier: free
     region: us-east-1

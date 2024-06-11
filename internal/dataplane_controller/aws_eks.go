@@ -431,18 +431,166 @@ func (ae *awsEnv) reconcileLBPhase() error {
 	return err
 }
 
+// reconcileNetwork ensures that the network infrastructure for the data plane is correctly set up.
+// The function performs the following steps:
+//
+// 1. Checks if network provisioning is enabled in the specification.
+// 2. Generates a random CIDR block for the VPC.
+// 3. Creates a VPC if it doesn't exist and updates the status with the VPC ID.
+// 4. Creates and attaches an Internet Gateway to the VPC if it doesn't exist and updates the status with the Internet Gateway ID.
+// 5. Creates a Route Table if it doesn't exist and updates the status with the Route Table ID.
+// 6. Creates a default route in the Route Table to the Internet Gateway.
+// 7. Defines CIDR blocks for subnets and creates them if they don't exist, updating the status with the Subnet IDs. Public subnets are auto-assigned public IPs and associated with the Route Table.
+// 8. Creates a Security Group if it doesn't exist and updates the status with the Security Group IDs.
+// 9. Adds an inbound rule to the Security Group if it hasn't been added and updates the status.
+// 10. Creates a NAT Gateway if it doesn't exist and updates the status with the NAT Gateway ID.
+// 11. Associates the NAT Gateway with the Route Table if it hasn't been done and updates the status.
+//
+// Flow Chart:
+//
+// +--------------------------------+
+// | Start                          |
+// +--------------------------------+
+//
+//	|
+//	v
+//
+// +--------------------------------+
+// | Check if network provisioning  |
+// | is enabled                     |
+// +--------------------------------+
+//
+//	|
+//	v
+//
+// +-------------------+  No   +----------------+
+// | ProvisionNetwork? |------>| Return nil     |
+// |                   |       +----------------+
+// |        Yes        |
+// +-------------------+
+//
+//	|
+//	v
+//
+// +--------------------------------+
+// | Generate random CIDR block for |
+// | VPC                            |
+// +--------------------------------+
+//
+//	|
+//	v
+//
+// +---------------------+  No   +----------------------+
+// | Check if VPC exists |------>| Create VPC, update   |
+// |                     |       | status with VPC ID   |
+// |         Yes         |       +----------------------+
+// +---------------------+
+//
+//	|
+//	v
+//
+// +---------------------------+  No   +----------------------+
+// | Check if Internet Gateway |------>| Create Internet      |
+// | exists                    |       | Gateway, update      |
+// |                           |       | status with IGW ID   |
+// |            Yes            |       +----------------------+
+// +---------------------------+
+//
+//	|
+//	v
+//
+// +-------------------------+  No   +--------------------------+
+// | Check if Route Table    |------>| Create Route Table,      |
+// | exists                  |       | update status with RT ID |
+// |                         |       +--------------------------+
+// |            Yes          |
+// +-------------------------+
+//
+//	|
+//	v
+//
+// +----------------------------+
+// | Create default route to    |
+// | Internet Gateway           |
+// +----------------------------+
+//
+//	|
+//	v
+//
+// +----------------------------+
+// | Define CIDR blocks for     |
+// | subnets                    |
+// +----------------------------+
+//
+//	|
+//	v
+//
+// +-------------------------+  No   +-----------------------+
+// | Check if subnets exist  |------>| Create subnets,       |
+// |                         |       | update status with    |
+// |            Yes          |       | Subnet IDs            |
+// +-------------------------+       +-----------------------+
+//
+//	|
+//	v
+//
+// +-------------------------+  No   +-----------------------+
+// | Check if Security Group |------>| Create Security Group,|
+// | exists                  |       | update status with SG |
+// |                         |       | IDs                   |
+// |            Yes          |       +-----------------------+
+// +-------------------------+
+//
+//	|
+//	v
+//
+// +--------------------------+  No   +-----------------------+
+// | Check if inbound rule    |------>| Add inbound rule,     |
+// | is added to Security     |       | update status         |
+// | Group                    |       +-----------------------+
+// |            Yes           |
+// +--------------------------+
+//
+//	|
+//	v
+//
+// +-------------------------+  No   +-----------------------+
+// | Check if NAT Gateway    |------>| Create NAT Gateway,   |
+// | exists                  |       | update status with NAT|
+// |                         |       | Gateway ID            |
+// |            Yes          |       +-----------------------+
+// +-------------------------+
+//
+//	|
+//	v
+//
+// +-------------------------+  No   +-----------------------+
+// | Check if NAT Gateway    |------>| Associate NAT Gateway,|
+// | is associated with Route|       | update status         |
+// | Table                   |       +-----------------------+
+// |            Yes          |
+// +-------------------------+
+//
+//	|
+//	v
+//
+// +--------------------------------+
+// | End                            |
+// +--------------------------------+
 func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
+	// Check if network provisioning is enabled in the specification
 	if !ae.dp.Spec.CloudInfra.ProvisionNetwork {
 		return nil
 	}
 
-	// Generate a random number between 0 and 253
+	// Generate a random number between 0 and 253 for CIDR block allocation
 	cidrRandom := mrand.Intn(254)
 
 	vpcId := ae.dp.Status.CloudInfraStatus.Vpc
+	vpcName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
 
+	// Create VPC if not already created
 	if vpcId == "" {
-		vpcName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
 		vpcCidr := fmt.Sprintf("10.%d.0.0/16", cidrRandom)
 		vpc, err := ae.network.CreateVPC(ctx, &awsec2.CreateVpcInput{
 			CidrBlock: &vpcCidr,
@@ -461,6 +609,7 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		// Update VPC ID in status
 		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.Vpc = *vpc.Vpc.VpcId
@@ -474,11 +623,25 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 		ae.dp = upObj.(*v1.DataPlanes)
 	}
 
+	// Create and attach Internet Gateway if not already created
 	if ae.dp.Status.CloudInfraStatus.InternetGatewayId == "" {
-		ig, err := ae.network.CreateInternetGateway(ctx)
+		ig, err := ae.network.CreateInternetGateway(ctx, &awsec2.CreateInternetGatewayInput{
+			TagSpecifications: []ec2types.TagSpecification{
+				{
+					ResourceType: ec2types.ResourceTypeInternetGateway,
+					Tags: []ec2types.Tag{
+						{
+							Key:   aws.String("Name"),
+							Value: aws.String(fmt.Sprintf("%s-%s-ig", ae.dp.Name, ae.dp.Namespace)),
+						},
+					},
+				},
+			},
+		})
 		if err != nil {
 			return err
 		}
+		// Update Internet Gateway ID in status
 		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.InternetGatewayId = *ig.InternetGateway.InternetGatewayId
@@ -495,12 +658,25 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 		}
 	}
 
+	// Create Route Table if not already created
 	if ae.dp.Status.CloudInfraStatus.PublicRTId == "" {
-		rt, err := ae.network.CreateRouteTable(ctx, ae.dp.Status.CloudInfraStatus.Vpc)
+		rt, err := ae.network.CreateRouteTable(ctx, ae.dp.Status.CloudInfraStatus.Vpc, &awsec2.CreateRouteTableInput{
+			TagSpecifications: []ec2types.TagSpecification{
+				{
+					ResourceType: ec2types.ResourceTypeRouteTable,
+					Tags: []ec2types.Tag{
+						{
+							Key:   aws.String("Name"),
+							Value: aws.String(fmt.Sprintf("%s-%s-rt", ae.dp.Name, ae.dp.Namespace)),
+						},
+					},
+				},
+			},
+		})
 		if err != nil {
 			return err
 		}
-
+		// Update Route Table ID in status
 		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.PublicRTId = *rt.RouteTable.RouteTableId
@@ -511,6 +687,7 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 		}
 		ae.dp = upObj.(*v1.DataPlanes)
 
+		// Create default route to Internet Gateway
 		if _, err := ae.network.CreateRoute(ctx, &awsec2.CreateRouteInput{
 			RouteTableId:         rt.RouteTable.RouteTableId,
 			GatewayId:            &ae.dp.Status.CloudInfraStatus.InternetGatewayId,
@@ -520,6 +697,7 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 		}
 	}
 
+	// Define CIDR blocks for subnets
 	subnetsCidr := []string{
 		fmt.Sprintf("10.%d.16.0/20", cidrRandom),
 		fmt.Sprintf("10.%d.32.0/20", cidrRandom),
@@ -527,16 +705,29 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 		fmt.Sprintf("10.%d.80.0/20", cidrRandom),
 	}
 
+	// Create subnets
 	for i := range subnetsCidr {
 		if len(ae.dp.Status.CloudInfraStatus.SubnetIds) >= 4 {
 			break
 		}
 
 		az := fmt.Sprintf("%s%c", ae.dp.Spec.CloudInfra.Region, 'a'+(i%3))
+		subnetName := fmt.Sprintf("%s-%s", vpcName, az)
 		subnetInput := &awsec2.CreateSubnetInput{
 			VpcId:            &vpcId,
 			CidrBlock:        &subnetsCidr[i],
 			AvailabilityZone: &az,
+			TagSpecifications: []ec2types.TagSpecification{
+				{
+					ResourceType: ec2types.ResourceTypeSubnet,
+					Tags: []ec2types.Tag{
+						{
+							Key:   aws.String("Name"),
+							Value: aws.String(subnetName),
+						},
+					},
+				},
+			},
 		}
 
 		subnet, err := ae.network.CreateSubnet(ctx, subnetInput)
@@ -545,7 +736,7 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 			continue
 		}
 
-		// AutoAssignPublicIP for public subnets only
+		// Auto-assign public IP for public subnets
 		if i%2 == 0 {
 			if _, err := ae.network.SubnetAutoAssignPublicIP(ctx, *subnet.Subnet.SubnetId); err != nil {
 				return err
@@ -555,6 +746,7 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 			}
 		}
 
+		// Update Subnet IDs in status
 		newObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			if in.Status.CloudInfraStatus.SubnetIds == nil {
@@ -571,6 +763,7 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 		ae.dp = newObj.(*v1.DataPlanes)
 	}
 
+	// Create Security Group if not already created
 	if len(ae.dp.Status.CloudInfraStatus.SecurityGroupIds) == 0 {
 		sgName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
 
@@ -579,6 +772,17 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 			Description: &sgDescription,
 			GroupName:   &sgName,
 			VpcId:       &vpcId,
+			TagSpecifications: []ec2types.TagSpecification{
+				{
+					ResourceType: ec2types.ResourceTypeSecurityGroup,
+					Tags: []ec2types.Tag{
+						{
+							Key:   aws.String("Name"),
+							Value: aws.String(sgName),
+						},
+					},
+				},
+			},
 		}
 
 		sg, err := ae.network.CreateSG(ctx, sgInput)
@@ -586,6 +790,7 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 			return err
 		}
 
+		// Update Security Group IDs in status
 		newObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			if in.Status.CloudInfraStatus.SecurityGroupIds == nil {
@@ -601,11 +806,13 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 		ae.dp = newObj.(*v1.DataPlanes)
 	}
 
+	// Add inbound rule to Security Group if not already added
 	if !ae.dp.Status.CloudInfraStatus.SGInboundRuleAdded && len(ae.dp.Status.CloudInfraStatus.SecurityGroupIds) > 0 {
 		if _, err := ae.network.AddSGInboundRule(ctx, ae.dp.Status.CloudInfraStatus.SecurityGroupIds[0], ae.dp.Status.CloudInfraStatus.Vpc); err != nil {
 			return err
 		}
 
+		// Update Security Group Inbound Rule status
 		newObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.SGInboundRuleAdded = true
@@ -619,12 +826,14 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 		ae.dp = newObj.(*v1.DataPlanes)
 	}
 
+	// Create NAT Gateway if not already created
 	if ae.dp.Status.CloudInfraStatus.NATGatewayId == "" {
 		nat, err := ae.network.CreateNAT(ctx, ae.dp)
 		if err != nil {
 			return err
 		}
 
+		// Update NAT Gateway ID in status
 		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.NATGatewayId = *nat.NatGateway.NatGatewayId
@@ -637,11 +846,13 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 		ae.dp = upObj.(*v1.DataPlanes)
 	}
 
+	// Associate NAT Gateway with Route Table if not already done
 	if ae.dp.Status.CloudInfraStatus.NATGatewayId != "" && !ae.dp.Status.CloudInfraStatus.NATAttachedWithRT {
 		if err := ae.network.AssociateNATWithRT(ctx, ae.dp); err != nil {
 			return err
 		}
 
+		// Update NAT Gateway association status
 		upObj, _, err := utils.PatchStatus(ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
 			in := obj.(*v1.DataPlanes)
 			in.Status.CloudInfraStatus.NATAttachedWithRT = true
@@ -702,8 +913,6 @@ func (ae *awsEnv) reconcileAwsApplications() error {
 			restConfig,
 			app.Spec.Values,
 		)
-
-		fmt.Println(helm)
 
 		_, exists := helm.List(restConfig)
 

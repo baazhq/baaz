@@ -96,7 +96,19 @@ func (p *provisioner) CreateNAT(ctx context.Context, dp *v1.DataPlanes) (*awsec2
 		subnetId = dp.Spec.CloudInfra.Eks.SubnetIds[0]
 	}
 
-	eIP, err := p.CreateElasticIP(ctx)
+	eIP, err := p.CreateElasticIP(ctx, &awsec2.AllocateAddressInput{
+		TagSpecifications: []ec2types.TagSpecification{
+			{
+				ResourceType: ec2types.ResourceTypeElasticIp,
+				Tags: []ec2types.Tag{
+					{
+						Key:   aws.String("Name"),
+						Value: aws.String(fmt.Sprintf("%s-%s-ip", dp.Name, dp.Namespace)),
+					},
+				},
+			},
+		},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -104,6 +116,17 @@ func (p *provisioner) CreateNAT(ctx context.Context, dp *v1.DataPlanes) (*awsec2
 	input := &awsec2.CreateNatGatewayInput{
 		SubnetId:     &subnetId,
 		AllocationId: eIP.AllocationId,
+		TagSpecifications: []ec2types.TagSpecification{
+			{
+				ResourceType: ec2types.ResourceTypeNatgateway,
+				Tags: []ec2types.Tag{
+					{
+						Key:   aws.String("Name"),
+						Value: aws.String(fmt.Sprintf("%s-%s-nat", dp.Name, dp.Namespace)),
+					},
+				},
+			},
+		},
 	}
 
 	return p.awsec2Client.CreateNatGateway(ctx, input)
@@ -142,8 +165,8 @@ func (p *provisioner) DeleteNatGateway(ctx context.Context, id string) error {
 	return nil
 }
 
-func (p *provisioner) CreateInternetGateway(ctx context.Context) (*awsec2.CreateInternetGatewayOutput, error) {
-	return p.awsec2Client.CreateInternetGateway(ctx, &awsec2.CreateInternetGatewayInput{})
+func (p *provisioner) CreateInternetGateway(ctx context.Context, params *awsec2.CreateInternetGatewayInput) (*awsec2.CreateInternetGatewayOutput, error) {
+	return p.awsec2Client.CreateInternetGateway(ctx, params)
 }
 
 func (p *provisioner) DeleteInternetGateway(ctx context.Context, id string) error {
@@ -168,8 +191,8 @@ func (p *provisioner) DetachInternetGateway(ctx context.Context, id, vpcId strin
 	return err
 }
 
-func (p *provisioner) CreateElasticIP(ctx context.Context) (*awsec2.AllocateAddressOutput, error) {
-	return p.awsec2Client.AllocateAddress(ctx, &awsec2.AllocateAddressInput{})
+func (p *provisioner) CreateElasticIP(ctx context.Context, params *awsec2.AllocateAddressInput) (*awsec2.AllocateAddressOutput, error) {
+	return p.awsec2Client.AllocateAddress(ctx, params)
 }
 
 func (p *provisioner) AssociateNATWithRT(ctx context.Context, dp *v1.DataPlanes) error {
@@ -251,12 +274,10 @@ func (p *provisioner) SubnetAutoAssignPublicIP(ctx context.Context, subnetId str
 	return p.awsec2Client.ModifySubnetAttribute(ctx, input)
 }
 
-func (p *provisioner) CreateRouteTable(ctx context.Context, vpcId string) (*awsec2.CreateRouteTableOutput, error) {
-	input := &awsec2.CreateRouteTableInput{
-		VpcId: &vpcId,
-	}
+func (p *provisioner) CreateRouteTable(ctx context.Context, vpcId string, params *awsec2.CreateRouteTableInput) (*awsec2.CreateRouteTableOutput, error) {
 
-	return p.awsec2Client.CreateRouteTable(ctx, input)
+	params.VpcId = &vpcId
+	return p.awsec2Client.CreateRouteTable(ctx, params)
 }
 
 func (p *provisioner) DeleteRouteTables(ctx context.Context, vpcId string) error {

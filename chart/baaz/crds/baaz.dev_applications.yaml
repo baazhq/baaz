@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: applications.datainfra.io
+  name: applications.baaz.dev
 spec:
-  group: datainfra.io
+  group: baaz.dev
   names:
     kind: Applications
     listKind: ApplicationsList
