@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 )
 
@@ -285,4 +286,12 @@ func (ec *eks) CreateVpcCniRole(ctx context.Context) (roleOutput *awsiam.CreateR
 	}
 
 	return &awsiam.CreateRoleOutput{}, "", nil
+}
+
+func (ec *eks) CreateIAMPolicy(ctx context.Context, input *iam.CreatePolicyInput) (*iam.CreatePolicyOutput, error) {
+	return ec.awsIamClient.CreatePolicy(ctx, input)
+}
+
+func (ec *eks) AttachRolePolicy(ctx context.Context, input *iam.AttachRolePolicyInput) (*iam.AttachRolePolicyOutput, error) {
+	return ec.awsIamClient.AttachRolePolicy(ctx, input)
 }

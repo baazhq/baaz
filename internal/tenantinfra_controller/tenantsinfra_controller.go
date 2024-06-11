@@ -45,7 +45,7 @@ func NewTenantsInfraReconciler(mgr ctrl.Manager, enablePrivate bool, customerNam
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
 		Recorder:      mgr.GetEventRecorderFor("tenantinfra-controller"),
-		Predicates:    predicates.GetPredicates(enablePrivate, customerName),
+		Predicates:    predicates.GetPredicates(enablePrivate, customerName, mgr.GetClient()),
 		NgStore:       store.NewInternalStore(),
 	}
 }

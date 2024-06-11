@@ -19,6 +19,12 @@ type MachineSpec struct {
 	Min int32 `json:"min"`
 	// +kubebuilder:validation:Minimum:=1
 	Max int32 `json:"max"`
+	// +kubebuilder:validation:Enum:=enable;disable
+	// +kubebuilder:default=enable
+	StrictScheduling StrictSchedulingStatus `json:"strictScheduling"`
+	// +kubebuilder:validation:Enum:=low-priority;default-priority
+	// +kubebuilder:default=default-priority
+	Type MachineType `json:"type"`
 }
 
 // TenantsStatus defines the observed state of Tenants

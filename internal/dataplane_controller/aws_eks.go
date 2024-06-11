@@ -13,6 +13,7 @@ import (
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go/aws"
 	v1 "github.com/baazhq/baaz/api/v1/types"
@@ -57,6 +58,10 @@ func (r *DataPlaneReconciler) reconcileAwsEnvironment(ctx context.Context, dp *v
 		return fmt.Errorf("error in reconciling aws eks cluster: %s", err.Error())
 	}
 
+	if err := awsEnv.reconcileClusterAutoscaler(); err != nil {
+		return fmt.Errorf("error in reconciling cluster autoscaler: %s", err.Error())
+	}
+
 	// bootstrap dataplane with apps
 	if err := awsEnv.reconcileAwsApplications(); err != nil {
 		return fmt.Errorf("error in reconciling applications: %s", err.Error())
@@ -72,6 +77,164 @@ type awsEnv struct {
 	client  client.Client
 	store   store.Store
 	network network.Network
+}
+
+var (
+	casIamPolicy = `{
+		"Version": "2012-10-17",
+		"Statement": [
+			{
+				"Effect": "Allow",
+				"Action": [
+					"autoscaling:DescribeAutoScalingGroups",
+					"autoscaling:DescribeAutoScalingInstances",
+					"autoscaling:DescribeLaunchConfigurations",
+					"autoscaling:DescribeScalingActivities",
+					"ec2:DescribeInstanceTypes",
+					"ec2:DescribeLaunchTemplateVersions"
+				],
+				"Resource": ["*"]
+			},
+			{
+				"Effect": "Allow",
+				"Action": [
+					"autoscaling:SetDesiredCapacity",
+					"autoscaling:TerminateInstanceInAutoScalingGroup"
+				],
+				"Resource": ["*"]
+			}
+		]
+	}`
+)
+
+const (
+	CASPolicyName = "cas-policy"
+)
+
+/* Error faced
+
+E0519 09:29:10.091183       1 aws_manager.go:128] Failed to regenerate ASG cache: AccessDenied: User: arn:aws:sts::437639712640:assumed-role/aws-us-east-1-owkb-system-node-role/i-06bb159e4a93c9753 is not authorized to perform: autoscaling:DescribeAutoScalingGroups because no identity-based policy allows the autoscaling:DescribeAutoScalingGroups action
+	status code: 403, request id: 6a1b2526-8012-4f05-a5f5-4fb783a352b3
+F0519 09:29:10.091232       1 aws_cloud_provider.go:460] Failed to create AWS Manager: AccessDenied: User: arn:aws:sts::437639712640:assumed-role/aws-us-east-1-owkb-system-node-role/i-06bb159e4a93c9753 is not authorized to perform: autoscaling:DescribeAutoScalingGroups because no identity-based policy allows the autoscaling:DescribeAutoScalingGroups action
+	status code: 403, request id: 6a1b2526-8012-4f05-a5f5-4fb783a352b3
+
+*/
+
+func (ae *awsEnv) reconcileClusterAutoscaler() error {
+	klog.Info("reconciling cluster autoscaler")
+
+	if ae.dp.Status.NodegroupStatus[ae.dp.Spec.CloudInfra.Eks.Name+"-system"] != string(types.NodegroupStatusActive) {
+		return nil
+	}
+
+	if ae.dp.Status.ClusterAutoScalerPolicyArn == "" {
+		policyInput := &iam.CreatePolicyInput{
+			PolicyDocument: aws.String(casIamPolicy),
+			PolicyName:     aws.String("cas-policy"),
+		}
+
+		policyOutput, err := ae.eksIC.CreateIAMPolicy(ae.ctx, policyInput)
+		if err != nil {
+			return err
+		}
+
+		_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+			in := obj.(*v1.DataPlanes)
+			in.Status.ClusterAutoScalerPolicyArn = *policyOutput.Policy.Arn
+			return in
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	if ae.dp.Status.ClusterAutoScalerPolicyArn != "" {
+		roles, err := ae.eksIC.GetClusterNodeRoles()
+		if err != nil {
+			return err
+		}
+
+		for _, r := range roles {
+			attachRolePolicyInput := &iam.AttachRolePolicyInput{
+				PolicyArn: &ae.dp.Status.ClusterAutoScalerPolicyArn,
+				RoleName:  &r,
+			}
+
+			_, err = ae.eksIC.AttachRolePolicy(ae.ctx, attachRolePolicyInput)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	restConfig, err := ae.eksIC.GetRestConfig()
+	if err != nil {
+		return err
+	}
+
+	ch := make(chan ChartCh)
+
+	chartValues := []string{fmt.Sprintf("autoDiscovery.clusterName=%s", ae.dp.Spec.CloudInfra.Eks.Name)}
+
+	if ae.dp.Status.ClusterAutoScalerStatus == v1.DeployedA || ae.dp.Status.ClusterAutoScalerStatus == v1.InstallingA {
+		return nil
+	}
+
+	if ae.dp.Status.ClusterAutoScalerStatus != v1.DeployedA {
+		helm := helm.NewHelm(
+			"cas",
+			"kube-system",
+			"cluster-autoscaler",
+			"autoscaler",
+			"https://kubernetes.github.io/autoscaler",
+			"9.37.0",
+			restConfig,
+			chartValues,
+		)
+
+		_, exists := helm.List(restConfig)
+
+		if !exists {
+			go func(ch chan ChartCh) {
+				c := ChartCh{
+					Name: "cas",
+					Err:  nil,
+				}
+				if err := helm.Apply(restConfig); err != nil {
+					c.Err = err
+				}
+				ch <- c
+			}(ch)
+
+			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
+				in.Status.ClusterAutoScalerStatus = v1.InstallingA
+				return in
+			})
+			if err != nil {
+				return err
+			}
+
+			chartCh := <-ch
+			var latestState v1.ApplicationPhase
+			if chartCh.Err != nil {
+				klog.Errorf("installing chart %s failed, reason: %s", chartCh.Name, chartCh.Err.Error())
+				latestState = v1.FailedA
+			} else {
+				latestState = v1.DeployedA
+			}
+
+			_, _, err := utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				in := obj.(*v1.DataPlanes)
+				in.Status.ClusterAutoScalerStatus = latestState
+				return in
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (ae *awsEnv) reconcileAwsEks() error {

@@ -16,6 +16,7 @@ import (
 	"github.com/baazhq/baaz/pkg/store"
 	"github.com/baazhq/baaz/pkg/utils"
 	"github.com/go-logr/logr"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
@@ -52,10 +53,9 @@ func NewDataplaneReconciler(mgr ctrl.Manager, enablePrivate bool, customerName s
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
 		Recorder:      mgr.GetEventRecorderFor("dataplane-controller"),
-		Predicates:    predicates.GetPredicates(enablePrivate, customerName),
+		Predicates:    predicates.GetPredicates(enablePrivate, customerName, mgr.GetClient()),
 		NgStore:       store.NewInternalStore(),
 	}
-
 }
 
 func (r *DataPlaneReconciler) initCloudAuth(ctx context.Context, dp *v1.DataPlanes) error {
@@ -138,7 +138,7 @@ func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}); upErr != nil {
 			return ctrl.Result{}, upErr
 		}
-		klog.Errorf("failed to reconcile environment: reason: %s", err.Error())
+		klog.Errorf("failed to reconcile dataplane: reason: %s", err.Error())
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	} else {
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -153,7 +153,8 @@ func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
 	for _, app := range ae.dp.Spec.Applications {
 		chartName := getChartName(app)
 
-		if ae.dp.Status.AppStatus[chartName] != v1.UninstallingA {
+		if ae.dp.Status.AppStatus[chartName] != v1.UninstallingA &&
+			ae.dp.Status.AppStatus[chartName] != v1.Uninstalled {
 			restConfig, err := ae.eksIC.GetRestConfig()
 			if err != nil {
 				var notFoundErr *types.ResourceNotFoundException
@@ -296,6 +297,19 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 	klog.Infof("Deleted Dataplane [%s]", ae.dp.GetName())
 	if err := ae.client.Update(ae.ctx, ae.dp.DeepCopyObject().(*v1.DataPlanes)); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// update namespace level
+	customerNs := &core.Namespace{}
+	if err := ae.client.Get(ae.ctx, client.ObjectKey{Name: ae.dp.Namespace}, customerNs); err != nil {
+		return ctrl.Result{}, err
+	}
+	if customerNs.GetLabels()["dataplane"] != "unavailable" {
+		customerNs.Labels["dataplane"] = "unabailable"
+
+		if err := ae.client.Update(ae.ctx, customerNs); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 	return ctrl.Result{}, nil
 }

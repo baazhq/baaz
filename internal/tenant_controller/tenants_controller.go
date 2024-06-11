@@ -5,6 +5,11 @@ import (
 	"os"
 	"time"
 
+	v1 "github.com/baazhq/baaz/api/v1/types"
+	"github.com/baazhq/baaz/internal/predicates"
+	"github.com/baazhq/baaz/pkg/aws/eks"
+	"github.com/baazhq/baaz/pkg/store"
+	"github.com/baazhq/baaz/pkg/utils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -13,12 +18,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-
-	v1 "github.com/baazhq/baaz/api/v1/types"
-	"github.com/baazhq/baaz/internal/predicates"
-	"github.com/baazhq/baaz/pkg/aws/eks"
-	"github.com/baazhq/baaz/pkg/store"
-	"github.com/baazhq/baaz/pkg/utils"
 )
 
 var tenantsFinalizer = "tenants.baaz.dev/finalizer"
@@ -45,7 +44,7 @@ func NewTenantsReconciler(mgr ctrl.Manager, enablePrivate bool, customerName str
 		Scheme:        mgr.GetScheme(),
 		ReconcileWait: lookupReconcileTime(initLogger),
 		Recorder:      mgr.GetEventRecorderFor("tenant-controller"),
-		Predicates:    predicates.GetPredicates(enablePrivate, customerName),
+		Predicates:    predicates.GetPredicates(enablePrivate, customerName, mgr.GetClient()),
 		NgStore:       store.NewInternalStore(),
 	}
 }
