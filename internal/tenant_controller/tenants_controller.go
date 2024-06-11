@@ -21,7 +21,7 @@ import (
 	"github.com/baazhq/baaz/pkg/utils"
 )
 
-var tenantsFinalizer = "tenants.datainfra.io/finalizer"
+var tenantsFinalizer = "tenants.baaz.dev/finalizer"
 
 // TenantsReconciler reconciles a Tenants object
 type TenantsReconciler struct {
@@ -50,9 +50,9 @@ func NewTenantsReconciler(mgr ctrl.Manager, enablePrivate bool, customerName str
 	}
 }
 
-//+kubebuilder:rbac:groups=datainfra.io,resources=tenants,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=datainfra.io,resources=tenants/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=datainfra.io,resources=tenants/finalizers,verbs=update
+//+kubebuilder:rbac:groups=baaz.dev,resources=tenants,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=baaz.dev,resources=tenants/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=baaz.dev,resources=tenants/finalizers,verbs=update
 
 func (r *TenantsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	tenantObj := &v1.Tenants{}

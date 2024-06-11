@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: tenantsinfras.datainfra.io
+  name: tenantsinfras.baaz.dev
 spec:
-  group: datainfra.io
+  group: baaz.dev
   names:
     kind: TenantsInfra
     listKind: TenantsInfraList

@@ -3,9 +3,11 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/baazhq/baaz/internal/predicates"
 	"github.com/baazhq/baaz/pkg/aws/eks"
@@ -24,7 +26,7 @@ import (
 )
 
 const (
-	dataplaneFinalizer = "dataplane.datainfra.io/finalizer"
+	dataplaneFinalizer = "dataplane.baaz.dev/finalizer"
 )
 
 // DataPlaneReconciler reconciles a Environment object
@@ -85,9 +87,9 @@ func (r *DataPlaneReconciler) initCloudAuth(ctx context.Context, dp *v1.DataPlan
 	return nil
 }
 
-// +kubebuilder:rbac:groups=datainfra.io,resources=dataplanes,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=datainfra.io,resources=dataplanes/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=datainfra.io,resources=dataplanes/finalizers,verbs=update
+// +kubebuilder:rbac:groups=baaz.dev,resources=dataplanes,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=baaz.dev,resources=dataplanes/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=baaz.dev,resources=dataplanes/finalizers,verbs=update
 func (r *DataPlaneReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	desiredObj := &v1.DataPlanes{}
@@ -154,7 +156,10 @@ func (r *DataPlaneReconciler) uninstallCharts(ae *awsEnv) error {
 		if ae.dp.Status.AppStatus[chartName] != v1.UninstallingA {
 			restConfig, err := ae.eksIC.GetRestConfig()
 			if err != nil {
-				return err
+				var notFoundErr *types.ResourceNotFoundException
+				if errors.As(err, &notFoundErr) {
+					return nil
+				}
 			}
 
 			helm := helm.NewHelm(
@@ -273,6 +278,7 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 		}
 	}
 
+	fmt.Println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 	if _, err := ae.eksIC.DeleteEKS(); err != nil {
 		klog.Infof("waiting for EKS to be deleted, current state: %s", err.Error())
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil

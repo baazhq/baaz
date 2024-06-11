@@ -1,11 +1,11 @@
 dataplane:
   cloudType: aws
   cloudRegion: us-east-1
-  saasType: dedicated
+  saasType: shared
   cloudAuth:
     awsAuth:
-      awsAccessKey: <>
-      awsSecretKey: <>
+      awsAccessKey: AKIAWLZK4B6AKHFOGXUH
+      awsSecretKey: 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
   provisionNetwork: true
   kubernetesConfig:
     eks:

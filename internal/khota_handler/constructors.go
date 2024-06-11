@@ -61,7 +61,7 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "datainfra.io/v1",
+			"apiVersion": "baaz.dev/v1",
 			"kind":       "DataPlanes",
 			"metadata": map[string]interface{}{
 				"name":   dataPlaneName,
@@ -109,7 +109,7 @@ func makeTenantConfig(
 
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "datainfra.io/v1",
+			"apiVersion": "baaz.dev/v1",
 			"kind":       "Tenants",
 			"metadata": map[string]interface{}{
 				"name":   tenantName,
@@ -155,7 +155,7 @@ func makeApplicationConfig(apps []v1.HTTPApplication, dataplaneName, tenantName,
 
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "datainfra.io/v1",
+			"apiVersion": "baaz.dev/v1",
 			"kind":       "Applications",
 			"metadata": map[string]interface{}{
 				"name":   appCRName,
@@ -190,7 +190,7 @@ func makeTenantsInfra(dataplaneName string, tenantSizes map[string]v1.HTTPTenant
 
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
-			"apiVersion": "datainfra.io/v1",
+			"apiVersion": "baaz.dev/v1",
 			"kind":       "TenantsInfra",
 			"metadata": map[string]interface{}{
 				"name":   dataplaneName + "-" + "tenantinfra",

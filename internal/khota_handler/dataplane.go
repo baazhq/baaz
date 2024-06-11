@@ -19,7 +19,7 @@ import (
 )
 
 var dpGVK = schema.GroupVersionResource{
-	Group:    "datainfra.io",
+	Group:    "baaz.dev",
 	Version:  "v1",
 	Resource: "dataplanes",
 }

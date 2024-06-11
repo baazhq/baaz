@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	applicationFinalizer = "application.datainfra.io/finalizer"
+	applicationFinalizer = "application.baaz.dev/finalizer"
 )
 
 // ApplicationReconciler reconciles a Application object
@@ -49,9 +49,9 @@ func NewApplicationReconciler(mgr ctrl.Manager, enablePrivate bool, customerName
 	}
 }
 
-// +kubebuilder:rbac:groups=datainfra.io,resources=applications,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=datainfra.io,resources=applications/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=datainfra.io,resources=applications/finalizers,verbs=update
+// +kubebuilder:rbac:groups=baaz.dev,resources=applications,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=baaz.dev,resources=applications/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=baaz.dev,resources=applications/finalizers,verbs=update
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	applicationObj := &v1.Applications{}

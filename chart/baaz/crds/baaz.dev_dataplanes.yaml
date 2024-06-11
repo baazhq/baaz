@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: dataplanes.datainfra.io
+  name: dataplanes.baaz.dev
 spec:
-  group: datainfra.io
+  group: baaz.dev
   names:
     kind: DataPlanes
     listKind: DataPlanesList
@@ -110,18 +110,14 @@ spec:
                         type: array
                       version:
                         type: string
-                    required:
-                    - name
-                    - securityGroupIds
-                    - subnetIds
-                    - version
                     type: object
+                  provisionNetwork:
+                    type: boolean
                   region:
                     type: string
                 required:
                 - authSecretRef
                 - cloudType
-                - eks
                 - region
                 type: object
             required:
@@ -137,6 +133,12 @@ spec:
                 description: 'AddonStatus holds a map of addon name & their current
                   status Example: addonStatus: aws-ebs-csi-driver: CREATING coredns:            READY'
                 type: object
+              appStatus:
+                additionalProperties:
+                  type: string
+                description: 'AppStatus holds a map of app helm chart name and thier
+                  current status Example: appStatus: nginx: Deployed druid: Installing'
+                type: object
               cloudInfraStatus:
                 properties:
                   eksStatus:
@@ -146,7 +148,31 @@ spec:
                       clusterId:
                         type: string
                     type: object
+                  internetGatewayId:
+                    type: string
+                  lbArns:
+                    items:
+                      type: string
+                    type: array
+                  natAttchedWithRT:
+                    type: boolean
+                  natGatewayId:
+                    type: string
+                  publicRTId:
+                    type: string
+                  securityGroupIds:
+                    items:
+                      type: string
+                    type: array
+                  sgInboundRuleAdded:
+                    type: boolean
+                  subnetIds:
+                    items:
+                      type: string
+                    type: array
                   type:
+                    type: string
+                  vpc:
                     type: string
                 type: object
               conditions:
