@@ -8,51 +8,59 @@ import (
 type eventStreams string
 
 const (
-	customerEventStream     eventStreams = "customers"
+	customersEventStream    eventStreams = "customers"
 	dataplanesEventStream   eventStreams = "dataplanes"
-	tenatsEventStream       eventStreams = "tenants"
-	tenatsInfraEventStream  eventStreams = "tenantsinfra"
+	tenantsEventStream      eventStreams = "tenants"
+	tenantsInfraEventStream eventStreams = "tenantsinfra"
 	applicationsEventStream eventStreams = "applications"
 )
 
 type eventType string
 
 const (
-	customerCreateSuccess eventType = `
+	customerCreateSuccessEvent eventType = `
 	[
 		{
 			"message": "customer create successfully",
 			"type": "normal",
 			"reason": "CustomerCreateSuccess",
-			"object": "baaz/customer"
+			"object": "baaz/customers"
 		}
 	]`
-	customerCreateFail eventType = `[
+	customerCreateFailEvent eventType = `[
 		{
 			"message": "customer creation failed",
 			"type": "error",
 			"reason": "CustomerCreateFail",
-			"object": "baaz/customer"
+			"object": "baaz/customers"
 		}
 	]`
-	dataplaneInitiationSuccess eventType = `
+	dataplaneInitiationSuccessEvent eventType = `
 	[
 		{
 			"message": "dataplane creation initiated",
 			"type": "normal",
 			"reason": "DataplaneCreationInitiated",
-			"object": "baaz/dataplane"
+			"object": "baaz/dataplanes"
 		}
 	]`
-	dataplaneInitiationFail eventType = `[
+	dataplaneInitiationFailEvent eventType = `[
 		{
 			"message": "dataplane creation failed",
 			"type": "error",
 			"reason": "DataplaneCreationFailed",
-			"object": "baaz/dataplane"
+			"object": "baaz/dataplanes"
 		}
 	]`
-	tenantsInfraInitiationSuccess eventType = `
+	dataplaneTerminationEvent eventType = `[
+		{
+			"message": "dataplane termination initiated",
+			"type": "error",
+			"reason": "DataplaneTerminationInitiated",
+			"object": "baaz/dataplanes"
+		}
+	]`
+	tenantsInfraInitiationSuccessEvent eventType = `
 	[
 		{
 			"message": "tenants infra creation initiated",
@@ -61,7 +69,7 @@ const (
 			"object": "baaz/tenantsinfra"
 		}
 	]`
-	tenantsInfraInitiationFail eventType = `[
+	tenantsInfraInitiationFailEvent eventType = `[
 		{
 			"message": "tenants infra creation failed",
 			"type": "error",
@@ -69,7 +77,7 @@ const (
 			"object": "baaz/tenantsinfra"
 		}
 	]`
-	tenantsCreationSuccess eventType = `
+	tenantsCreationSuccessEvent eventType = `
 	[
 		{
 			"message": "tenants creation success",
@@ -78,7 +86,7 @@ const (
 			"object": "baaz/tenants"
 		}
 	]`
-	tenantsCreationFail eventType = `[
+	tenantsCreationFailEvent eventType = `[
 		{
 			"message": "tenants creation failed",
 			"type": "error",
@@ -86,14 +94,74 @@ const (
 			"object": "baaz/tenants"
 		}
 	]`
+	ApplicationCreationFailEvent eventType = `[
+		{
+			"message": "application creation failed",
+			"type": "error",
+			"reason": "ApplicationCreationFailed",
+			"object": "baaz/applications"
+		}
+	]`
+	ApplicationCreationSuccessEvent eventType = `[
+		{
+			"message": "application creation success",
+			"type": "error",
+			"reason": "ApplicationCreationSuccess",
+			"object": "baaz/applications"
+		}
+	]`
 )
 
 func sendEventParseable(stream eventStreams, eventType eventType, labels, tags map[string]string) {
 
 	switch stream {
-	case customerEventStream:
+	case customersEventStream:
 		stream := parseable.NewStreamBuilder(
-			string(customerEventStream),
+			string(customersEventStream),
+			[]byte(eventType),
+			labels,
+			tags,
+		)
+		_, err := stream.InsertLogs()
+		if err != nil {
+			klog.Error(err)
+		}
+	case dataplanesEventStream:
+		stream := parseable.NewStreamBuilder(
+			string(dataplanesEventStream),
+			[]byte(eventType),
+			labels,
+			tags,
+		)
+		_, err := stream.InsertLogs()
+		if err != nil {
+			klog.Error(err)
+		}
+	case tenantsInfraEventStream:
+		stream := parseable.NewStreamBuilder(
+			string(tenantsInfraEventStream),
+			[]byte(eventType),
+			labels,
+			tags,
+		)
+		_, err := stream.InsertLogs()
+		if err != nil {
+			klog.Error(err)
+		}
+	case tenantsEventStream:
+		stream := parseable.NewStreamBuilder(
+			string(tenantsEventStream),
+			[]byte(eventType),
+			labels,
+			tags,
+		)
+		_, err := stream.InsertLogs()
+		if err != nil {
+			klog.Error(err)
+		}
+	case applicationsEventStream:
+		stream := parseable.NewStreamBuilder(
+			string(applicationsEventStream),
 			[]byte(eventType),
 			labels,
 			tags,

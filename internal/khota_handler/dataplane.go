@@ -302,14 +302,14 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 		res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
-		sendEventParseable(dataplanesEventStream, dataplaneInitiationSuccess, nil, map[string]string{"dataplane_name": dpName})
+		sendEventParseable(dataplanesEventStream, dataplaneInitiationFailEvent, nil, map[string]string{"dataplane_name": dpName})
 		return
 	}
 
+	sendEventParseable(dataplanesEventStream, dataplaneInitiationSuccessEvent, labels, map[string]string{"dataplane_name": dpName})
 	res := NewResponse(DataPlaneCreateIntiated, success, nil, http.StatusOK)
 	res.LogResponse()
 	res.SetResponse(&w)
-	sendEventParseable(dataplanesEventStream, dataplaneInitiationSuccess, labels, map[string]string{"dataplane_name": dpName})
 
 }
 
@@ -428,7 +428,7 @@ func UpdateDataPlane(w http.ResponseWriter, req *http.Request) {
 	res := NewResponse(DataplaneUpdateFail, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 	res.LogResponse()
-	sendEventParseable(dataplanesEventStream, dataplaneInitiationSuccess, labels, map[string]string{"dataplane_name": dpName})
+	sendEventParseable(dataplanesEventStream, dataplaneInitiationSuccessEvent, labels, map[string]string{"dataplane_name": dpName})
 }
 
 func GetDataPlaneStatus(w http.ResponseWriter, req *http.Request) {
@@ -547,13 +547,14 @@ func DeleteDataPlane(w http.ResponseWriter, req *http.Request) {
 			}
 			err = dc.Resource(dpGVK).Namespace(dpObj.GetNamespace()).Delete(context.TODO(), dpObj.GetName(), metav1.DeleteOptions{})
 			if err != nil {
-				res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
+				res := NewResponse(DataplaneDeletionFailed, internal_error, err, http.StatusInternalServerError)
 				res.SetResponse(&w)
 				res.LogResponse()
 				return
 			}
 			res := NewResponse("", string(DataplaneDeletionInitiated), nil, http.StatusOK)
 			res.SetResponse(&w)
+			sendEventParseable(dataplanesEventStream, dataplaneTerminationEvent, dpObj.GetLabels(), map[string]string{"dataplane_name": dpObj.GetName()})
 		}
 	}
 

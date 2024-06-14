@@ -15,9 +15,9 @@ type MachineSpec struct {
 	Name       string            `json:"name"`
 	NodeLabels map[string]string `json:"labels"`
 	Size       string            `json:"size"`
-	// +kubebuilder:validation:Minimum:=1
+	// +kubebuilder:validation:Minimum:=0
 	Min int32 `json:"min"`
-	// +kubebuilder:validation:Minimum:=1
+	// +kubebuilder:validation:Minimum:=0
 	Max int32 `json:"max"`
 	// +kubebuilder:validation:Enum:=enable;disable
 	// +kubebuilder:default=enable

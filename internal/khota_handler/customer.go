@@ -135,7 +135,7 @@ func CreateCustomer(w http.ResponseWriter, req *http.Request) {
 		}
 
 		handleSuccess(w, CustomerNamespaceSuccess, http.StatusOK)
-		sendEventParseable(customerEventStream, customerCreateSuccess, allLabels, map[string]string{"customer_name": customerName})
+		sendEventParseable(customersEventStream, customerCreateSuccessEvent, allLabels, map[string]string{"customer_name": customerName})
 		return
 	}
 

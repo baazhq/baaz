@@ -116,10 +116,12 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 			res := NewResponse(ApplicationCreateFail, internal_error, err, http.StatusInternalServerError)
 			res.SetResponse(&w)
 			res.LogResponse()
+			sendEventParseable(applicationsEventStream, ApplicationCreationFailEvent, appDeploy.GetLabels(), map[string]string{"application_name": appDeploy.GetName()})
 			return
 		}
 
 		res := NewResponse(ApplicationCreateIntiated, success, nil, http.StatusOK)
+		sendEventParseable(applicationsEventStream, ApplicationCreationSuccessEvent, appDeploy.GetLabels(), map[string]string{"application_name": appDeploy.GetName()})
 		res.SetResponse(&w)
 	}
 }
