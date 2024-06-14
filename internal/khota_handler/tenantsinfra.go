@@ -3,7 +3,6 @@ package khota_handler
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -93,8 +92,6 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 
 	infra := makeTenantsInfra(dataplaneName, tenantsInfra, labels)
 
-	fmt.Println(infra)
-
 	existingObj, err := dc.Resource(tenantInfraGVK).Namespace(namespace).Get(context.TODO(), infra.GetName(), metav1.GetOptions{})
 	if err == nil {
 		ob := &v1.TenantsInfra{}
@@ -141,7 +138,7 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	res := NewResponse(TenantsInfraCreateSuccess, success, nil, http.StatusOK)
+	res := NewResponse(TenantsInfraCreateInitiated, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 	res.LogResponse()
 	sendEventParseable(tenantsInfraEventStream, tenantsInfraInitiationSuccessEvent, labels, map[string]string{"tenant_name": infra.GetName()})
@@ -193,5 +190,56 @@ func GetTenantInfra(w http.ResponseWriter, req *http.Request) {
 
 	bytes, _ := json.Marshal(tenantsInfrasResp)
 	sendJsonResponse(bytes, http.StatusOK, &w)
+
+}
+
+func DeleteTenantInfra(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	dataplaneName := vars["dataplane_name"]
+	tenantsInfraName := vars["tenantsinfra_name"]
+
+	_, dc := getKubeClientset()
+
+	// dpObjList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{})
+	// if err != nil {
+	// 	res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
+	// 	res.SetResponse(&w)
+	// 	res.LogResponse()
+	// 	return
+	// }
+
+	// var namespace string
+	// for _, dpObj := range dpObjList.Items {
+	// 	if dpObj.GetName() == vars["dataplane_name"] {
+	// 		namespace = dpObj.GetNamespace()
+	// 	}
+	// }
+
+	tenantsInfraObj, err := dc.Resource(tenantInfraGVK).Namespace("").List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "dataplane_name=" + dataplaneName,
+	})
+	if err != nil {
+		res := NewResponse(TenantsInfraListFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	for _, tf := range tenantsInfraObj.Items {
+		if tf.GetName() == tenantsInfraName {
+			err := dc.Resource(tenantInfraGVK).Namespace(tf.GetNamespace()).Delete(context.TODO(), tf.GetName(), metav1.DeleteOptions{})
+			if err != nil {
+				res := NewResponse(TenantsInfraDeleteFail, internal_error, err, http.StatusInternalServerError)
+				res.SetResponse(&w)
+				res.LogResponse()
+				return
+			}
+			res := NewResponse(TenantsInfraDeleteInitiated, success, nil, http.StatusOK)
+			res.SetResponse(&w)
+			res.LogResponse()
+			sendEventParseable(tenantsInfraEventStream, tenantsInfraInitiationSuccessEvent, tf.GetLabels(), map[string]string{"tenant_name": tf.GetName()})
+		}
+	}
 
 }
