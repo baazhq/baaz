@@ -69,6 +69,15 @@ const (
 			"object": "baaz/tenantsinfra"
 		}
 	]`
+	tenantsInfraInitiationDeletionEvent eventType = `
+	[
+		{
+			"message": "tenants infra deletion initiated",
+			"type": "normal",
+			"reason": "TenantsInfraDeletionInitiated",
+			"object": "baaz/tenantsinfra"
+		}
+	]`
 	tenantsInfraInitiationFailEvent eventType = `[
 		{
 			"message": "tenants infra creation failed",
