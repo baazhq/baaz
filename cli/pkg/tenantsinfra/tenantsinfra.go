@@ -64,11 +64,13 @@ type MachinePoolStatus struct {
 }
 
 type MachinePool struct {
-	Labels map[string]string `json:"labels"`
-	Max    int               `json:"max"`
-	Min    int               `json:"min"`
-	Name   string            `json:"name"`
-	Size   string            `json:"size"`
+	Labels           map[string]string `json:"labels"`
+	Max              int               `json:"max"`
+	Min              int               `json:"min"`
+	Name             string            `json:"name"`
+	Size             string            `json:"size"`
+	StrictScheduling string            `json:"strictScheduling"`
+	Type             string            `json:"type"`
 }
 
 type TenantInfra struct {
@@ -95,6 +97,8 @@ func GetTenantsInfra(dataplane string) error {
 		"Min",
 		"Max",
 		"Labels",
+		"Strict_Scheduling",
+		"Type",
 		"Status",
 	})
 
@@ -116,6 +120,8 @@ func GetTenantsInfra(dataplane string) error {
 					fmt.Sprintf("%d", mp.Min),
 					fmt.Sprintf("%d", mp.Max),
 					strings.Join(labels, ", "),
+					mp.StrictScheduling,
+					mp.Type,
 					status,
 				})
 				uniqueNamePrinted = true
@@ -127,6 +133,8 @@ func GetTenantsInfra(dataplane string) error {
 					fmt.Sprintf("%d", mp.Min),
 					fmt.Sprintf("%d", mp.Max),
 					strings.Join(labels, ", "),
+					mp.StrictScheduling,
+					mp.Type,
 					status,
 				})
 			}
@@ -190,6 +198,9 @@ func CreateTenantsInfra(filePath string, dataplane string) (string, error) {
 		return "", err
 	}
 
+	fmt.Println(string(tiByte))
+
+	fmt.Println(makeTenantInfraPath(dataplane))
 	resp, err := http.Post(
 		makeTenantInfraPath(dataplane),
 		"application/json",

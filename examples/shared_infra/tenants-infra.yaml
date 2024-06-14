@@ -1,21 +1,34 @@
 tenantsInfra:
-  druid-small:
+  zk-small:
     machinePool:
-    - name: druid-dataservers
+    - name: zk-pool
       size: t2.small
       min: 1
       max: 3
       strictScheduling: enable
       type: low-priority
       labels:
-        app: druid
+        app: zk
         size: small
-    - name: druid-queryservers
-      size: t2.small
-      min: 1
+  zk-medium:
+    machinePool:
+    - name: zk-pool
+      size: t2.medium
+      min: 0
       max: 3
       strictScheduling: enable
       type: low-priority
       labels:
-        app: druid
+        app: zk
+        size: small
+  zk-large:
+    machinePool:
+    - name: zk-pool
+      size: t2.medium
+      min: 0
+      max: 3
+      strictScheduling: enable
+      type: low-priority
+      labels:
+        app: zk
         size: small

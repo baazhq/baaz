@@ -15,7 +15,7 @@ import (
 )
 
 var tenantGVK = schema.GroupVersionResource{
-	Group:    "datainfra.io",
+	Group:    "baaz.dev",
 	Version:  "v1",
 	Resource: "tenants",
 }
@@ -150,11 +150,13 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		res := NewResponse(TenantCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
+		sendEventParseable(tenantsEventStream, tenantsCreationFailEvent, tenantLabels, map[string]string{"tenant_name": tenantName})
 		return
 	}
 
 	res := NewResponse(TenantCreateIntiated, success, nil, http.StatusOK)
 	res.SetResponse(&w)
+	sendEventParseable(tenantsEventStream, tenantsCreationSuccessEvent, tenantLabels, map[string]string{"tenant_name": tenantName})
 
 }
 

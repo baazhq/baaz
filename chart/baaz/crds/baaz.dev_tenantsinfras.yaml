@@ -48,15 +48,27 @@ spec:
                             type: object
                           max:
                             format: int32
-                            minimum: 1
+                            minimum: 0
                             type: integer
                           min:
                             format: int32
-                            minimum: 1
+                            minimum: 0
                             type: integer
                           name:
                             type: string
                           size:
+                            type: string
+                          strictScheduling:
+                            default: enable
+                            enum:
+                            - enable
+                            - disable
+                            type: string
+                          type:
+                            default: default-priority
+                            enum:
+                            - low-priority
+                            - default-priority
                             type: string
                         required:
                         - labels
@@ -64,6 +76,8 @@ spec:
                         - min
                         - name
                         - size
+                        - strictScheduling
+                        - type
                         type: object
                       type: array
                   required:

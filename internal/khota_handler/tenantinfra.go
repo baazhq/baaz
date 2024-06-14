@@ -3,6 +3,7 @@ package khota_handler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -15,7 +16,7 @@ import (
 )
 
 var tenantInfraGVK = schema.GroupVersionResource{
-	Group:    "datainfra.io",
+	Group:    "baaz.dev",
 	Version:  "v1",
 	Resource: "tenantsinfras",
 }
@@ -92,6 +93,8 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 
 	infra := makeTenantsInfra(dataplaneName, tenantsInfra, labels)
 
+	fmt.Println(infra)
+
 	existingObj, err := dc.Resource(tenantInfraGVK).Namespace(namespace).Get(context.TODO(), infra.GetName(), metav1.GetOptions{})
 	if err == nil {
 		ob := &v1.TenantsInfra{}
@@ -133,6 +136,7 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 			res := NewResponse(TenantsInfraCreateFail, req_error, err, http.StatusInternalServerError)
 			res.SetResponse(&w)
 			res.LogResponse()
+			sendEventParseable(tenantsInfraEventStream, tenantsInfraInitiationFailEvent, labels, map[string]string{"tenant_name": infra.GetName()})
 			return
 		}
 	}
@@ -140,6 +144,8 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 	res := NewResponse(TenantsInfraCreateSuccess, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 	res.LogResponse()
+	sendEventParseable(tenantsInfraEventStream, tenantsInfraInitiationSuccessEvent, labels, map[string]string{"tenant_name": infra.GetName()})
+
 }
 
 func GetTenantInfra(w http.ResponseWriter, req *http.Request) {

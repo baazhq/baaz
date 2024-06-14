@@ -11,14 +11,6 @@ dataplane:
     eks:
       version: '1.27'
   applicationConfig:
-  - name:  "druid-operator"
-    namespace: druid-operator
-    chartName: "druid-operator"
-    repoName: "datainfra"
-    repoUrl: "https://charts.datainfra.io"
-    version: "1.2.1"
-    values:
-     - nodeSelector.nodeType=system
   - name: "nginx"
     namespace: nginx-ingress
     chartName: "ingress-nginx"

@@ -130,7 +130,7 @@ func (ae *awsEnv) reconcileClusterAutoscaler() error {
 	if ae.dp.Status.ClusterAutoScalerPolicyArn == "" {
 		policyInput := &iam.CreatePolicyInput{
 			PolicyDocument: aws.String(casIamPolicy),
-			PolicyName:     aws.String("cas-policy"),
+			PolicyName:     aws.String(ae.dp.Spec.CloudInfra.Eks.Name + "-cas-policy"),
 		}
 
 		policyOutput, err := ae.eksIC.CreateIAMPolicy(ae.ctx, policyInput)
