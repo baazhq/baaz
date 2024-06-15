@@ -6,12 +6,13 @@ import (
 	"io"
 	"net/http"
 
-	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 var applicationGVK = schema.GroupVersionResource{
@@ -65,7 +66,7 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 	if customer.GetLabels()["saas_type"] == string(v1.PrivateSaaS) {
 		labels = map[string]string{
 			"customer_" + customerName: customerName,
-			"private_object":           "true",
+			v1.PrivateObjectLabelKey:   "true",
 			"tenant":                   tenantName,
 		}
 	}

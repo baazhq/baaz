@@ -9,3 +9,8 @@ type MachineType string
 
 const MachineTypeLowPriority MachineType = "low-priority"
 const MachineTypeDefaultPriority MachineType = "default-priority"
+
+const (
+	PrivateModeNSLabelKey = "private_mode"
+	PrivateObjectLabelKey = "private_object"
+)

@@ -10,11 +10,12 @@ import (
 	"strings"
 	"time"
 
-	v1 "github.com/baazhq/baaz/api/v1/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 func getKubeClientset() (*kubernetes.Clientset, dynamic.Interface) {

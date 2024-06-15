@@ -7,12 +7,13 @@ import (
 	"io"
 	"net/http"
 
-	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 var tenantInfraGVK = schema.GroupVersionResource{
@@ -77,7 +78,7 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 			} else if dpType == string(v1.PrivateSaaS) {
 				namespace = matchStringInMap("customer_", dp.GetLabels())
 				labels = mergeMaps(labels, map[string]string{
-					"private_object": "true",
+					v1.PrivateObjectLabelKey: "true",
 				})
 			}
 

@@ -10,6 +10,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 func getSecret(ctx context.Context, c client.Client, key client.ObjectKey) (*corev1.Secret, error) {
@@ -45,4 +46,20 @@ func getIssuerCAThumbprint(isserURL string) (string, error) {
 		}
 	}
 	return "", errors.New("unable to get OIDC issuer's certificate")
+}
+
+func getInClusterClient() (client.Client, error) {
+	// Get the in-cluster configuration
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a new client using the in-cluster configuration
+	kubeClient, err := client.New(cfg, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	return kubeClient, nil
 }

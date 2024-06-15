@@ -3,11 +3,12 @@ package khota_handler
 import (
 	"context"
 
-	v1 "github.com/baazhq/baaz/api/v1/types"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 const (
@@ -59,6 +60,12 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 		})
 	}
 
+	if labels[v1.PrivateObjectLabelKey] != "true" {
+		dataplane.CloudAuth.AwsAuthRef.SecretName = dataPlaneName + "-aws-secret"
+		dataplane.CloudAuth.AwsAuthRef.AccessKeyName = access_key
+		dataplane.CloudAuth.AwsAuthRef.SecretKeyName = secret_key
+	}
+
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"apiVersion": "baaz.dev/v1",
@@ -72,9 +79,9 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 					"cloudType": dataplane.CloudType,
 					"region":    dataplane.CloudRegion,
 					"authSecretRef": map[string]interface{}{
-						"secretName":    dataPlaneName + "-aws-secret",
-						"accessKeyName": access_key,
-						"secretKeyName": secret_key,
+						"secretName":    dataplane.CloudAuth.AwsAuthRef.SecretName,
+						"accessKeyName": dataplane.CloudAuth.AwsAuthRef.AccessKeyName,
+						"secretKeyName": dataplane.CloudAuth.AwsAuthRef.SecretKeyName,
 					},
 					"provisionNetwork": dataplane.ProvisionNetwork,
 					"eks": map[string]interface{}{

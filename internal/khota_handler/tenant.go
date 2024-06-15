@@ -97,7 +97,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 			} else if dpType == string(v1.PrivateSaaS) {
 				dpNamespace = matchStringInMap("customer_", dp.GetLabels())
 				tenantLabels = mergeMaps(tenantLabels, map[string]string{
-					"private_object": "true",
+					v1.PrivateObjectLabelKey: "true",
 				})
 			}
 
