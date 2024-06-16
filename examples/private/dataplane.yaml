@@ -1,0 +1,23 @@
+dataplane:
+  cloudType: aws
+  cloudRegion: us-east-1
+  saasType: private
+  customerName: foo
+  cloudAuth:
+    awsAuthRef:
+      secretName: aws-secret
+      accessKeyName: accessKey 
+      secretKeyName: secretKey
+  provisionNetwork: true
+  kubernetesConfig:
+    eks:
+      version: '1.27'
+  applicationConfig:
+  - name: "nginx"
+    namespace: nginx-ingress
+    chartName: "ingress-nginx"
+    repoName: "ingress-nginx"
+    repoUrl: "https://kubernetes.github.io/ingress-nginx"
+    version: "1.9.4"
+    values:
+    - controller.nodeSelector.nodeType=system

@@ -50,7 +50,7 @@ func NewDataplaneReconciler(mgr ctrl.Manager, enablePrivate bool, customerName s
 	initLogger := ctrl.Log.WithName("controllers").WithName("dataplane")
 	inClusterClient, err := getInClusterClient()
 	if err != nil {
-		fmt.Println("failed to load incluster client, private_mode won't work, reason: ", err.Error())
+		panic(err)
 	}
 
 	return &DataPlaneReconciler{

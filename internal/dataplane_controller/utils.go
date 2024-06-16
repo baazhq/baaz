@@ -9,8 +9,8 @@ import (
 	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
 func getSecret(ctx context.Context, c client.Client, key client.ObjectKey) (*corev1.Secret, error) {
@@ -50,7 +50,7 @@ func getIssuerCAThumbprint(isserURL string) (string, error) {
 
 func getInClusterClient() (client.Client, error) {
 	// Get the in-cluster configuration
-	cfg, err := config.GetConfig()
+	cfg, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
 	}

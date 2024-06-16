@@ -8,11 +8,11 @@ metadata:
   {{- end }}
 rules:
 - apiGroups:
-  - datainfra.io
+  - baaz.dev
   resources: ["*"]
   verbs: ["*"]
 - apiGroups:
-  - datainfra.io
+  - baaz.dev
   resources:
   - dataplanes/status
   verbs:
