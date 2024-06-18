@@ -67,12 +67,15 @@ func NewDataplaneReconciler(mgr ctrl.Manager, enablePrivate bool, customerName s
 
 func (r *DataPlaneReconciler) initCloudAuth(ctx context.Context, dp *v1.DataPlanes) error {
 	c := r.Client
+	secretName := dp.Spec.CloudInfra.AuthSecretRef.SecretName
+
 	if dp.GetLabels()[v1.PrivateObjectLabelKey] == "true" {
 		c = r.InClusterClient
+		secretName = fmt.Sprintf("%s-aws-secret", dp.Namespace) // here dp.Namespace == customer name
 	}
 
 	awsSecret, err := getSecret(ctx, c, client.ObjectKey{
-		Name:      dp.Spec.CloudInfra.AuthSecretRef.SecretName,
+		Name:      secretName,
 		Namespace: dp.Namespace,
 	})
 	if err != nil {

@@ -60,11 +60,11 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 		})
 	}
 
-	if labels[v1.PrivateObjectLabelKey] != "true" {
-		dataplane.CloudAuth.AwsAuthRef.SecretName = dataPlaneName + "-aws-secret"
-		dataplane.CloudAuth.AwsAuthRef.AccessKeyName = access_key
-		dataplane.CloudAuth.AwsAuthRef.SecretKeyName = secret_key
-	}
+	// if labels[v1.PrivateObjectLabelKey] != "true" {
+	// 	dataplane.CloudAuth.AwsAuthRef.SecretName = dataPlaneName + "-aws-secret"
+	// 	dataplane.CloudAuth.AwsAuthRef.AccessKeyName = access_key
+	// 	dataplane.CloudAuth.AwsAuthRef.SecretKeyName = secret_key
+	// }
 
 	return &unstructured.Unstructured{
 		Object: map[string]interface{}{
@@ -79,9 +79,12 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 					"cloudType": dataplane.CloudType,
 					"region":    dataplane.CloudRegion,
 					"authSecretRef": map[string]interface{}{
-						"secretName":    dataplane.CloudAuth.AwsAuthRef.SecretName,
-						"accessKeyName": dataplane.CloudAuth.AwsAuthRef.AccessKeyName,
-						"secretKeyName": dataplane.CloudAuth.AwsAuthRef.SecretKeyName,
+						// "secretName":    dataplane.CloudAuth.AwsAuthRef.SecretName,
+						// "accessKeyName": dataplane.CloudAuth.AwsAuthRef.AccessKeyName,
+						// "secretKeyName": dataplane.CloudAuth.AwsAuthRef.SecretKeyName,
+						"secretName":    dataPlaneName + "-aws-secret",
+						"accessKeyName": access_key,
+						"secretKeyName": secret_key,
 					},
 					"provisionNetwork": dataplane.ProvisionNetwork,
 					"eks": map[string]interface{}{

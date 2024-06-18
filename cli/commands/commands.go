@@ -28,6 +28,8 @@ var (
 	private_mode                 bool
 	kubernetes_config_server_url string
 	namespace                    string
+	aws_access_key               string
+	aws_secret_key               string
 )
 
 var (
