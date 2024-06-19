@@ -26,12 +26,19 @@ type DataPlane struct {
 
 type CloudAuth struct {
 	AwsAuth AwsAuth `json:"aws_auth"`
+	// AwsAuthRef AwsAuthRef `json:"aws_auth_ref"`
 }
 
 type AwsAuth struct {
 	AwsAccessKey string `json:"aws_access_key"`
 	AwsSecretKey string `json:"aws_secret_key"`
 }
+
+// type AwsAuthRef struct {
+// 	SecretName    string `json:"secret_name"`
+// 	AccessKeyName string `json:"access_key_name"`
+// 	SecretKeyName string `json:"secret_key_name"`
+// }
 
 type KubernetesConfig struct {
 	EKS EKSConfig `json:"eks"`

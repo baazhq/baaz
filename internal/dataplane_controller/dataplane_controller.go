@@ -8,13 +8,6 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
-	v1 "github.com/baazhq/baaz/api/v1/types"
-	"github.com/baazhq/baaz/internal/predicates"
-	"github.com/baazhq/baaz/pkg/aws/eks"
-	"github.com/baazhq/baaz/pkg/aws/network"
-	"github.com/baazhq/baaz/pkg/helm"
-	"github.com/baazhq/baaz/pkg/store"
-	"github.com/baazhq/baaz/pkg/utils"
 	"github.com/go-logr/logr"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,6 +17,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
+	"github.com/baazhq/baaz/internal/predicates"
+	"github.com/baazhq/baaz/pkg/aws/eks"
+	"github.com/baazhq/baaz/pkg/aws/network"
+	"github.com/baazhq/baaz/pkg/helm"
+	"github.com/baazhq/baaz/pkg/store"
+	"github.com/baazhq/baaz/pkg/utils"
 )
 
 const (
@@ -36,31 +37,45 @@ type DataPlaneReconciler struct {
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 	// reconcile time duration, defaults to 10s
-	ReconcileWait time.Duration
-	Recorder      record.EventRecorder
-	Predicates    predicate.Predicate
-	NgStore       store.Store
-	CustomerName  string
-	EnablePrivate bool
+	ReconcileWait   time.Duration
+	Recorder        record.EventRecorder
+	Predicates      predicate.Predicate
+	NgStore         store.Store
+	CustomerName    string
+	EnablePrivate   bool
+	InClusterClient client.Client
 }
 
 func NewDataplaneReconciler(mgr ctrl.Manager, enablePrivate bool, customerName string) *DataPlaneReconciler {
 	initLogger := ctrl.Log.WithName("controllers").WithName("dataplane")
+	inClusterClient, err := getInClusterClient()
+	if err != nil {
+		panic(err)
+	}
 
 	return &DataPlaneReconciler{
-		Client:        mgr.GetClient(),
-		Log:           initLogger,
-		Scheme:        mgr.GetScheme(),
-		ReconcileWait: lookupReconcileTime(initLogger),
-		Recorder:      mgr.GetEventRecorderFor("dataplane-controller"),
-		Predicates:    predicates.GetPredicates(enablePrivate, customerName, mgr.GetClient()),
-		NgStore:       store.NewInternalStore(),
+		Client:          mgr.GetClient(),
+		Log:             initLogger,
+		Scheme:          mgr.GetScheme(),
+		ReconcileWait:   lookupReconcileTime(initLogger),
+		Recorder:        mgr.GetEventRecorderFor("dataplane-controller"),
+		Predicates:      predicates.GetPredicates(enablePrivate, customerName, mgr.GetClient()),
+		NgStore:         store.NewInternalStore(),
+		InClusterClient: inClusterClient,
 	}
 }
 
 func (r *DataPlaneReconciler) initCloudAuth(ctx context.Context, dp *v1.DataPlanes) error {
-	awsSecret, err := getSecret(ctx, r.Client, client.ObjectKey{
-		Name:      dp.Spec.CloudInfra.AuthSecretRef.SecretName,
+	c := r.Client
+	secretName := dp.Spec.CloudInfra.AuthSecretRef.SecretName
+
+	if dp.GetLabels()[v1.PrivateObjectLabelKey] == "true" {
+		c = r.InClusterClient
+		secretName = fmt.Sprintf("%s-aws-secret", dp.Namespace) // here dp.Namespace == customer name
+	}
+
+	awsSecret, err := getSecret(ctx, c, client.ObjectKey{
+		Name:      secretName,
 		Namespace: dp.Namespace,
 	})
 	if err != nil {

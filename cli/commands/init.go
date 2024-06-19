@@ -18,12 +18,19 @@ var (
 			if private_mode {
 
 				if customer_name == "" {
-					return fmt.Errorf("Customer Name cannot be nil")
+					return fmt.Errorf("customer Name cannot be nil")
 				}
 
 				err := utils.CreateNamespace(utils.GetLocalKubeClientset(), customer_name)
 				if err != nil {
 					return err
+				}
+
+				if aws_access_key != "" && aws_secret_key != "" {
+					_, err := utils.CreateAWSSecret(customer_name, aws_access_key, aws_secret_key)
+					if err != nil {
+						return err
+					}
 				}
 
 				config, err := kubeconfig.GetCustomerKubeConfig(customer_name)
@@ -36,24 +43,24 @@ var (
 					return err
 				}
 
-				// helmBuild := helm.NewHelm(
-				// 	"baaz",
-				// 	customer_name,
-				// 	"../chart/baaz/",
-				// 	nil,
-				// 	[]string{
-				// 		"private_mode.enabled=true",
-				// 		"private_mode.customer_name=" + customer_name,
-				// 		"private_mode.args.kubeconfig=/kubeconfig/" + customer_name + "-kubeconfig",
-				// 		"private_mode.args.private_mode=true",
-				// 		"private_mode.customer_name=" + customer_name,
-				// 	},
-				// )
+				helmBuild := helm.NewHelm(
+					"baaz",
+					customer_name,
+					"../chart/baaz/",
+					nil,
+					[]string{
+						"private_mode.enabled=true",
+						"private_mode.customer_name=" + customer_name,
+						"private_mode.args.kubeconfig=/kubeconfig/" + customer_name + "-kubeconfig",
+						"private_mode.args.private_mode=true",
+						"private_mode.customer_name=" + customer_name,
+					},
+				)
 
-				// err = helmBuild.Apply()
-				// if err != nil {
-				// 	return err
-				// }
+				err = helmBuild.Apply()
+				if err != nil {
+					return err
+				}
 
 			} else {
 
@@ -91,5 +98,6 @@ func init() {
 	initCmd.Flags().BoolVarP(&private_mode, "private_mode", "", false, "Run BaaZ control plane in private mode")
 	initCmd.Flags().StringVarP(&kubernetes_config_server_url, "kubernetes_config_server_url", "", "", "Kubernetes config server url, make sure it is public accessible")
 	initCmd.Flags().StringVarP(&namespace, "namespace", "", "", "Namespace to deploy BaaZ control plane")
-
+	initCmd.Flags().StringVarP(&aws_access_key, "aws_access_key", "", "", "AWS auth access key")
+	initCmd.Flags().StringVarP(&aws_secret_key, "aws_secret_key", "", "", "AWS auth secret key")
 }

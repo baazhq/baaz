@@ -1,10 +1,10 @@
 replicaCount: 1
 
 image:
-  repository: datainfrahq/baaz
+  repository: controller
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  #tag: "latest"
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""

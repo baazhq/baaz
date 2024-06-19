@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -55,4 +56,21 @@ func CreateNamespace(cs *kubernetes.Clientset, customerName string) error {
 		return err
 	}
 	return nil
+}
+
+func CreateAWSSecret(customer, accessKey, secretKey string) (*v1.Secret, error) {
+	kc := GetLocalKubeClientset()
+
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-aws-secret", customer),
+			Namespace: customer,
+		},
+		StringData: map[string]string{
+			"accessKey": accessKey,
+			"secretKey": secretKey,
+		},
+	}
+
+	return kc.CoreV1().Secrets(customer).Create(context.TODO(), secret, metav1.CreateOptions{})
 }
