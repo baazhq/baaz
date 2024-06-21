@@ -3,11 +3,6 @@ dataplane:
   cloudRegion: us-east-1
   saasType: private
   customerName: foo
-  cloudAuth:
-    awsAuthRef:
-      secretName: aws-secret
-      accessKeyName: accessKey 
-      secretKeyName: secretKey
   provisionNetwork: true
   kubernetesConfig:
     eks:
