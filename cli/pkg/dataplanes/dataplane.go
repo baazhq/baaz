@@ -26,11 +26,6 @@ type Dataplane struct {
 				AwsAccessKey string `yaml:"awsAccessKey" json:"aws_access_key"`
 				AwsSecretKey string `yaml:"awsSecretKey" json:"aws_secret_key"`
 			} `yaml:"awsAuth" json:"aws_auth"`
-			// AwsAuthRef struct {
-			// 	SecretName    string `yaml:"secretName" json:"secret_name"`
-			// 	AccessKeyName string `yaml:"accessKeyName" json:"access_key_name"`
-			// 	SecretKeyName string `yaml:"secretKeyName" json:"secret_key_name"`
-			// } `yaml:"awsAuthRef" json:"aws_auth_ref"`
 		} `yaml:"cloudAuth" json:"cloud_auth"`
 		ProvisionNetwork bool `yaml:"provisionNetwork" json:"provision_network"`
 		KubernetesConfig struct {

@@ -223,11 +223,6 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 				AwsAccessKey: dp.CloudAuth.AwsAuth.AwsAccessKey,
 				AwsSecretKey: dp.CloudAuth.AwsAuth.AwsSecretKey,
 			},
-			// AwsAuthRef: v1.AwsAuthRef{
-			// 	SecretName:    dp.CloudAuth.AwsAuthRef.SecretName,
-			// 	AccessKeyName: dp.CloudAuth.AwsAuthRef.AccessKeyName,
-			// 	SecretKeyName: dp.CloudAuth.AwsAuthRef.SecretKeyName,
-			// },
 		},
 		ProvisionNetwork: dp.ProvisionNetwork,
 		KubeConfig: v1.KubernetesConfig{
