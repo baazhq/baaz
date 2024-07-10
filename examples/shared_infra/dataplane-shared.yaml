@@ -19,3 +19,11 @@ dataplane:
     version: "1.9.4"
     values:
     - controller.nodeSelector.nodeType=system
+  - name: "zookeeper-operator"
+    namespace: zk-operator
+    chartName: "zookeeper-operator"
+    repoName: "pravega"
+    repoUrl: "https://charts.pravega.io"
+    version: "0.2.15"
+    values:
+    - nodeSelector.nodeType=system
