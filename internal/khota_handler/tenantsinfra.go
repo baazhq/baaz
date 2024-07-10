@@ -6,12 +6,13 @@ import (
 	"io"
 	"net/http"
 
-	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/gorilla/mux"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 var tenantInfraGVK = schema.GroupVersionResource{
@@ -200,21 +201,6 @@ func DeleteTenantInfra(w http.ResponseWriter, req *http.Request) {
 	tenantsInfraName := vars["tenantsinfra_name"]
 
 	_, dc := getKubeClientset()
-
-	// dpObjList, err := dc.Resource(dpGVK).Namespace("").List(context.TODO(), metav1.ListOptions{})
-	// if err != nil {
-	// 	res := NewResponse(DataPlaneGetFail, internal_error, err, http.StatusInternalServerError)
-	// 	res.SetResponse(&w)
-	// 	res.LogResponse()
-	// 	return
-	// }
-
-	// var namespace string
-	// for _, dpObj := range dpObjList.Items {
-	// 	if dpObj.GetName() == vars["dataplane_name"] {
-	// 		namespace = dpObj.GetNamespace()
-	// 	}
-	// }
 
 	tenantsInfraObj, err := dc.Resource(tenantInfraGVK).Namespace("").List(context.TODO(), metav1.ListOptions{
 		LabelSelector: "dataplane_name=" + dataplaneName,
