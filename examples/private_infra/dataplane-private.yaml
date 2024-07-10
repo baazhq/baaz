@@ -2,10 +2,7 @@ dataplane:
   cloudType: aws
   cloudRegion: us-east-1
   saasType: private
-  cloudAuth:
-    awsAuth:
-      awsAccessKey: ""
-      awsSecretKey: ""
+  customerName: foo
   provisionNetwork: true
   kubernetesConfig:
     eks:
@@ -19,11 +16,3 @@ dataplane:
     version: "1.9.4"
     values:
     - controller.nodeSelector.nodeType=system
-  - name: "zookeeper-operator"
-    namespace: zk-operator
-    chartName: "zookeeper-operator"
-    repoName: "pravega"
-    repoUrl: "https://charts.pravega.io"
-    version: "0.2.15"
-    values:
-    - nodeSelector.nodeType=system

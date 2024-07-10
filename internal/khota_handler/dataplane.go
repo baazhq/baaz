@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 
-	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +15,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 var dpGVK = schema.GroupVersionResource{
@@ -237,14 +238,24 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 
 	kc, dc := getKubeClientset()
 
-	dpSecret := getAwsEksSecret(dpName, dataplane)
-
-	_, err = dc.Resource(secretGVK).Namespace(dpNamespace).Create(context.TODO(), dpSecret, metav1.CreateOptions{})
+	dpNS, err := kc.CoreV1().Namespaces().Get(context.TODO(), dpNamespace, metav1.GetOptions{})
 	if err != nil {
 		res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
 		return
+	}
+
+	// create secret based on saas type
+	if dpNS.GetLabels()[v1.PrivateModeNSLabelKey] != "true" {
+		dpSecret := getAwsEksSecret(dpName, dataplane)
+		_, err = dc.Resource(secretGVK).Namespace(dpNamespace).Create(context.TODO(), dpSecret, metav1.CreateOptions{})
+		if err != nil {
+			res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
 	}
 
 	labels := map[string]string{
@@ -270,8 +281,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 			})
 			_, updateErr := kc.CoreV1().Namespaces().Update(context.TODO(), customer, metav1.UpdateOptions{})
 			return updateErr
-		},
-		)
+		})
 
 		if retryErr != nil {
 			res := NewResponse(DataPlaneCreateFail, internal_error, retryErr, http.StatusInternalServerError)
@@ -286,7 +296,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 
 		if customer.GetLabels()["saas_type"] == "private" {
 			labels = mergeMaps(labels, map[string]string{
-				"private_object": "true",
+				v1.PrivateObjectLabelKey: "true",
 			})
 		}
 	} else {

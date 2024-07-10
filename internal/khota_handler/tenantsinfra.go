@@ -77,7 +77,7 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 			} else if dpType == string(v1.PrivateSaaS) {
 				namespace = matchStringInMap("customer_", dp.GetLabels())
 				labels = mergeMaps(labels, map[string]string{
-					"private_object": "true",
+					v1.PrivateObjectLabelKey: "true",
 				})
 			}
 

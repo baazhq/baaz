@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -45,4 +46,20 @@ func getIssuerCAThumbprint(isserURL string) (string, error) {
 		}
 	}
 	return "", errors.New("unable to get OIDC issuer's certificate")
+}
+
+func getInClusterClient() (client.Client, error) {
+	// Get the in-cluster configuration
+	cfg, err := rest.InClusterConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a new client using the in-cluster configuration
+	kubeClient, err := client.New(cfg, client.Options{})
+	if err != nil {
+		return nil, err
+	}
+
+	return kubeClient, nil
 }

@@ -1,10 +1,10 @@
 replicaCount: 1
 
 image:
-  repository: datainfrahq/baaz
+  repository: controller
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  #tag: "latest"
+  tag: "latest"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -31,12 +31,12 @@ env:
  AWS_SYSTEM_NODEGROUP_SIZE: t2.medium
 
 private_mode:
-  enabled: false
-  customer_name: parseable
+  enabled: true
+  customer_name: foo
   args: 
-   kubeconfig: /kubeconfig/parseable-kubeconfig
+   kubeconfig: /kubeconfig/foo-kubeconfig
    private_mode: true 
-   customer_name: parseable
+   customer_name: foo
 
 ingress:
   enabled: false
