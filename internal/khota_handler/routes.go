@@ -150,6 +150,12 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}/tenant",
 		GetAllTenantInCustomer,
 	},
+	Route{
+		"DELETE TENANT",
+		"DELETE",
+		"/api/v1/customer/{customer_name}/tenant/{tenant_name}",
+		DeleteTenant,
+	},
 	// Route{
 	// 	"LIST TENANT",
 	// 	"GET",

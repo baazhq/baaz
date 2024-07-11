@@ -6,12 +6,14 @@ import (
 	"io"
 	"net/http"
 
-	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/gorilla/mux"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 var tenantGVK = schema.GroupVersionResource{
@@ -197,4 +199,37 @@ func GetAllTenantInCustomer(w http.ResponseWriter, req *http.Request) {
 
 	bytes, _ := json.Marshal(tenantResp)
 	sendJsonResponse(bytes, http.StatusOK, &w)
+}
+
+func DeleteTenant(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	tenantName := vars["tenant_name"]
+	customerName := vars["customer_name"]
+
+	kc, dc := getKubeClientset()
+
+	customer, err := kc.CoreV1().Namespaces().Get(context.TODO(), customerName, metav1.GetOptions{})
+	if err != nil {
+		res := NewResponse(CustomerNamespaceGetFail, req_error, err, http.StatusNotFound)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	err = dc.Resource(tenantGVK).Namespace(customer.Name).Delete(req.Context(), tenantName, metav1.DeleteOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			res := NewResponse(TenantDeleteFail, req_error, err, http.StatusNotFound)
+			res.SetResponse(&w)
+			res.LogResponse()
+		} else {
+			res := NewResponse(TenantDeleteFail, req_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+		}
+		return
+	}
+	res := NewResponse(TenantDeleteIntiated, success, nil, http.StatusOK)
+	res.SetResponse(&w)
 }

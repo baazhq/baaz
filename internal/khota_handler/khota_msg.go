@@ -49,6 +49,8 @@ const (
 	TenantCreateFailDataplaneNotActive CustomMsg = "Tenant creation failed, Dataplane is not Active"
 	TenantGetFail                      CustomMsg = "Tenant get fail"
 	TenantListFail                     CustomMsg = "Tenant list fail"
+	TenantDeleteFail                   CustomMsg = "Tenant delete failed"
+	TenantDeleteIntiated               CustomMsg = "Tenant deletion successfully initiated"
 )
 
 // TenantsInfra

@@ -30,6 +30,10 @@ func makeCreateTenantPath(customerName, tenantName string) string {
 	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.TenantPath + "/" + tenantName
 }
 
+func makeDeleteTenantPath(customerName, tenantName string) string {
+	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.TenantPath + "/" + tenantName
+}
+
 func makeGetTenantPath(customerName string) string {
 	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + "/" + common.TenantPath
 }
@@ -135,4 +139,38 @@ func CreateTenant(filePath, customerName, tenantName string) (string, error) {
 
 	return "", nil
 
+}
+
+func DeleteTenant(customerName, tenantName string) (string, error) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest(
+		http.MethodDelete,
+		makeDeleteTenantPath(customerName, tenantName),
+		nil,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("%s", string(body))
+	}
+
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == http.StatusOK {
+		return "Tenant Deletion Initiated Successfully", nil
+	}
+
+	return "", nil
 }
