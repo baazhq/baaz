@@ -20,6 +20,9 @@ func makeGetCustomerPath() string { return common.GetBzUrl() + customersUrlPath 
 func makePostCustomerPath(customerName string) string {
 	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName
 }
+func makeDeleteCustomerPath(customerName string) string {
+	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName
+}
 
 type customerList struct {
 	Name      string            `json:"name"`
@@ -154,4 +157,39 @@ func CreateCustomer(filePath string, privateMode bool) (string, error) {
 	}
 
 	return "", nil
+}
+
+func DeleteCustomer(customerName string) (string, error) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest(
+		http.MethodDelete,
+		makeDeleteCustomerPath(customerName),
+		nil,
+	)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("%s", string(body))
+	}
+
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == http.StatusOK {
+		return "Customer Deletion Initiated Successfully", nil
+	}
+
+	return "", nil
+
 }

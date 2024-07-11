@@ -72,6 +72,12 @@ var routes = Routes{
 		"/api/v1/customer",
 		ListCustomer,
 	},
+	Route{
+		"DELETE CUSTOMER",
+		"DELETE",
+		"/api/v1/customer/{customer_name}",
+		DeleteCustomer,
+	},
 	// -------------------------------------- DATAPLANE ROUTES ---------------------------------------//
 	// {
 	// 	"cloud_type": "aws",

@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"strings"
 
-	v1 "github.com/baazhq/baaz/api/v1/types"
-	helm "github.com/baazhq/baaz/pkg/helmchartpath"
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
+	helm "github.com/baazhq/baaz/pkg/helmchartpath"
 )
 
 const (
@@ -177,6 +178,25 @@ func UpdateCustomer(w http.ResponseWriter, req *http.Request) {
 	}
 
 	handleSuccess(w, CustomerNamespaceUpdateSuccess, http.StatusOK)
+}
+
+// DeleteCustomer handles deleting a customer
+func DeleteCustomer(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	customerName := vars["customer_name"]
+
+	client, _ := getKubeClientset()
+	err := client.CoreV1().Namespaces().Delete(context.TODO(), customerName, metav1.DeleteOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			handleError(w, err, CustomerNamespaceDoesNotExists, http.StatusNotFound)
+		} else {
+			handleError(w, err, CustomerNamespaceDeleteFail, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	handleSuccess(w, CustomerNamespaceDeleteSuccess, http.StatusOK)
 }
 
 // handleError logs and handles errors

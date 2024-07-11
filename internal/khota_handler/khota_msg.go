@@ -22,6 +22,8 @@ const (
 	CustomerNamespaceList            CustomMsg = "Customer namespace list"
 	CustomerServiceAccountCreateFail CustomMsg = "Customer service account creation failed."
 	CustomerNotExistInDataplane      CustomMsg = "Customer not exist in dataplane"
+	CustomerNamespaceDeleteSuccess   CustomMsg = "Customer namespace delete success"
+	CustomerNamespaceDeleteFail      CustomMsg = "Customer namespace delete failed"
 )
 
 // DataPlane

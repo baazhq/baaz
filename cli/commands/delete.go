@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
 	"fmt"
 
@@ -19,7 +20,11 @@ var (
 		RunE: func(cmd *cobra.Command, args []string) error {
 			switch args[0] {
 			case "customer":
-				return nil
+				resp, err := customers.DeleteCustomer(customer_name)
+				if err != nil {
+					return err
+				}
+				fmt.Println(resp)
 			case "dataplane":
 				resp, err := dataplanes.DeleteDataplane(dataplane_name)
 				if err != nil {
@@ -37,4 +42,5 @@ var (
 func init() {
 	rootCmd.AddCommand(deleteCmd)
 	deleteCmd.Flags().StringVar(&dataplane_name, "dataplane", "", "name of the dataplane to be deleted")
+	deleteCmd.Flags().StringVar(&customer_name, "customer", "", "name of the customer to be deleted")
 }
