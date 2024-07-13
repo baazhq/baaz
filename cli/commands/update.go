@@ -3,6 +3,7 @@ package commands
 import (
 	"bz/pkg/dataplanes"
 	"bz/pkg/tenants"
+	"bz/pkg/tenantsinfra"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -41,6 +42,21 @@ var (
 					return err
 				}
 				fmt.Println(resp)
+			case "tenantinfra", "tenantsinfra":
+				if dataplane_name == "" {
+					return fmt.Errorf("dataplane name cannot be nil")
+				}
+				if tenantsinfra_name == "" {
+					return fmt.Errorf("tenantinfra name cannot be nil")
+				}
+				if file == "" {
+					return fmt.Errorf("file path cannot be nil, use --file or -f flag to specify the file path")
+				}
+				resp, err := tenantsinfra.UpdateTenantsInfra(file, dataplane_name, tenantsinfra_name)
+				if err != nil {
+					return err
+				}
+				fmt.Println(resp)
 			default:
 				return NotValidArgs(commonValidArgs)
 			}
@@ -55,4 +71,5 @@ func init() {
 	updateCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
 	updateCmd.Flags().StringVarP(&customer_name, "customer", "", "", "customer name")
 	updateCmd.Flags().StringVarP(&tenant_name, "tenant", "", "", "tenant name")
+	updateCmd.Flags().StringVarP(&tenantsinfra_name, "tenantinfra", "", "", "tenane infra name")
 }

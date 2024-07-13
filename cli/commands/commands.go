@@ -25,6 +25,7 @@ var (
 	duration                     string
 	customer_name                string
 	tenant_name                  string
+	tenantsinfra_name            string
 	private_mode                 bool
 	kubernetes_config_server_url string
 	namespace                    string

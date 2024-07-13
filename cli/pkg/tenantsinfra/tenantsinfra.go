@@ -19,6 +19,10 @@ func makeTenantInfraPath(dataplaneName string) string {
 	return common.GetBzUrl() + common.BaazPath + common.DataplanePath + "/" + dataplaneName + common.TenantInfraPath
 }
 
+func makeTenantInfraPathWithName(dataplaneName, tenantInfraName string) string {
+	return common.GetBzUrl() + common.BaazPath + common.DataplanePath + "/" + dataplaneName + common.TenantInfraPath + "/" + tenantInfraName
+}
+
 // tenantsInfra:
 //   foo-small:
 //     machinePool:
@@ -222,6 +226,88 @@ func CreateTenantsInfra(filePath string, dataplane string) (string, error) {
 	}
 	if resp.StatusCode == http.StatusOK {
 		return "Tenant Infra Creation Initiated Successfully", nil
+	}
+
+	return "", nil
+}
+
+func UpdateTenantsInfra(filePath string, dataplane, tenantInfra string) (string, error) {
+
+	yamlFile, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	var ti Ti
+
+	err = yaml.Unmarshal(yamlFile, &ti)
+	if err != nil {
+		return "", err
+	}
+
+	tiByte, err := json.Marshal(ti.TenantsInfra)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPut,
+		makeTenantInfraPathWithName(dataplane, tenantInfra),
+		bytes.NewBuffer(tiByte),
+	)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("%s", string(body))
+	}
+
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == http.StatusOK {
+		return "Tenant Infra Update Initiated Successfully", nil
+	}
+
+	return "", nil
+}
+
+func DeleteTenantsInfra(dataplane, tenantInfra string) (string, error) {
+	req, err := http.NewRequest(
+		http.MethodDelete,
+		makeTenantInfraPathWithName(dataplane, tenantInfra),
+		nil,
+	)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("%s", string(body))
+	}
+
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == http.StatusOK {
+		return "Tenant Infra Delete Initiated Successfully", nil
 	}
 
 	return "", nil

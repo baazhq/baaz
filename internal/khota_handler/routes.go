@@ -193,6 +193,12 @@ var routes = Routes{
 		"/api/v1/dataplane/{dataplane_name}/tenantsinfra/{tenantsinfra_name}",
 		GetTenantInfra,
 	},
+	Route{
+		"UPDATE TENANT SIZES",
+		"PUT",
+		"/api/v1/dataplane/{dataplane_name}/tenantsinfra/{tenantsinfra_name}",
+		UpdateTenantInfra,
+	},
 	// -------------------------------------- APPLICATIONS ROUTES ---------------------------------------//
 	Route{
 		"CREATE APPLICATION",

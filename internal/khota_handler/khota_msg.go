@@ -64,7 +64,9 @@ const (
 	TenantsInfraDeleteInitiated             CustomMsg = "tenantsinfra delete initiated"
 	TenantsInfraCreateInitiated             CustomMsg = "tenantsinfra creation initiated"
 	TenantInfraUpdateSuccess                CustomMsg = "tenantsinfra update success"
+	TenantInfraUpdateFail                   CustomMsg = "tenantsinfra update failed"
 	TenantInfraCreateFailDataplaneNotActive CustomMsg = "tenantsinfra creation failed, dataplane is not active"
+	TenantInfraUpdateFailDataplaneNotActive CustomMsg = "tenantsinfra update failed, dataplane is not active"
 )
 
 // Application
