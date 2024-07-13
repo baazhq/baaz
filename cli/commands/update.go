@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"bz/pkg/applications"
 	"bz/pkg/dataplanes"
 	"bz/pkg/tenants"
 	"bz/pkg/tenantsinfra"
@@ -57,6 +58,21 @@ var (
 					return err
 				}
 				fmt.Println(resp)
+			case "application", "applications":
+				if customer_name == "" {
+					return fmt.Errorf("customer name cannot be nil")
+				}
+				if application_name == "" {
+					return fmt.Errorf("application name cannot be nil")
+				}
+				if file == "" {
+					return fmt.Errorf("file path cannot be nil, use --file or -f flag to specify the file path")
+				}
+				resp, err := applications.CreateApplication(file, customer_name, application_name)
+				if err != nil {
+					return err
+				}
+				fmt.Println(resp)
 			default:
 				return NotValidArgs(commonValidArgs)
 			}
@@ -72,4 +88,5 @@ func init() {
 	updateCmd.Flags().StringVarP(&customer_name, "customer", "", "", "customer name")
 	updateCmd.Flags().StringVarP(&tenant_name, "tenant", "", "", "tenant name")
 	updateCmd.Flags().StringVarP(&tenantsinfra_name, "tenantinfra", "", "", "tenane infra name")
+	updateCmd.Flags().StringVarP(&application_name, "application", "", "", "application name")
 }

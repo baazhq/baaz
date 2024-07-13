@@ -218,6 +218,12 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
 		DeleteApplicationStatus,
 	},
+	Route{
+		"UPDATE APPLICATION",
+		"PUT",
+		"/api/v1/customer/{customer_name}/application/{application_name}",
+		UpdateApplication,
+	},
 	// Get Kubeconfig for a Private SaaS customer
 	Route{
 		"GET KUBECONFIG FOR PRIVATE SAAS CUSTOMER",

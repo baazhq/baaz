@@ -72,59 +72,19 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 	}
 	appDeploy := makeApplicationConfig(applications, dataplaneName, tenantName, applicationName, labels)
 
-	existingObj, err := dc.Resource(applicationGVK).Namespace(customerName).Get(context.TODO(), appDeploy.GetName(), metav1.GetOptions{})
-	if err == nil {
-		ob := &v1.Applications{}
-		if errCon := runtime.DefaultUnstructuredConverter.FromUnstructured(existingObj.Object, ob); errCon != nil {
-			res := NewResponse(ApplicationUpdateFail, req_error, errCon, http.StatusInternalServerError)
-			res.SetResponse(&w)
-			res.LogResponse()
-			return
-		}
-
-		inputAppMap := make(map[string]v1.HTTPApplication)
-		for _, app := range applications {
-			inputAppMap[app.ApplicationName] = app
-		}
-
-		for idx, app := range ob.Spec.Applications {
-			if inputApp, found := inputAppMap[app.Name]; found {
-				ob.Spec.Applications[idx].Spec.Version = inputApp.Version
-			}
-		}
-
-		upObj, errCon := runtime.DefaultUnstructuredConverter.ToUnstructured(ob)
-		if errCon != nil {
-			res := NewResponse(ApplicationUpdateFail, req_error, errCon, http.StatusInternalServerError)
-			res.SetResponse(&w)
-			res.LogResponse()
-			return
-		}
-
-		_, uperr := dc.Resource(applicationGVK).Namespace(customerName).Update(context.TODO(), &unstructured.Unstructured{Object: upObj}, metav1.UpdateOptions{})
-		if uperr != nil {
-			res := NewResponse(ApplicationUpdateFail, req_error, uperr, http.StatusInternalServerError)
-			res.SetResponse(&w)
-			res.LogResponse()
-			return
-		}
-		res := NewResponse(ApplicationUpdateSuccess, success, nil, http.StatusOK)
+	_, err = dc.Resource(applicationGVK).Namespace(customerName).Create(context.TODO(), appDeploy, metav1.CreateOptions{})
+	if err != nil {
+		res := NewResponse(ApplicationCreateFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
-	} else {
-		_, err = dc.Resource(applicationGVK).Namespace(customerName).Create(context.TODO(), appDeploy, metav1.CreateOptions{})
-		if err != nil {
-			res := NewResponse(ApplicationCreateFail, internal_error, err, http.StatusInternalServerError)
-			res.SetResponse(&w)
-			res.LogResponse()
-			sendEventParseable(applicationsEventStream, ApplicationCreationFailEvent, appDeploy.GetLabels(), map[string]string{"application_name": appDeploy.GetName()})
-			return
-		}
-
-		res := NewResponse(ApplicationCreateIntiated, success, nil, http.StatusOK)
-		sendEventParseable(applicationsEventStream, ApplicationCreationSuccessEvent, appDeploy.GetLabels(), map[string]string{"application_name": appDeploy.GetName()})
-		res.SetResponse(&w)
+		sendEventParseable(applicationsEventStream, ApplicationCreationFailEvent, appDeploy.GetLabels(), map[string]string{"application_name": appDeploy.GetName()})
+		return
 	}
+
+	res := NewResponse(ApplicationCreateIntiated, success, nil, http.StatusOK)
+	sendEventParseable(applicationsEventStream, ApplicationCreationSuccessEvent, appDeploy.GetLabels(), map[string]string{"application_name": appDeploy.GetName()})
+	res.SetResponse(&w)
+
 }
 
 func GetApplicationStatus(w http.ResponseWriter, req *http.Request) {
@@ -168,4 +128,81 @@ func DeleteApplicationStatus(w http.ResponseWriter, req *http.Request) {
 	res := NewResponse("", string(ApplicationDeleteIntiated), nil, http.StatusOK)
 	res.SetResponse(&w)
 
+}
+
+func UpdateApplication(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	customerName := vars["customer_name"]
+	applicationName := vars["application_name"]
+
+	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
+	if err != nil {
+		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	if err := req.Body.Close(); err != nil {
+		res := NewResponse(ServerBodyCloseError, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+	var applications []v1.HTTPApplication
+
+	if err := json.Unmarshal(body, &applications); err != nil {
+		res := NewResponse(ServerUnmarshallError, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	_, dc := getKubeClientset()
+
+	existingObj, err := dc.Resource(applicationGVK).Namespace(customerName).Get(context.TODO(), applicationName, metav1.GetOptions{})
+	if err != nil {
+		res := NewResponse(ApplicationUpdateFail, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+	ob := &v1.Applications{}
+	if errCon := runtime.DefaultUnstructuredConverter.FromUnstructured(existingObj.Object, ob); errCon != nil {
+		res := NewResponse(ApplicationUpdateFail, req_error, errCon, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	inputAppMap := make(map[string]v1.HTTPApplication)
+	for _, app := range applications {
+		inputAppMap[app.ApplicationName] = app
+	}
+
+	for idx, app := range ob.Spec.Applications {
+		if inputApp, found := inputAppMap[app.Name]; found {
+			ob.Spec.Applications[idx].Spec.Version = inputApp.Version
+		}
+	}
+
+	upObj, errCon := runtime.DefaultUnstructuredConverter.ToUnstructured(ob)
+	if errCon != nil {
+		res := NewResponse(ApplicationUpdateFail, req_error, errCon, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	_, uperr := dc.Resource(applicationGVK).Namespace(customerName).Update(context.TODO(), &unstructured.Unstructured{Object: upObj}, metav1.UpdateOptions{})
+	if uperr != nil {
+		res := NewResponse(ApplicationUpdateFail, req_error, uperr, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+	res := NewResponse(ApplicationUpdateSuccess, success, nil, http.StatusOK)
+	res.SetResponse(&w)
+	res.LogResponse()
 }
