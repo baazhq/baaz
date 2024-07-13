@@ -30,6 +30,10 @@ func makeCreateTenantPath(customerName, tenantName string) string {
 	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.TenantPath + "/" + tenantName
 }
 
+func makeUpdateTenantPath(customerName, tenantName string) string {
+	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.TenantPath + "/" + tenantName
+}
+
 func makeDeleteTenantPath(customerName, tenantName string) string {
 	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.TenantPath + "/" + tenantName
 }
@@ -173,4 +177,56 @@ func DeleteTenant(customerName, tenantName string) (string, error) {
 	}
 
 	return "", nil
+}
+
+func UpdateTenant(filePath, customerName, tenantName string) (string, error) {
+	yamlByte, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	var tenants Tenants
+
+	err = yaml.Unmarshal(yamlByte, &tenants)
+	if err != nil {
+		return "", err
+	}
+
+	tenantByte, err := json.Marshal(tenants.Tenants)
+	if err != nil {
+		return "", err
+	}
+
+	client := &http.Client{}
+
+	req, err := http.NewRequest(
+		http.MethodPut,
+		makeUpdateTenantPath(customerName, tenantName),
+		bytes.NewBuffer(tenantByte),
+	)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Add("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if resp.StatusCode > 299 {
+		return "", fmt.Errorf("%s", string(respBody))
+	}
+
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode == http.StatusOK {
+		return "Tenant Updated Successfully", nil
+	}
+
+	return "", nil
+
 }

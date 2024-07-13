@@ -10,6 +10,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -139,7 +140,7 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 		patchBytes,
 		metav1.PatchOptions{},
 	)
-	if err != nil {
+	if patchErr != nil {
 		res := NewResponse(DataplanePatchFail, internal_error, patchErr, http.StatusInternalServerError)
 		res.SetResponse(&w)
 		res.LogResponse()
@@ -231,5 +232,82 @@ func DeleteTenant(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	res := NewResponse(TenantDeleteIntiated, success, nil, http.StatusOK)
+	res.SetResponse(&w)
+}
+
+func UpdateTenant(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	tenantName := vars["tenant_name"]
+	customerName := vars["customer_name"]
+
+	body, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
+	if err != nil {
+		res := NewResponse(ServerReqSizeExceed, req_error, err, http.StatusBadRequest)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	if err := req.Body.Close(); err != nil {
+		res := NewResponse(ServerBodyCloseError, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	var tenant v1.HTTPTenant
+
+	if err := json.Unmarshal(body, &tenant); err != nil {
+		res := NewResponse(ServerUnmarshallError, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	_, dc := getKubeClientset()
+
+	ob, err := dc.Resource(tenantGVK).Namespace(customerName).Get(req.Context(), tenantName, metav1.GetOptions{})
+	if err != nil {
+		res := NewResponse(TenantUpdateFail, resource_not_found, err, http.StatusNotFound)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	curTenant := &v1.Tenants{}
+	if errCon := runtime.DefaultUnstructuredConverter.FromUnstructured(ob.Object, curTenant); errCon != nil {
+		res := NewResponse(TenantUpdateFail, req_error, errCon, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+
+	}
+
+	updatedTenant := curTenant.DeepCopy()
+	for i, tn := range updatedTenant.Spec.TenantConfig {
+		if string(tn.AppType) == tenant.Application.Name {
+			updatedTenant.Spec.TenantConfig[i].Size = tenant.Application.Size
+
+		}
+	}
+
+	tenantUns, err := runtime.DefaultUnstructuredConverter.ToUnstructured(updatedTenant)
+	if err != nil {
+		res := NewResponse(TenantUpdateFail, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	_, err = dc.Resource(tenantGVK).Namespace(customerName).Update(context.TODO(), &unstructured.Unstructured{Object: tenantUns}, metav1.UpdateOptions{})
+	if err != nil {
+		res := NewResponse(TenantCreateFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	res := NewResponse(TenantCreateIntiated, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 }

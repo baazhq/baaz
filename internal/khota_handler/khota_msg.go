@@ -44,7 +44,9 @@ const (
 
 // Tenant
 const (
-	TenantCreateFail                   CustomMsg = "Tenant creation  fail"
+	TenantCreateFail CustomMsg = "Tenant creation  fail"
+	TenantUpdateFail CustomMsg = "Tenant update fail"
+
 	TenantCreateIntiated               CustomMsg = "Tenant creation success"
 	TenantCreateFailDataplaneNotActive CustomMsg = "Tenant creation failed, Dataplane is not Active"
 	TenantGetFail                      CustomMsg = "Tenant get fail"
@@ -88,6 +90,7 @@ const (
 	dataplane_not_active  string = "dataplane not active"
 	duplicate_entry       string = "entry already exists"
 	entry_not_exists      string = "entry doesn't exist"
+	resource_not_found    string = "resource_not_found"
 	success               string = "success"
 	shared_namespace      string = "shared"
 	dedicated_namespace   string = "dedicated"
