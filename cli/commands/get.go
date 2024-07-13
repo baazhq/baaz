@@ -1,15 +1,14 @@
 package commands
 
 import (
-	"fmt"
-
-	"github.com/spf13/cobra"
-
 	"bz/pkg/customers"
 	"bz/pkg/dataplanes"
 	"bz/pkg/events"
 	"bz/pkg/tenants"
 	"bz/pkg/tenantsinfra"
+	"fmt"
+
+	"github.com/spf13/cobra"
 )
 
 // getCmd represents the get command
@@ -44,7 +43,10 @@ var getCmd = &cobra.Command{
 			if customer_name == "" {
 				return fmt.Errorf("customer cannot be nil")
 			}
-			return tenants.GetTenants(customer_name)
+			if tenant_name != "" {
+				return tenants.GetTenant(customer_name, tenant_name)
+			}
+			return tenants.ListTenants(customer_name)
 		default:
 			// Handle invalid arguments
 			return NotValidArgs(commonValidArgs)

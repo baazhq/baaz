@@ -151,6 +151,12 @@ var routes = Routes{
 		GetAllTenantInCustomer,
 	},
 	Route{
+		"GET TENANT",
+		"GET",
+		"/api/v1/customer/{customer_name}/tenant/{tenant_name}",
+		GetTenantInCustomer,
+	},
+	Route{
 		"UPDATE TENANT",
 		"PUT",
 		"/api/v1/customer/{customer_name}/tenant/{tenant_name}",

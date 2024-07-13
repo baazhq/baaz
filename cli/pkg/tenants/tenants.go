@@ -38,12 +38,16 @@ func makeDeleteTenantPath(customerName, tenantName string) string {
 	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.TenantPath + "/" + tenantName
 }
 
-func makeGetTenantPath(customerName string) string {
+func makeListTenantPath(customerName string) string {
 	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + "/" + common.TenantPath
 }
 
-func GetTenants(customerName string) error {
-	tenants, err := getTenants(customerName)
+func makeGetTenantPath(customerName, tenantName string) string {
+	return common.GetBzUrl() + common.BaazPath + common.CustomerPath + "/" + customerName + common.TenantPath + "/" + tenantName
+}
+
+func ListTenants(customerName string) error {
+	tenants, err := listTenants(customerName)
 	if err != nil {
 		return err
 	}
@@ -76,9 +80,9 @@ func GetTenants(customerName string) error {
 	return nil
 
 }
-func getTenants(customerName string) ([]map[string]interface{}, error) {
+func listTenants(customerName string) ([]map[string]interface{}, error) {
 	resp, err := http.Get(
-		makeGetTenantPath(customerName),
+		makeListTenantPath(customerName),
 	)
 	if err != nil {
 		return nil, err
@@ -229,4 +233,53 @@ func UpdateTenant(filePath, customerName, tenantName string) (string, error) {
 
 	return "", nil
 
+}
+
+func GetTenant(customerName, tenantName string) error {
+	resp, err := http.Get(
+		makeGetTenantPath(customerName, tenantName),
+	)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode > 299 {
+		return fmt.Errorf("%s", string(body))
+	}
+
+	var tenant map[string]interface{}
+	err = json.Unmarshal(body, &tenant)
+	if err != nil {
+		return err
+	}
+
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{
+		"Tenant_Name",
+		"Customer_Name",
+		"Dataplane_Name",
+		"Application_Name",
+		"Application_Size",
+	},
+	)
+
+	row := []string{
+		tenant["tenant"].(string),
+		tenant["customer"].(string),
+		tenant["dataplane"].(string),
+		tenant["application"].(string),
+		tenant["size"].(string),
+	}
+	table.SetRowLine(true)
+	table.Append(row)
+	table.SetAlignment(1)
+
+	table.Render()
+	return nil
 }

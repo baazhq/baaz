@@ -311,3 +311,42 @@ func UpdateTenant(w http.ResponseWriter, req *http.Request) {
 	res := NewResponse(TenantCreateIntiated, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 }
+
+func GetTenantInCustomer(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+
+	customerName := vars["customer_name"]
+	tenantName := vars["tenant_name"]
+
+	_, dc := getKubeClientset()
+
+	tenant, err := dc.Resource(tenantGVK).Namespace(customerName).Get(context.TODO(), tenantName, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			res := NewResponse(TenantGetFail, internal_error, err, http.StatusNotFound)
+			res.SetResponse(&w)
+			res.LogResponse()
+		} else {
+			res := NewResponse(TenantGetFail, internal_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+		}
+		return
+	}
+
+	tenantResp := tenantListResp{
+		TenantName:    tenant.GetName(),
+		CustomerName:  customerName,
+		DataplaneName: tenant.GetLabels()["dataplane"],
+		Size:          tenant.GetLabels()["size"],
+		Application:   tenant.GetLabels()["application"],
+	}
+
+	bytes, err := json.Marshal(tenantResp)
+	if err != nil {
+		res := NewResponse(TenantGetFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+	}
+	sendJsonResponse(bytes, http.StatusOK, &w)
+}
