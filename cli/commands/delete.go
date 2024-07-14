@@ -43,6 +43,9 @@ var (
 				if tenant_name == "" {
 					return fmt.Errorf("tenant name cannot be nil")
 				}
+				if customer_name == "" {
+					return fmt.Errorf("customer name cannot be nil")
+				}
 				resp, err := tenants.DeleteTenant(customer_name, tenant_name)
 				if err != nil {
 					return err
