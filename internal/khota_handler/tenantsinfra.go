@@ -110,7 +110,7 @@ func CreateTenantInfra(w http.ResponseWriter, req *http.Request) {
 
 }
 
-func GetTenantInfra(w http.ResponseWriter, req *http.Request) {
+func ListTenantInfra(w http.ResponseWriter, req *http.Request) {
 	_, dc := getKubeClientset()
 
 	dataplane := mux.Vars(req)["dataplane_name"]
@@ -302,4 +302,55 @@ func UpdateTenantInfra(w http.ResponseWriter, req *http.Request) {
 	res := NewResponse(TenantInfraUpdateSuccess, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 	res.LogResponse()
+}
+
+func GetTenantInfra(w http.ResponseWriter, req *http.Request) {
+	_, dc := getKubeClientset()
+
+	dataplane := mux.Vars(req)["dataplane_name"]
+	tenantInfra := mux.Vars(req)["tenantinfra_name"]
+
+	tenantsInfras, err := dc.Resource(tenantInfraGVK).Namespace("").List(context.TODO(), metav1.ListOptions{
+		LabelSelector: "dataplane_name=" + dataplane,
+	})
+	if err != nil {
+		res := NewResponse(TenantsInfraGetFail, internal_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
+		return
+	}
+
+	type tenantInfraResp struct {
+		Name              string                 `json:"name"`
+		DataplaneName     string                 `json:"dataplane"`
+		MachinePoolStatus map[string]interface{} `json:"machine_pool_status"`
+		TenantSizes       map[string]interface{} `json:"tenant_sizes"`
+		Status            string                 `json:"status"`
+	}
+
+	var tenantsInfrasResp []tenantInfraResp
+
+	for _, ti := range tenantsInfras.Items {
+		if ti.GetName() == tenantInfra {
+			status, _, _ := unstructured.NestedString(ti.Object, "status", "phase")
+
+			machinePoolStatus, _, _ := unstructured.NestedMap(ti.Object, "status", "machinePoolStatus")
+
+			tenantSizes, _, _ := unstructured.NestedMap(ti.Object, "spec", "tenantSizes")
+
+			resp := tenantInfraResp{
+				Name:              ti.GetName(),
+				DataplaneName:     ti.GetLabels()["dataplane_name"],
+				MachinePoolStatus: machinePoolStatus,
+				TenantSizes:       tenantSizes,
+				Status:            status,
+			}
+
+			tenantsInfrasResp = append(tenantsInfrasResp, resp)
+			break
+		}
+	}
+
+	bytes, _ := json.Marshal(tenantsInfrasResp)
+	sendJsonResponse(bytes, http.StatusOK, &w)
 }

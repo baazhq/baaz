@@ -87,8 +87,8 @@ type TenantInfra struct {
 	Status string `json:"status"`
 }
 
-func GetTenantsInfra(dataplane string) error {
-	ti, err := getTenantsInfra(dataplane)
+func GetTenantsInfra(dataplane, tenantinfra_name string) error {
+	ti, err := getTenantsInfra(dataplane, tenantinfra_name)
 	if err != nil {
 		return err
 	}
@@ -149,8 +149,12 @@ func GetTenantsInfra(dataplane string) error {
 	return nil
 }
 
-func getTenantsInfra(dataplane string) (TenantInfra, error) {
-	response, err := http.Get(makeTenantInfraPath(dataplane))
+func getTenantsInfra(dataplane, tenantinfra_name string) (TenantInfra, error) {
+	path := makeTenantInfraPath(dataplane)
+	if tenantinfra_name != "" {
+		path = makeTenantInfraPathWithName(dataplane, tenantinfra_name)
+	}
+	response, err := http.Get(path)
 	if err != nil {
 		return TenantInfra{}, err
 	}

@@ -188,9 +188,15 @@ var routes = Routes{
 		DeleteTenantInfra,
 	},
 	Route{
-		"GET TENANT SIZES",
+		"LIST TENANT SIZES",
 		"GET",
-		"/api/v1/dataplane/{dataplane_name}/tenantsinfra/{tenantsinfra_name}",
+		"/api/v1/dataplane/{dataplane_name}/tenantsinfra",
+		ListTenantInfra,
+	},
+	Route{
+		"GET SPECIFIC TENANT SIZES",
+		"GET",
+		"/api/v1/dataplane/{dataplane_name}/tenantsinfra/{tenantinfra_name}",
 		GetTenantInfra,
 	},
 	Route{

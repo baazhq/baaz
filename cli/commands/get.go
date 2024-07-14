@@ -28,7 +28,7 @@ var getCmd = &cobra.Command{
 			if dataplane_name == "" {
 				return fmt.Errorf("dataplane name cannot be nil")
 			}
-			return tenantsinfra.GetTenantsInfra(dataplane_name)
+			return tenantsinfra.GetTenantsInfra(dataplane_name, tenantsinfra_name)
 		case "events", "event":
 			// Ensure dataplane name is provided
 			if entity_name == "" {
@@ -64,5 +64,5 @@ func init() {
 	getCmd.Flags().StringVarP(&dataplane_name, "dataplane", "", "", "dataplane name")
 	getCmd.Flags().StringVarP(&entity_name, "entity", "", "", "entity name")
 	getCmd.Flags().StringVarP(&duration, "duration", "", "", "duration to get events")
-
+	getCmd.Flags().StringVarP(&tenantsinfra_name, "tenantinfra_name", "", "", "tenantinfra name")
 }
