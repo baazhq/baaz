@@ -78,6 +78,7 @@ func makeAwsEksConfig(dataPlaneName string, dataplane v1.DataPlane, labels map[s
 						"secretKeyName": secret_key,
 					},
 					"provisionNetwork": dataplane.ProvisionNetwork,
+					"vpcCidr":          dataplane.VpcCidr,
 					"eks": map[string]interface{}{
 						"name":             dataPlaneName,
 						"subnetIds":        dataplane.KubeConfig.EKS.SubnetIds,

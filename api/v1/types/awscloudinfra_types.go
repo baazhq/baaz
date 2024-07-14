@@ -5,7 +5,9 @@ type AwsCloudInfraConfig struct {
 	// Secret must be in the same namespace as dataplane
 	AuthSecretRef    AWSAuthSecretRef `json:"authSecretRef"`
 	ProvisionNetwork bool             `json:"provisionNetwork,omitempty"`
-	Eks              EksConfig        `json:"eks,omitempty"`
+	// if ProvisionNetwork is set as True, users can set VpcCidr otherwise controller will generate a random cidr
+	VpcCidr string    `json:"vpcCidr,omitempty"`
+	Eks     EksConfig `json:"eks,omitempty"`
 }
 
 type AWSAuthSecretRef struct {

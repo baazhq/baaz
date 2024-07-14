@@ -225,6 +225,7 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 			},
 		},
 		ProvisionNetwork: dp.ProvisionNetwork,
+		VpcCidr:          dp.VpcCidr,
 		KubeConfig: v1.KubernetesConfig{
 			EKS: v1.EKSConfig{
 				Name:             dpName,

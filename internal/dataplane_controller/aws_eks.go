@@ -16,16 +16,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go/aws"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/baazhq/baaz/pkg/aws/eks"
 	"github.com/baazhq/baaz/pkg/aws/network"
 	"github.com/baazhq/baaz/pkg/helm"
 	"github.com/baazhq/baaz/pkg/store"
 	"github.com/baazhq/baaz/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -474,7 +475,8 @@ func (ae *awsEnv) reconcileLBPhase() error {
 //
 // +--------------------------------+
 // | Generate random CIDR block for |
-// | VPC                            |
+// | VPC if user doesn't specify    |
+// | vpc cidr range                 |
 // +--------------------------------+
 //
 //	|
@@ -591,7 +593,11 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 
 	// Create VPC if not already created
 	if vpcId == "" {
-		vpcCidr := fmt.Sprintf("10.%d.0.0/16", cidrRandom)
+		vpcCidr := ae.dp.Spec.CloudInfra.VpcCidr
+		if vpcCidr == "" {
+			vpcCidr = fmt.Sprintf("10.%d.0.0/16", cidrRandom)
+		}
+
 		vpc, err := ae.network.CreateVPC(ctx, &awsec2.CreateVpcInput{
 			CidrBlock: &vpcCidr,
 			TagSpecifications: []ec2types.TagSpecification{

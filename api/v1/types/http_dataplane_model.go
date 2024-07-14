@@ -20,6 +20,7 @@ type DataPlane struct {
 	CloudRegion       string            `json:"cloud_region"`
 	CloudAuth         CloudAuth         `json:"cloud_auth"`
 	ProvisionNetwork  bool              `json:"provision_network"`
+	VpcCidr           string            `json:"vpc_cidr"`
 	KubeConfig        KubernetesConfig  `json:"kubernetes_config"`
 	ApplicationConfig []HTTPApplication `json:"application_config,omitempty"`
 }

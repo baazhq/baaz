@@ -115,6 +115,10 @@ spec:
                     type: boolean
                   region:
                     type: string
+                  vpcCidr:
+                    description: if ProvisionNetwork is set as True, users can set
+                      VpcCidr otherwise controller will generate a random cidr
+                    type: string
                 required:
                 - authSecretRef
                 - cloudType
