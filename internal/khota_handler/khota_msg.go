@@ -22,6 +22,8 @@ const (
 	CustomerNamespaceList            CustomMsg = "Customer namespace list"
 	CustomerServiceAccountCreateFail CustomMsg = "Customer service account creation failed."
 	CustomerNotExistInDataplane      CustomMsg = "Customer not exist in dataplane"
+	CustomerNamespaceDeleteSuccess   CustomMsg = "Customer namespace delete success"
+	CustomerNamespaceDeleteFail      CustomMsg = "Customer namespace delete failed"
 )
 
 // DataPlane
@@ -42,11 +44,15 @@ const (
 
 // Tenant
 const (
-	TenantCreateFail                   CustomMsg = "Tenant creation  fail"
+	TenantCreateFail CustomMsg = "Tenant creation  fail"
+	TenantUpdateFail CustomMsg = "Tenant update fail"
+
 	TenantCreateIntiated               CustomMsg = "Tenant creation success"
 	TenantCreateFailDataplaneNotActive CustomMsg = "Tenant creation failed, Dataplane is not Active"
 	TenantGetFail                      CustomMsg = "Tenant get fail"
 	TenantListFail                     CustomMsg = "Tenant list fail"
+	TenantDeleteFail                   CustomMsg = "Tenant delete failed"
+	TenantDeleteIntiated               CustomMsg = "Tenant deletion successfully initiated"
 )
 
 // TenantsInfra
@@ -58,7 +64,9 @@ const (
 	TenantsInfraDeleteInitiated             CustomMsg = "tenantsinfra delete initiated"
 	TenantsInfraCreateInitiated             CustomMsg = "tenantsinfra creation initiated"
 	TenantInfraUpdateSuccess                CustomMsg = "tenantsinfra update success"
+	TenantInfraUpdateFail                   CustomMsg = "tenantsinfra update failed"
 	TenantInfraCreateFailDataplaneNotActive CustomMsg = "tenantsinfra creation failed, dataplane is not active"
+	TenantInfraUpdateFailDataplaneNotActive CustomMsg = "tenantsinfra update failed, dataplane is not active"
 )
 
 // Application
@@ -84,6 +92,7 @@ const (
 	dataplane_not_active  string = "dataplane not active"
 	duplicate_entry       string = "entry already exists"
 	entry_not_exists      string = "entry doesn't exist"
+	resource_not_found    string = "resource_not_found"
 	success               string = "success"
 	shared_namespace      string = "shared"
 	dedicated_namespace   string = "dedicated"

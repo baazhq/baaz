@@ -72,6 +72,12 @@ var routes = Routes{
 		"/api/v1/customer",
 		ListCustomer,
 	},
+	Route{
+		"DELETE CUSTOMER",
+		"DELETE",
+		"/api/v1/customer/{customer_name}",
+		DeleteCustomer,
+	},
 	// -------------------------------------- DATAPLANE ROUTES ---------------------------------------//
 	// {
 	// 	"cloud_type": "aws",
@@ -144,6 +150,24 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}/tenant",
 		GetAllTenantInCustomer,
 	},
+	Route{
+		"GET TENANT",
+		"GET",
+		"/api/v1/customer/{customer_name}/tenant/{tenant_name}",
+		GetTenantInCustomer,
+	},
+	Route{
+		"UPDATE TENANT",
+		"PUT",
+		"/api/v1/customer/{customer_name}/tenant/{tenant_name}",
+		UpdateTenant,
+	},
+	Route{
+		"DELETE TENANT",
+		"DELETE",
+		"/api/v1/customer/{customer_name}/tenant/{tenant_name}",
+		DeleteTenant,
+	},
 	// Route{
 	// 	"LIST TENANT",
 	// 	"GET",
@@ -164,10 +188,22 @@ var routes = Routes{
 		DeleteTenantInfra,
 	},
 	Route{
-		"GET TENANT SIZES",
+		"LIST TENANT SIZES",
 		"GET",
-		"/api/v1/dataplane/{dataplane_name}/tenantsinfra/{tenantsinfra_name}",
+		"/api/v1/dataplane/{dataplane_name}/tenantsinfra",
+		ListTenantInfra,
+	},
+	Route{
+		"GET SPECIFIC TENANT SIZES",
+		"GET",
+		"/api/v1/dataplane/{dataplane_name}/tenantsinfra/{tenantinfra_name}",
 		GetTenantInfra,
+	},
+	Route{
+		"UPDATE TENANT SIZES",
+		"PUT",
+		"/api/v1/dataplane/{dataplane_name}/tenantsinfra/{tenantsinfra_name}",
+		UpdateTenantInfra,
 	},
 	// -------------------------------------- APPLICATIONS ROUTES ---------------------------------------//
 	Route{
@@ -187,6 +223,12 @@ var routes = Routes{
 		"DELETE",
 		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
 		DeleteApplicationStatus,
+	},
+	Route{
+		"UPDATE APPLICATION",
+		"PUT",
+		"/api/v1/customer/{customer_name}/application/{application_name}",
+		UpdateApplication,
 	},
 	// Get Kubeconfig for a Private SaaS customer
 	Route{

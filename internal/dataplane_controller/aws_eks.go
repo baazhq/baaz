@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	mrand "math/rand"
+	"net"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/apparentlymart/go-cidr/cidr"
 	awsec2 "github.com/aws/aws-sdk-go-v2/service/ec2"
 	ec2types "github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
@@ -16,16 +19,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/aws/aws-sdk-go/aws"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	v1 "github.com/baazhq/baaz/api/v1/types"
 	"github.com/baazhq/baaz/pkg/aws/eks"
 	"github.com/baazhq/baaz/pkg/aws/network"
 	"github.com/baazhq/baaz/pkg/helm"
 	"github.com/baazhq/baaz/pkg/store"
 	"github.com/baazhq/baaz/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -474,7 +478,8 @@ func (ae *awsEnv) reconcileLBPhase() error {
 //
 // +--------------------------------+
 // | Generate random CIDR block for |
-// | VPC                            |
+// | VPC if user doesn't specify    |
+// | vpc cidr range                 |
 // +--------------------------------+
 //
 //	|
@@ -588,10 +593,14 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 
 	vpcId := ae.dp.Status.CloudInfraStatus.Vpc
 	vpcName := fmt.Sprintf("%s-%s", ae.dp.Name, ae.dp.Namespace)
+	vpcCidr := ae.dp.Spec.CloudInfra.VpcCidr
 
 	// Create VPC if not already created
 	if vpcId == "" {
-		vpcCidr := fmt.Sprintf("10.%d.0.0/16", cidrRandom)
+		if vpcCidr == "" {
+			vpcCidr = fmt.Sprintf("10.%d.0.0/16", cidrRandom)
+		}
+
 		vpc, err := ae.network.CreateVPC(ctx, &awsec2.CreateVpcInput{
 			CidrBlock: &vpcCidr,
 			TagSpecifications: []ec2types.TagSpecification{
@@ -698,11 +707,9 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 	}
 
 	// Define CIDR blocks for subnets
-	subnetsCidr := []string{
-		fmt.Sprintf("10.%d.16.0/20", cidrRandom),
-		fmt.Sprintf("10.%d.32.0/20", cidrRandom),
-		fmt.Sprintf("10.%d.0.0/20", cidrRandom),
-		fmt.Sprintf("10.%d.80.0/20", cidrRandom),
+	subnetsCidr, err := generateSubnets(vpcCidr, 4)
+	if err != nil {
+		return err
 	}
 
 	// Create subnets
@@ -866,6 +873,31 @@ func (ae *awsEnv) reconcileNetwork(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func generateSubnets(vpcCidr string, count int) ([]string, error) {
+	_, ipnet, err := net.ParseCIDR(vpcCidr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the prefix length and total bits
+	ones, bits := ipnet.Mask.Size()
+
+	// Calculate the number of additional bits needed for the subnets
+	additionalBits := int(math.Ceil(math.Log2(float64(count))))
+	newPrefixLen := ones + additionalBits
+	if newPrefixLen > bits {
+		return nil, errors.New("prefix length exceeds the maximum allowed for the address family")
+	}
+
+	// Generate the subnets
+	subnets := make([]string, 0, count)
+	for i := 0; i < count; i++ {
+		subnet, _ := cidr.Subnet(ipnet, additionalBits, i)
+		subnets = append(subnets, subnet.String())
+	}
+	return subnets, nil
 }
 
 func getChartName(app v1.AppSpec) string {
