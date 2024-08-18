@@ -124,6 +124,9 @@ func CreateTenant(w http.ResponseWriter, req *http.Request) {
 
 	dataplane, err := dc.Resource(dpGVK).Namespace(dpNamespace).Get(context.TODO(), customer.GetLabels()["dataplane"], metav1.GetOptions{})
 	if err != nil {
+		res := NewResponse(DataPlaneGetFail, req_error, err, http.StatusInternalServerError)
+		res.SetResponse(&w)
+		res.LogResponse()
 		return
 	}
 

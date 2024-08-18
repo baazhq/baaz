@@ -1,0 +1,685 @@
+{
+	"info": {
+		"_postman_id": "b68bcb39-6d58-4212-8859-289c6fdab960",
+		"name": "Baaz",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "12043772"
+	},
+	"item": [
+		{
+			"name": "Dataplane",
+			"item": [
+				{
+					"name": "Create Dataplane",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"cloud_type\": \"aws\",\n    \"cloud_region\": \"us-east-1\",\n    \"customer_name\": \"\",\n    \"saas_type\": \"shared\",\n    \"cloud_auth\": {\n        \"aws_auth\": {\n            \"aws_access_key\": \"\",\n            \"aws_secret_key\": \"\"\n        }\n    },\n    \"provision_network\": true,\n    \"vpc_cidr\": \"10.192.0.0/16\",\n    \"kubernetes_config\": {\n        \"Eks\": {\n            \"subnet_ids\": null,\n            \"security_group_ids\": null,\n            \"version\": \"1.28\"\n        }\n    },\n    \"application_config\": [\n        {\n            \"name\": \"nginx\",\n            \"namespace\": \"nginx-ingress\",\n            \"chart_name\": \"ingress-nginx\",\n            \"repo_name\": \"ingress-nginx\",\n            \"repo_url\": \"https://kubernetes.github.io/ingress-nginx\",\n            \"version\": \"1.9.4\",\n            \"values\": [\n                \"controller.nodeSelector.nodeType=system\"\n            ]\n        },\n        {\n            \"name\": \"zookeeper-operator\",\n            \"namespace\": \"zk-operator\",\n            \"chart_name\": \"zookeeper-operator\",\n            \"repo_name\": \"pravega\",\n            \"repo_url\": \"https://charts.pravega.io\",\n            \"version\": \"0.2.15\",\n            \"values\": [\n                \"nodeSelector.nodeType=system\"\n            ]\n        }\n    ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/v1/dataplane",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dataplane"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Dataplane",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"kubernetes_config\": {\n        \"Eks\": {\n            \"version\": \"1.29\"\n        }\n    }\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/v1/dataplane/{{dataplane_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dataplane",
+								"{{dataplane_name}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Dataplanes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/api/v1/dataplane",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dataplane"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Dataplane",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/api/v1/dataplane/{{dataplane_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dataplane",
+								"{{dataplane_name}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Dataplane",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/api/v1/dataplane/{{dataplane_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dataplane",
+								"{{dataplane_name}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Tenant Infra",
+			"item": [
+				{
+					"name": "Create Tenant Infra",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"zk-small\": {\n        \"machine_pool\": [\n            {\n                \"name\": \"zk-pool\",\n                \"size\": \"t2.small\",\n                \"min\": 1,\n                \"max\": 3,\n                \"strictScheduling\": \"enable\",\n                \"type\": \"low-priority\",\n                \"labels\": {\n                    \"app\": \"zk\",\n                    \"size\": \"small\"\n                }\n            }\n        ]\n    },\n    \"zk-medium\": {\n        \"machine_pool\": [\n            {\n                \"name\": \"zk-pool\",\n                \"size\": \"t2.medium\",\n                \"min\": 0,\n                \"max\": 2,\n                \"strictScheduling\": \"enable\",\n                \"type\": \"low-priority\",\n                \"labels\": {\n                    \"app\": \"zk\",\n                    \"size\": \"medium\"\n                }\n            }\n        ]\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/v1/dataplane/{{dateplane_name}}/tenantsinfra",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dataplane",
+								"{{dateplane_name}}",
+								"tenantsinfra"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tenant Infra",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"zk-small\": {\n        \"machine_pool\": [\n            {\n                \"name\": \"zk-pool\",\n                \"size\": \"t2.small\",\n                \"min\": 1,\n                \"max\": 2,\n                \"strictScheduling\": \"enable\",\n                \"type\": \"low-priority\",\n                \"labels\": {\n                    \"app\": \"zk\",\n                    \"size\": \"small\"\n                }\n            }\n        ]\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/v1/dataplane/{{dataplane_name}}/tenantsinfra/{{tenantinfra_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dataplane",
+								"{{dataplane_name}}",
+								"tenantsinfra",
+								"{{tenantinfra_name}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Tenant Infras",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/api/v1/dataplane/{{dataplane_name}}/tenantsinfra",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dataplane",
+								"{{dataplane_name}}",
+								"tenantsinfra"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tenant Infra",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/api/v1/dataplane/{{dataplane_name}}/tenantsinfra/{{tenantinfra_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dataplane",
+								"{{dataplane_name}}",
+								"tenantsinfra",
+								"{{tenantinfra_name}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Tenant Infra",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/api/v1/dataplane/{{dataplane_name}}/tenantsinfra/{{tenantinfra_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"dataplane",
+								"{{dataplane_name}}",
+								"tenantsinfra",
+								"{{tenantinfra_name}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Customer",
+			"item": [
+				{
+					"name": "Create Customer",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"saas_type\": \"shared\",\n    \"cloud_type\": \"AWS\",\n    \"labels\": {\n        \"tier\": \"free\",\n        \"app\": \"logging\"\n    }\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/v1/customer/{{customer_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customer",
+								"{{customer_name}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Customer",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"saas_type\": \"shared\",\n    \"cloud_type\": \"AWS\",\n    \"labels\": {\n        \"tier\": \"free\",\n        \"app\": \"logging\",\n        \"custom_label\": \"custom_val\"\n    }\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/v1/customer/{{customer_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customer",
+								"{{customer_name}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List All Customers",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/api/v1/customer",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customer"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Customer",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/api/v1/customer/{{customer_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customer",
+								"{{customer_name}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Tenant",
+			"item": [
+				{
+					"name": "Create Tenant",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"networkSecurity\": {\n        \"interNamespaceTraffic\": \"Deny\",\n        \"allowedNamespaces\": [\n            \"nginx-ingress\"\n        ]\n    },\n    \"application\": {\n        \"name\": \"kube-state-metrics\",\n        \"appSize\": \"zk-small\"\n    }\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/v1/customer/{{customer_name}}/tenant/{{tenant_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customer",
+								"{{customer_name}}",
+								"tenant",
+								"{{tenant_name}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tenant",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"networkSecurity\": {\n        \"interNamespaceTraffic\": \"Deny\",\n        \"allowedNamespaces\": [\n            \"nginx-ingress\"\n        ]\n    },\n    \"application\": {\n        \"name\": \"kube-state-metrics\",\n        \"appSize\": \"zk-medium\"\n    }\n}\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/v1/customer/{{customer_name}}/tenant/{{tenant_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customer",
+								"{{customer_name}}",
+								"tenant",
+								"{{tenant_name}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List All Tenants",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tenant",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Tenant",
+					"request": {
+						"method": "GET",
+						"header": []
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Application",
+			"item": [
+				{
+					"name": "Create Application",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    {\n        \"name\": \"kube-state-metrics\",\n        \"chart_name\": \"kube-state-metrics\",\n        \"repo_name\": \"prometheus-community\",\n        \"repo_url\": \"https://prometheus-community.github.io/helm-charts\",\n        \"version\": \"5.18.0\",\n        \"values\": [\n            \"tolerations[0].key=app\",\n            \"tolerations[0].operator=Equal\",\n            \"tolerations[0].value=system\",\n            \"tolerations[0].effect=NoSchedule\"\n        ]\n    }\n]\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/v1/customer/{{customer_name}}/tenant/{{tenant_name}}/application",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customer",
+								"{{customer_name}}",
+								"tenant",
+								"{{tenant_name}}",
+								"application"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Application Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/api/v1/customer/{{customer_name}}/dataplane/{{dataplane_name}}/application/{{application_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customer",
+								"{{customer_name}}",
+								"dataplane",
+								"{{dataplane_name}}",
+								"application",
+								"{{application_name}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Application",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "[\n    {\n        \"name\": \"kube-state-metrics\",\n        \"chart_name\": \"kube-state-metrics\",\n        \"repo_name\": \"prometheus-community\",\n        \"repo_url\": \"https://prometheus-community.github.io/helm-charts\",\n        \"version\": \"5.18.1\",\n        \"values\": [\n            \"tolerations[0].key=app\",\n            \"tolerations[0].operator=Equal\",\n            \"tolerations[0].value=system\",\n            \"tolerations[0].effect=NoSchedule\"\n        ]\n    }\n]\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{host}}/api/v1/customer/{{customer_name}}/application/{{application_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customer",
+								"{{customer_name}}",
+								"application",
+								"{{application_name}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Application",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{host}}/api/v1/customer/{{customer_name}}/dataplane/{{dataplane_name}}/application/{{application_name}}",
+							"host": [
+								"{{host}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"customer",
+								"{{customer_name}}",
+								"dataplane",
+								"{{dataplane_name}}",
+								"application",
+								"{{application_name}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "host",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "customer_name",
+			"value": "shared",
+			"type": "string"
+		},
+		{
+			"key": "tenant_name",
+			"value": "foo-tenant",
+			"type": "string"
+		},
+		{
+			"key": "tenantinfra_name",
+			"value": "aws-us-east-1-nnnu-tenantinfra",
+			"type": "string"
+		},
+		{
+			"key": "dataplane_name",
+			"value": "aws-us-east-1-nnnu",
+			"type": "string"
+		},
+		{
+			"key": "application_name",
+			"value": "shared-foo-tenant-apps",
+			"type": "string"
+		}
+	]
+}
