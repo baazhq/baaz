@@ -436,7 +436,7 @@ func UpdateDataPlane(w http.ResponseWriter, req *http.Request) {
 		res.LogResponse()
 		return
 	}
-	res := NewResponse(DataplaneUpdateFail, success, nil, http.StatusOK)
+	res := NewResponse(DataplaneUpdateSuccess, success, nil, http.StatusOK)
 	res.SetResponse(&w)
 	res.LogResponse()
 	sendEventParseable(dataplanesEventStream, dataplaneInitiationSuccessEvent, labels, map[string]string{"dataplane_name": dpName})

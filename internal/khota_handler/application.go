@@ -16,7 +16,7 @@ import (
 )
 
 var applicationGVK = schema.GroupVersionResource{
-	Group:    "datainfra.io",
+	Group:    "baaz.dev",
 	Version:  "v1",
 	Resource: "applications",
 }
