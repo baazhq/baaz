@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,6 +18,10 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	v1 "github.com/baazhq/baaz/api/v1/types"
+)
+
+const (
+	SharedNS = "shared"
 )
 
 var dpGVK = schema.GroupVersionResource{
@@ -238,6 +243,28 @@ func CreateDataPlane(w http.ResponseWriter, req *http.Request) {
 	}
 
 	kc, dc := getKubeClientset()
+
+	_, err = kc.CoreV1().Namespaces().Get(req.Context(), SharedNS, metav1.GetOptions{})
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+
+		_, err = kc.CoreV1().Namespaces().Create(req.Context(), &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: SharedNS,
+			},
+		}, metav1.CreateOptions{})
+		if err != nil {
+			res := NewResponse(DataPlaneCreateFail, internal_error, err, http.StatusInternalServerError)
+			res.SetResponse(&w)
+			res.LogResponse()
+			return
+		}
+	}
 
 	dpNS, err := kc.CoreV1().Namespaces().Get(context.TODO(), dpNamespace, metav1.GetOptions{})
 	if err != nil {
