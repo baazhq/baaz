@@ -49,20 +49,20 @@ type DataPlaneReconciler struct {
 
 func NewDataplaneReconciler(mgr ctrl.Manager, enablePrivate bool, customerName string) *DataPlaneReconciler {
 	initLogger := ctrl.Log.WithName("controllers").WithName("dataplane")
-	inClusterClient, err := getInClusterClient()
-	if err != nil {
-		panic(err)
-	}
+	// inClusterClient, err := getInClusterClient()
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	return &DataPlaneReconciler{
-		Client:          mgr.GetClient(),
-		Log:             initLogger,
-		Scheme:          mgr.GetScheme(),
-		ReconcileWait:   lookupReconcileTime(initLogger),
-		Recorder:        mgr.GetEventRecorderFor("dataplane-controller"),
-		Predicates:      predicates.GetPredicates(enablePrivate, customerName, mgr.GetClient()),
-		NgStore:         store.NewInternalStore(),
-		InClusterClient: inClusterClient,
+		Client:        mgr.GetClient(),
+		Log:           initLogger,
+		Scheme:        mgr.GetScheme(),
+		ReconcileWait: lookupReconcileTime(initLogger),
+		Recorder:      mgr.GetEventRecorderFor("dataplane-controller"),
+		Predicates:    predicates.GetPredicates(enablePrivate, customerName, mgr.GetClient()),
+		NgStore:       store.NewInternalStore(),
+		//InClusterClient: inClusterClient,
 	}
 }
 

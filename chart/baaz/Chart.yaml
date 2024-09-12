@@ -3,4 +3,4 @@ name: baaz
 description: A Helm chart for baaz
 type: application
 version: 0.1.0
-appVersion: "v1"
+appVersion: "v0.0.1-alpha"
