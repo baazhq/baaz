@@ -1,2 +1,0 @@
-bz init --kubernetes_config_server_url=https://FC8F7DC9B098CF1E04E8D8E78781CF2D.gr7.us-east-1.eks.amazonaws.com
-
