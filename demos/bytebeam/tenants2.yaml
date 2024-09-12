@@ -1,0 +1,7 @@
+tenants:
+  networkSecurity: 
+    interNamespaceTraffic: "Deny"
+    allowedNamespaces: ["nginx-ingress"]
+  application:
+    name: "customer1"
+    appSize: "bytebeam-small"

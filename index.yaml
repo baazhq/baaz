@@ -1,0 +1,14 @@
+apiVersion: v1
+entries:
+  baaz:
+  - apiVersion: v2
+    appVersion: v0.0.1-alpha
+    created: "2024-09-13T05:17:30.595266+05:30"
+    description: A Helm chart for baaz
+    digest: c516f0d2eeb6ff8b97962a5a0859a09195b3c22c23a804caaf4b1a2ef2b07034
+    name: baaz
+    type: application
+    urls:
+    - https://charts.baaz.dev/helm-releases/baaz-0.1.0.tgz
+    version: 0.1.0
+generated: "2024-09-13T05:17:30.593024+05:30"
