@@ -234,58 +234,57 @@ func (ec *eks) CreateVpcCniRole(ctx context.Context) (roleOutput *awsiam.CreateR
 
 	roleName := MakeVpcCniRoleName(ec.dp.Spec.CloudInfra.Region, ec.dp.Spec.CloudInfra.Eks.Name)
 
-	_, err = ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
+	role, err := ec.awsIamClient.GetRole(ec.ctx, &awsiam.GetRoleInput{
 		RoleName: aws.String(roleName),
 	})
-
-	if err != nil {
-		_, oidcProviderURL, found := strings.Cut(oidcProvider, "oidc-provider/")
-		if !found {
-			return nil, "", errors.New("invalid oidc provider arn")
-		}
-		accountID, err := ec.getAccountID()
-		if err != nil {
-			return nil, "", err
-		}
-
-		tmpl, err := template.New("vpcni-template").Parse(vpcCniTrustPolicy)
-		if err != nil {
-			return nil, "", err
-		}
-		var tmplOutput bytes.Buffer
-
-		if err := tmpl.Execute(&tmplOutput, genericRoleTemplateInput{
-			AccountID:    accountID,
-			OIDCProvider: oidcProviderURL,
-		}); err != nil {
-			return nil, "", err
-		}
-
-		trustPolicy := tmplOutput.String()
-
-		roleInput := awsiam.CreateRoleInput{
-			AssumeRolePolicyDocument: aws.String(strings.TrimSpace(trustPolicy)),
-			RoleName:                 &roleName,
-		}
-
-		roleOutput, err := ec.awsIamClient.CreateRole(ctx, &roleInput)
-		if err != nil {
-			return nil, "", err
-		}
-
-		attachPolicyInput := awsiam.AttachRolePolicyInput{
-			PolicyArn: &vpcCNIPolicyARN,
-			RoleName:  roleOutput.Role.RoleName,
-		}
-
-		if _, err := ec.awsIamClient.AttachRolePolicy(ctx, &attachPolicyInput); err != nil {
-			return nil, "", err
-		}
-
-		return roleOutput, fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName), nil
+	if err == nil {
+		return &awsiam.CreateRoleOutput{}, *role.Role.Arn, err
 	}
 
-	return &awsiam.CreateRoleOutput{}, "", nil
+	_, oidcProviderURL, found := strings.Cut(oidcProvider, "oidc-provider/")
+	if !found {
+		return nil, "", errors.New("invalid oidc provider arn")
+	}
+	accountID, err := ec.getAccountID()
+	if err != nil {
+		return nil, "", err
+	}
+
+	tmpl, err := template.New("vpcni-template").Parse(vpcCniTrustPolicy)
+	if err != nil {
+		return nil, "", err
+	}
+	var tmplOutput bytes.Buffer
+
+	if err := tmpl.Execute(&tmplOutput, genericRoleTemplateInput{
+		AccountID:    accountID,
+		OIDCProvider: oidcProviderURL,
+	}); err != nil {
+		return nil, "", err
+	}
+
+	trustPolicy := tmplOutput.String()
+
+	roleInput := awsiam.CreateRoleInput{
+		AssumeRolePolicyDocument: aws.String(strings.TrimSpace(trustPolicy)),
+		RoleName:                 &roleName,
+	}
+
+	roleOutput, err = ec.awsIamClient.CreateRole(ctx, &roleInput)
+	if err != nil {
+		return nil, "", err
+	}
+
+	attachPolicyInput := awsiam.AttachRolePolicyInput{
+		PolicyArn: &vpcCNIPolicyARN,
+		RoleName:  roleOutput.Role.RoleName,
+	}
+
+	if _, err := ec.awsIamClient.AttachRolePolicy(ctx, &attachPolicyInput); err != nil {
+		return nil, "", err
+	}
+
+	return roleOutput, fmt.Sprintf("arn:aws:iam::%s:role/%s", accountID, roleName), nil
 }
 
 func (ec *eks) CreateIAMPolicy(ctx context.Context, input *iam.CreatePolicyInput) (*iam.CreatePolicyOutput, error) {

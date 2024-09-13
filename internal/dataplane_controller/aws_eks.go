@@ -1229,7 +1229,7 @@ func (ae *awsEnv) ReconcileDefaultAddons() error {
 				ClusterName:           aws.String(clusterName),
 				ResolveConflicts:      types.ResolveConflictsOverwrite,
 				ServiceAccountRoleArn: aws.String(arn),
-				AddonVersion:          aws.String("v1.15.0-eksbuild.2"),
+				AddonVersion:          aws.String("v1.18.3-eksbuild.3"),
 				ConfigurationValues:   aws.String(v),
 			})
 			if cErr != nil {
