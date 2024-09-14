@@ -321,6 +321,13 @@ func (r *DataPlaneReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 		return ctrl.Result{}, retryErr
 	}
 
+	// delete created roles
+	for roleName, _ := range ae.dp.Status.CloudInfraStatus.Roles {
+		if err := ae.eksIC.DeleteRole(ae.ctx, roleName); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	// update namespace level
 	customerNs := &core.Namespace{}
 	if err := ae.client.Get(ae.ctx, client.ObjectKey{Name: ae.dp.Namespace}, customerNs); err != nil {
