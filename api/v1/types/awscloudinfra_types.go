@@ -24,16 +24,17 @@ type EksConfig struct {
 }
 
 type AwsCloudInfraConfigStatus struct {
-	Vpc                string    `json:"vpc,omitempty"`
-	SubnetIds          []string  `json:"subnetIds,omitempty"`
-	SecurityGroupIds   []string  `json:"securityGroupIds,omitempty"`
-	NATGatewayId       string    `json:"natGatewayId,omitempty"`
-	NATAttachedWithRT  bool      `json:"natAttchedWithRT,omitempty"`
-	SGInboundRuleAdded bool      `json:"sgInboundRuleAdded,omitempty"`
-	InternetGatewayId  string    `json:"internetGatewayId,omitempty"`
-	PublicRTId         string    `json:"publicRTId,omitempty"`
-	LBArns             []string  `json:"lbArns,omitempty"`
-	EksStatus          EksStatus `json:"eksStatus,omitempty"`
+	Vpc                string          `json:"vpc,omitempty"`
+	SubnetIds          []string        `json:"subnetIds,omitempty"`
+	SecurityGroupIds   []string        `json:"securityGroupIds,omitempty"`
+	NATGatewayId       string          `json:"natGatewayId,omitempty"`
+	NATAttachedWithRT  bool            `json:"natAttchedWithRT,omitempty"`
+	SGInboundRuleAdded bool            `json:"sgInboundRuleAdded,omitempty"`
+	InternetGatewayId  string          `json:"internetGatewayId,omitempty"`
+	PublicRTId         string          `json:"publicRTId,omitempty"`
+	LBArns             []string        `json:"lbArns,omitempty"`
+	EksStatus          EksStatus       `json:"eksStatus,omitempty"`
+	Roles              map[string]bool `json:"roles,omitempty"`
 }
 
 type EksStatus struct {

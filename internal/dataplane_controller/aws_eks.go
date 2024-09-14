@@ -255,6 +255,17 @@ func (ae *awsEnv) reconcileAwsEks() error {
 				return fmt.Errorf("failed to create cluster iam role: %s", err.Error())
 			}
 
+			if _, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				ob := obj.(*v1.DataPlanes)
+				if ob.Status.CloudInfraStatus.Roles == nil {
+					ob.Status.CloudInfraStatus.Roles = make(map[string]bool)
+				}
+				ob.Status.CloudInfraStatus.Roles[*clusterRoleOutput.Role.RoleName] = true
+				return ob
+			}); err != nil {
+				return err
+			}
+
 			klog.Infof("Cluster Role [%s] Created", *clusterRoleOutput.Role.RoleName)
 
 			createEksResult := ae.eksIC.CreateEks()
@@ -1084,6 +1095,17 @@ func (ae *awsEnv) reconcileSystemNodeGroup() error {
 		return errors.New("node role is nil")
 	}
 
+	if _, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+		ob := obj.(*v1.DataPlanes)
+		if ob.Status.CloudInfraStatus.Roles == nil {
+			ob.Status.CloudInfraStatus.Roles = make(map[string]bool)
+		}
+		ob.Status.CloudInfraStatus.Roles[*nodeRole.Role.RoleName] = true
+		return ob
+	}); err != nil {
+		return err
+	}
+
 	subnetIds := ae.dp.Spec.CloudInfra.AwsCloudInfraConfig.Eks.SubnetIds
 	if ae.dp.Spec.CloudInfra.ProvisionNetwork {
 		subnetIds = ae.dp.Status.CloudInfraStatus.SubnetIds
@@ -1189,6 +1211,17 @@ func (ae *awsEnv) ReconcileDefaultAddons() error {
 				return err
 			}
 
+			if _, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				ob := obj.(*v1.DataPlanes)
+				if ob.Status.CloudInfraStatus.Roles == nil {
+					ob.Status.CloudInfraStatus.Roles = make(map[string]bool)
+				}
+				ob.Status.CloudInfraStatus.Roles[*role.Role.RoleName] = true
+				return ob
+			}); err != nil {
+				return err
+			}
+
 			_, cErr := ae.eksIC.CreateAddon(ae.ctx, &awseks.CreateAddonInput{
 				AddonName:             aws.String(awsEbsCsiDriver),
 				ClusterName:           aws.String(clusterName),
@@ -1217,8 +1250,19 @@ func (ae *awsEnv) ReconcileDefaultAddons() error {
 		var notFoundErr *types.ResourceNotFoundException
 		if errors.As(err, &notFoundErr) {
 			klog.Info("Creating vpc cni addon")
-			_, arn, err := ae.eksIC.CreateVpcCniRole(ae.ctx)
+			role, arn, err := ae.eksIC.CreateVpcCniRole(ae.ctx)
 			if err != nil {
+				return err
+			}
+
+			if _, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.dp, func(obj client.Object) client.Object {
+				ob := obj.(*v1.DataPlanes)
+				if ob.Status.CloudInfraStatus.Roles == nil {
+					ob.Status.CloudInfraStatus.Roles = make(map[string]bool)
+				}
+				ob.Status.CloudInfraStatus.Roles[*role.Role.RoleName] = true
+				return ob
+			}); err != nil {
 				return err
 			}
 
@@ -1229,7 +1273,7 @@ func (ae *awsEnv) ReconcileDefaultAddons() error {
 				ClusterName:           aws.String(clusterName),
 				ResolveConflicts:      types.ResolveConflictsOverwrite,
 				ServiceAccountRoleArn: aws.String(arn),
-				AddonVersion:          aws.String("v1.15.0-eksbuild.2"),
+				AddonVersion:          aws.String("v1.18.3-eksbuild.3"),
 				ConfigurationValues:   aws.String(v),
 			})
 			if cErr != nil {

@@ -11,10 +11,6 @@ import (
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	"github.com/aws/aws-sdk-go-v2/service/eks/types"
 	"github.com/aws/aws-sdk-go/aws"
-	v1 "github.com/baazhq/baaz/api/v1/types"
-	"github.com/baazhq/baaz/pkg/aws/eks"
-	"github.com/baazhq/baaz/pkg/store"
-	"github.com/baazhq/baaz/pkg/utils"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -23,6 +19,11 @@ import (
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/aws-iam-authenticator/pkg/token"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
+	"github.com/baazhq/baaz/pkg/aws/eks"
+	"github.com/baazhq/baaz/pkg/store"
+	"github.com/baazhq/baaz/pkg/utils"
 )
 
 type nodeGroupType string

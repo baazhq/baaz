@@ -7,9 +7,10 @@ import (
 	awseks "github.com/aws/aws-sdk-go-v2/service/eks"
 	awsiam "github.com/aws/aws-sdk-go-v2/service/iam"
 	awssts "github.com/aws/aws-sdk-go-v2/service/sts"
-	v1 "github.com/baazhq/baaz/api/v1/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	v1 "github.com/baazhq/baaz/api/v1/types"
 )
 
 type Eks interface {
@@ -44,6 +45,7 @@ type Eks interface {
 	DescribeInstances(ctx context.Context, input *awsec2.DescribeInstancesInput) (*awsec2.DescribeInstancesOutput, error)
 	CreateIAMPolicy(ctx context.Context, input *awsiam.CreatePolicyInput) (*awsiam.CreatePolicyOutput, error)
 	AttachRolePolicy(ctx context.Context, input *awsiam.AttachRolePolicyInput) (*awsiam.AttachRolePolicyOutput, error)
+	DeleteRole(ctx context.Context, roleName string) error
 }
 
 type eks struct {
