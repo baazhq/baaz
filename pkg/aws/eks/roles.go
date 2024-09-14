@@ -299,7 +299,23 @@ func (ec *eks) AttachRolePolicy(ctx context.Context, input *iam.AttachRolePolicy
 }
 
 func (ec *eks) DeleteRole(ctx context.Context, roleName string) error {
-	_, err := ec.awsIamClient.DeleteRole(ctx, &awsiam.DeleteRoleInput{
+	policy, err := ec.awsIamClient.ListAttachedRolePolicies(ctx, &awsiam.ListAttachedRolePoliciesInput{
+		RoleName: &roleName,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, p := range policy.AttachedPolicies {
+		if _, err := ec.awsIamClient.DetachRolePolicy(ctx, &awsiam.DetachRolePolicyInput{
+			RoleName:  &roleName,
+			PolicyArn: p.PolicyArn,
+		}); err != nil {
+			return err
+		}
+	}
+
+	_, err = ec.awsIamClient.DeleteRole(ctx, &awsiam.DeleteRoleInput{
 		RoleName: &roleName,
 	})
 	return err
