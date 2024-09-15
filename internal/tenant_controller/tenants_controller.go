@@ -156,37 +156,6 @@ func (r *TenantsReconciler) reconcileDelete(ae *awsEnv) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	for ng, ngStatus := range ae.tenant.Status.NodegroupStatus {
-
-		if ngStatus != "DELETING" {
-			_, err := ae.eksIC.DeleteNodeGroup(ng)
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-			// update status with current nodegroup status
-			_, _, err = utils.PatchStatus(ae.ctx, ae.client, ae.tenant, func(obj client.Object) client.Object {
-				in := obj.(*v1.Tenants)
-				if in.Status.NodegroupStatus == nil {
-					in.Status.NodegroupStatus = make(map[string]string)
-				}
-				in.Status.NodegroupStatus[ng] = "DELETING"
-				return in
-			})
-			if err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-
-		_, found, err := ae.eksIC.DescribeNodegroup(ng)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if found {
-			klog.Infof("waiting for nodegroup %s to be deleted", ng)
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-		}
-	}
-
 	// remove our finalizer from the list and update it.
 	controllerutil.RemoveFinalizer(ae.tenant, tenantsFinalizer)
 	klog.Infof("Deleted Tenant [%s]", ae.tenant.GetName())

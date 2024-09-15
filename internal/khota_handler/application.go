@@ -87,15 +87,15 @@ func CreateApplication(w http.ResponseWriter, req *http.Request) {
 
 }
 
-func GetApplicationStatus(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
+func ListApplicationStatus(w http.ResponseWriter, req *http.Request) {
+	//vars := mux.Vars(req)
 
-	customerName := vars["customer_name"]
-	applicationName := vars["application_name"]
+	// customerName := vars["customer_name"]
+	// applicationName := vars["application_name"]
 
 	_, dc := getKubeClientset()
 
-	application, err := dc.Resource(applicationGVK).Namespace(customerName).Get(context.TODO(), applicationName, metav1.GetOptions{})
+	application, err := dc.Resource(applicationGVK).Namespace("").List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		res := NewResponse(ApplicationGetFail, internal_error, err, http.StatusInternalServerError)
 		res.SetResponse(&w)
@@ -103,9 +103,32 @@ func GetApplicationStatus(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	status, _, _ := unstructured.NestedString(application.Object, "status", "phase")
-	res := NewResponse("", status, nil, 200)
-	res.SetResponse(&w)
+	type listApplicationResp struct {
+		Name          string                 `json:"name"`
+		DataplaneName string                 `json:"dataplane"`
+		TenantName    string                 `json:"tenant"`
+		AppStatus     map[string]interface{} `json:"status"`
+	}
+	var appResp []listApplicationResp
+
+	for _, app := range application.Items {
+
+		dpName, _, _ := unstructured.NestedString(app.Object, "status", "applicationCurrentSpec", "dataplane")
+		tenantName, _, _ := unstructured.NestedString(app.Object, "status", "applicationCurrentSpec", "tenant")
+
+		appStatus, _, _ := unstructured.NestedMap(app.Object, "status", "appStatus")
+
+		resp := listApplicationResp{
+			Name:          app.GetName(),
+			DataplaneName: dpName,
+			TenantName:    tenantName,
+			AppStatus:     appStatus,
+		}
+
+		appResp = append(appResp, resp)
+	}
+	bytes, _ := json.Marshal(appResp)
+	sendJsonResponse(bytes, http.StatusOK, &w)
 
 }
 

@@ -53,16 +53,7 @@ func getRandomSubnet(dp *v1.DataPlanes) string {
 }
 
 func getNodeGroupSubnet(tenants *v1.TenantsInfra, dp *v1.DataPlanes) string {
-	// bytebeam-medium:
-	// machinePool:
-	// - name: bytebeam-app1
-	//   #size: t2.small
-	//   size: t2.medium
-	// new name: bytebeam-medium-bytebeam-app1-t2-medium ()
-	// old name: bytebeam-medium-bytebeam-app1-t2-small (status)
-	// if len(tenants.Spec.TenantSizes) == len(tenants.Status.NodegroupStatus) {
-	// 	return ""
-	// }
+
 	specFlags := make(map[string]bool)
 	for tenantName, machineSpecs := range tenants.Spec.TenantSizes {
 		for _, machineSpec := range machineSpecs.MachineSpec {
@@ -177,16 +168,15 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 					describeNodegroupOutput.Nodegroup != nil &&
 					len(describeNodegroupOutput.Nodegroup.Subnets) > 0 {
 
-					fmt.Println(describeNodegroupOutput.Nodegroup.ScalingConfig.MinSize)
 					if describeNodegroupOutput.Nodegroup.ScalingConfig.MinSize != &machineSpec.Min {
-						ae.eksIC.UpdateNodegroup(&awseks.UpdateNodegroupConfigInput{
-							ClusterName:   describeNodegroupOutput.Nodegroup.ClusterName,
-							NodegroupName: describeNodegroupOutput.Nodegroup.NodegroupName,
-							ScalingConfig: &types.NodegroupScalingConfig{
-								MinSize: &machineSpec.Min,
-								MaxSize: &machineSpec.Max,
-							},
-						})
+						// ae.eksIC.UpdateNodegroup(&awseks.UpdateNodegroupConfigInput{
+						// 	ClusterName:   describeNodegroupOutput.Nodegroup.ClusterName,
+						// 	NodegroupName: describeNodegroupOutput.Nodegroup.NodegroupName,
+						// 	ScalingConfig: &types.NodegroupScalingConfig{
+						// 		MinSize: &machineSpec.Min,
+						// 		MaxSize: &machineSpec.Max,
+						// 	},
+						// })
 					}
 					if err := ae.patchStatus(*describeNodegroupOutput.Nodegroup.NodegroupName, &v1.NodegroupStatus{
 						Status: string(describeNodegroupOutput.Nodegroup.Status),

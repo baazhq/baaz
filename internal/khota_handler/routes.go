@@ -212,11 +212,17 @@ var routes = Routes{
 		"/api/v1/customer/{customer_name}/tenant/{tenant_name}/application",
 		CreateApplication,
 	},
+	// Route{
+	// 	"GET APPLICATION STATUS",
+	// 	"GET",
+	// 	"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
+	// 	GetApplicationStatus,
+	// },
 	Route{
-		"GET APPLICATION STATUS",
+		"LIST APPLICATION STATUS",
 		"GET",
-		"/api/v1/customer/{customer_name}/dataplane/{dataplane_name}/application/{application_name}",
-		GetApplicationStatus,
+		"/api/v1/application",
+		ListApplicationStatus,
 	},
 	Route{
 		"DELETE APPLICATION",

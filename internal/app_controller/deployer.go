@@ -46,7 +46,7 @@ func NewApplication(
 }
 
 func getChartName(app v1.AppSpec) string {
-	return fmt.Sprintf("%s-%s", app.Name, app.Namespace)
+	return fmt.Sprintf("%s", app.Name)
 }
 
 type InstallChart struct {

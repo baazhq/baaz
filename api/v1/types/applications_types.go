@@ -10,6 +10,7 @@ const (
 	PendingA      ApplicationPhase = "Pending"
 	UninstallingA ApplicationPhase = "Uninstalling"
 	Uninstalled   ApplicationPhase = "Uninstalled"
+	RetryingA     ApplicationPhase = "Retrying"
 	DeployedA     ApplicationPhase = "Deployed"
 	InstallingA   ApplicationPhase = "Installing"
 	FailedA       ApplicationPhase = "Failed"
