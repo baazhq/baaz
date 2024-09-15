@@ -98,6 +98,7 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 				if err != nil {
 					return err
 				}
+
 				if !found {
 					nodeRole, err := ae.eksIC.CreateNodeIamRole(nodeName)
 					if err != nil {
@@ -106,7 +107,6 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 					if nodeRole.Role == nil {
 						return errors.New("node role is nil")
 					}
-
 					subnet := getNodeGroupSubnet(ae.tenantsInfra, ae.dp)
 
 					createNodeGroupOutput, err := ae.eksIC.CreateNodegroup(ae.getNodegroupInput(nodeName, *nodeRole.Role.Arn, subnet, &machineSpec))
@@ -176,6 +176,18 @@ func (ae *awsEnv) ReconcileInfraTenants() error {
 				if describeNodegroupOutput != nil &&
 					describeNodegroupOutput.Nodegroup != nil &&
 					len(describeNodegroupOutput.Nodegroup.Subnets) > 0 {
+
+					fmt.Println(describeNodegroupOutput.Nodegroup.ScalingConfig.MinSize)
+					if describeNodegroupOutput.Nodegroup.ScalingConfig.MinSize != &machineSpec.Min {
+						ae.eksIC.UpdateNodegroup(&awseks.UpdateNodegroupConfigInput{
+							ClusterName:   describeNodegroupOutput.Nodegroup.ClusterName,
+							NodegroupName: describeNodegroupOutput.Nodegroup.NodegroupName,
+							ScalingConfig: &types.NodegroupScalingConfig{
+								MinSize: &machineSpec.Min,
+								MaxSize: &machineSpec.Max,
+							},
+						})
+					}
 					if err := ae.patchStatus(*describeNodegroupOutput.Nodegroup.NodegroupName, &v1.NodegroupStatus{
 						Status: string(describeNodegroupOutput.Nodegroup.Status),
 						Subnet: describeNodegroupOutput.Nodegroup.Subnets[0],
@@ -340,40 +352,13 @@ func newClientset(cluster *types.Cluster) (*kubernetes.Clientset, error) {
 	return clientset, nil
 }
 
-// func (ae *awsEnv) getNodeSpecForTenantSize(tenantConfig v1.TenantApplicationConfig) (*[]v1.MachineSpec, error) {
-
-// 	// cm := corev1.ConfigMap{}
-// 	// if err := ae.client.Get(
-// 	// 	ae.ctx,
-// 	// 	k8stypes.NamespacedName{Name: "tenant-sizes", Namespace: "kube-system"},
-// 	// 	&cm,
-// 	// ); err != nil {
-// 	// 	return nil, err
-// 	// }
-// 	// sizeJson := cm.Data["size.json"]
-
-// 	// var tenantInfraAppSize v1.TenantInfraAppSize
-
-// 	// err := json.Unmarshal([]byte(sizeJson), &tenantInfraAppSize)
-
-// 	// if err != nil {
-// 	// 	return nil, err
-// 	// }
-
-// 	for _, size := range tenantInfraAppSize.TenantSizes {
-// 		if size.Name == tenantConfig.Size {
-// 			return &size.MachineSpec, nil
-// 		}
-// 	}
-
-// 	return nil, fmt.Errorf("no NodegroupSpec for app %s & size %s", tenantConfig.AppType, tenantConfig.Size)
-// }
-
 func (ae *awsEnv) getNodegroupInput(nodeName, roleArn, subnet string, machineSpec *v1.MachineSpec) (input *awseks.CreateNodegroupInput) {
 
 	var taints = &[]types.Taint{}
 
-	taints = makeTaints(nodeName)
+	if machineSpec.StrictScheduling == v1.StrictSchedulingStatusEnable {
+		taints = makeTaints(nodeName)
+	}
 
 	var capacityType types.CapacityTypes
 	if machineSpec.Type == v1.MachineTypeLowPriority {

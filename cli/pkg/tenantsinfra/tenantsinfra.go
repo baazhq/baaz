@@ -206,9 +206,6 @@ func CreateTenantsInfra(filePath string, dataplane string) (string, error) {
 		return "", err
 	}
 
-	fmt.Println(string(tiByte))
-
-	fmt.Println(makeTenantInfraPath(dataplane))
 	resp, err := http.Post(
 		makeTenantInfraPath(dataplane),
 		"application/json",
