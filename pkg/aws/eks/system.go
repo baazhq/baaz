@@ -36,6 +36,7 @@ func (ec *eks) DescribeNodegroup(nodeGroupName string) (output *awseks.DescribeN
 		}
 		return nil, false, err
 	}
+
 	return describeNodeGroupOutput, true, nil
 }
 
